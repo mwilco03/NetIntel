@@ -190,6 +190,22 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .admin-port-cat{color:#8b949e;font-size:.65rem}
 .admin-more{font-size:.7rem;color:#8b949e;padding:.25rem}
 
+/* === NSE SCRIPT FINDINGS === */
+.nse-findings{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #21262d}
+.nse-title{font-size:.75rem;font-weight:600;color:#58a6ff;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.nse-title svg{width:14px;height:14px}
+.nse-finding{display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.15);border-radius:4px;font-size:.7rem;margin-bottom:.25rem}
+.nse-port{font-family:monospace;color:#8b949e;min-width:40px}
+.nse-type{color:#58a6ff;font-weight:500;min-width:50px}
+.nse-detail{color:#c9d1d9;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nse-more{font-size:.7rem;color:#8b949e;padding:.25rem}
+.nse-vulns{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #21262d}
+.nse-vuln-title{font-size:.75rem;font-weight:600;color:#f85149;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.nse-vuln-title svg{width:14px;height:14px}
+.nse-vuln{display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.2);border-radius:4px;font-size:.7rem;margin-bottom:.25rem}
+.nse-vuln-script{font-family:monospace;color:#f85149;font-weight:500}
+.nse-vuln-port{color:#8b949e}
+
 /* === DIFF VIEW === */
 .diff-item{display:flex;align-items:center;gap:1rem;padding:.75rem;border-bottom:1px solid #21262d;font-size:.875rem}
 .diff-item:last-child{border-bottom:none}
@@ -1002,7 +1018,8 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       "status": "<xsl:value-of select="status/@state"/>",
       "os": [<xsl:for-each select="os/osmatch">{"name":"<xsl:value-of select="translate(@name, '&quot;', &quot;'&quot;)"/>","accuracy":<xsl:value-of select="@accuracy"/>}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
       "osFingerprint": "<xsl:value-of select="os/osfingerprint/@fingerprint"/>",
-      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"<xsl:value-of select="service/@servicefp"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"<xsl:value-of select="service/@servicefp"/>","scripts":[<xsl:for-each select="script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:value-of select="translate(translate(@output, '&quot;', &quot;'&quot;), '&#10;&#13;', '  ')"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "hostscripts": [<xsl:for-each select="hostscript/script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:value-of select="translate(translate(@output, '&quot;', &quot;'&quot;), '&#10;&#13;', '  ')"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
       "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>","rtt":"<xsl:value-of select="@rtt"/>","host":"<xsl:value-of select="@host"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
     }<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
   ]
@@ -1175,6 +1192,115 @@ function migrateTags() {
   }
 }
 
+// === NSE SCRIPT PARSING ===
+// Key scripts that provide valuable intel
+const NSE_PARSERS = {
+  'ssl-cert': (output) => {
+    const info = {};
+    const subjectMatch = output.match(/Subject: (.+?)(?:$|  )/);
+    const issuerMatch = output.match(/Issuer: (.+?)(?:$|  )/);
+    const validMatch = output.match(/Not valid after:\s*(\d{4}-\d{2}-\d{2})/);
+    if (subjectMatch) info.subject = subjectMatch[1].trim();
+    if (issuerMatch) info.issuer = issuerMatch[1].trim();
+    if (validMatch) info.expires = validMatch[1];
+    return { type: 'cert', icon: 'shield', ...info };
+  },
+  'http-title': (output) => {
+    const title = output.replace(/^Title:\s*/, '').trim();
+    return { type: 'http', icon: 'globe', title };
+  },
+  'http-server-header': (output) => {
+    return { type: 'http', icon: 'server', server: output.trim() };
+  },
+  'smb-os-discovery': (output) => {
+    const info = {};
+    const osMatch = output.match(/OS: ([^\n]+)/);
+    const compMatch = output.match(/Computer name: ([^\n]+)/);
+    const domainMatch = output.match(/Domain name: ([^\n]+)/);
+    if (osMatch) info.os = osMatch[1].trim();
+    if (compMatch) info.computer = compMatch[1].trim();
+    if (domainMatch) info.domain = domainMatch[1].trim();
+    return { type: 'smb', icon: 'windows', ...info };
+  },
+  'ssh-hostkey': (output) => {
+    const keys = [];
+    const keyMatches = output.matchAll(/(\d+) ([\w-]+) ([^\s]+)/g);
+    for (const m of keyMatches) {
+      keys.push({ bits: m[1], algo: m[2], fingerprint: m[3].slice(0, 16) + '...' });
+    }
+    return { type: 'ssh', icon: 'key', keys: keys.slice(0, 3) };
+  },
+  'ftp-anon': (output) => {
+    const anon = output.toLowerCase().includes('anonymous ftp login allowed');
+    return { type: 'ftp', icon: 'warning', anonymous: anon, sev: anon ? 'high' : 'info' };
+  },
+  'ms-sql-info': (output) => {
+    const info = {};
+    const versionMatch = output.match(/Version:([^\n]+)/i);
+    const instanceMatch = output.match(/Instance name:([^\n]+)/i);
+    if (versionMatch) info.version = versionMatch[1].trim();
+    if (instanceMatch) info.instance = instanceMatch[1].trim();
+    return { type: 'mssql', icon: 'database', ...info };
+  },
+  'mysql-info': (output) => {
+    const info = {};
+    const versionMatch = output.match(/Version: ([^\n]+)/);
+    if (versionMatch) info.version = versionMatch[1].trim();
+    return { type: 'mysql', icon: 'database', ...info };
+  }
+};
+
+// Scripts that indicate vulnerabilities
+const VULN_SCRIPTS = ['smb-vuln-', 'ssl-heartbleed', 'ssl-poodle', 'ssl-ccs-injection', 'vulners', 'vulscan'];
+
+// Get parsed NSE findings for a host
+function getHostNseFindings(host) {
+  const findings = [];
+  const vulns = [];
+
+  // Parse port scripts
+  (host.ports || []).forEach(port => {
+    (port.scripts || []).forEach(script => {
+      // Check for vulnerability scripts
+      if (VULN_SCRIPTS.some(v => script.id.startsWith(v) || script.id.includes(v))) {
+        vulns.push({ port: port.port, script: script.id, output: script.output });
+      }
+      // Parse known scripts
+      else if (NSE_PARSERS[script.id]) {
+        const parsed = NSE_PARSERS[script.id](script.output);
+        findings.push({ port: port.port, script: script.id, ...parsed });
+      }
+    });
+  });
+
+  // Parse host-level scripts
+  (host.hostscripts || []).forEach(script => {
+    if (VULN_SCRIPTS.some(v => script.id.startsWith(v) || script.id.includes(v))) {
+      vulns.push({ port: null, script: script.id, output: script.output });
+    }
+    else if (NSE_PARSERS[script.id]) {
+      const parsed = NSE_PARSERS[script.id](script.output);
+      findings.push({ port: null, script: script.id, ...parsed });
+    }
+  });
+
+  return { findings, vulns };
+}
+
+// Get all scripts for a host (raw, for details view)
+function getHostAllScripts(host) {
+  const scripts = [];
+  (host.ports || []).forEach(port => {
+    (port.scripts || []).forEach(script => {
+      scripts.push({ port: port.port, ...script });
+    });
+  });
+  (host.hostscripts || []).forEach(script => {
+    scripts.push({ port: null, ...script });
+  });
+  return scripts;
+}
+
 // === HEROICONS (inline SVG) ===
 const ICONS = {
   server: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 0 0-.12-1.03l-2.268-9.64a3.375 3.375 0 0 0-3.285-2.602H7.923a3.375 3.375 0 0 0-3.285 2.602l-2.268 9.64a4.5 4.5 0 0 0-.12 1.03v.228m19.5 0a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3m19.5 0a3 3 0 0 0-3-3H5.25a3 3 0 0 0-3 3m16.5 0h.008v.008h-.008v-.008Zm-3 0h.008v.008h-.008v-.008Z" /></svg>',
@@ -1195,6 +1321,7 @@ const ICONS = {
   bug: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 0 1 .4-2.253M12 8.25a2.25 2.25 0 0 0-2.248 2.146M12 8.25a2.25 2.25 0 0 1 2.248 2.146M8.683 5a6.032 6.032 0 0 1-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0 1 15.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 0 0-.575-1.752M4.921 6a24.048 24.048 0 0 0-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 0 1-5.223 1.082" /></svg>',
   star: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>',
   key: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>',
+  search: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>',
   target: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Z" /></svg>',
   network: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>',
   chevronDown: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>',
@@ -2670,6 +2797,7 @@ function createEntityCard(host) {
   const mac = host.mac;
   const cves = getHostCVEs(host);
   const adminPorts = getHostAdminPorts(host);
+  const { findings: nseFindings, vulns: nseVulns } = getHostNseFindings(host);
 
   const card = document.createElement('div');
   card.className = 'entity';
@@ -2707,6 +2835,39 @@ function createEntityCard(host) {
   // Count critical/high admin ports for badge
   const criticalAdmin = adminPorts.filter(a => a.sev === 'critical' || a.sev === 'high').length;
 
+  // NSE script findings HTML
+  const nseHtml = nseFindings.length > 0 ? `
+    <div class="nse-findings">
+      <div class="nse-title">${icon('search')} Script Findings</div>
+      ${nseFindings.slice(0, 4).map(f => `
+        <div class="nse-finding">
+          <span class="nse-port">${f.port ? ':' + f.port : 'host'}</span>
+          <span class="nse-type">${f.type}</span>
+          <span class="nse-detail">${
+            f.title || f.subject || f.os || f.server || f.version ||
+            (f.keys ? f.keys.map(k => k.algo).join(', ') : '') ||
+            (f.anonymous ? 'Anonymous FTP!' : '') || f.script
+          }</span>
+        </div>
+      `).join('')}
+      ${nseFindings.length > 4 ? `<div class="nse-more">...and ${nseFindings.length - 4} more</div>` : ''}
+    </div>
+  ` : '';
+
+  // NSE vulnerability findings
+  const nseVulnHtml = nseVulns.length > 0 ? `
+    <div class="nse-vulns">
+      <div class="nse-vuln-title">${icon('warning')} Script Vulnerabilities</div>
+      ${nseVulns.slice(0, 3).map(v => `
+        <div class="nse-vuln">
+          <span class="nse-vuln-script">${v.script}</span>
+          ${v.port ? `<span class="nse-vuln-port">:${v.port}</span>` : ''}
+        </div>
+      `).join('')}
+      ${nseVulns.length > 3 ? `<div class="nse-more">...and ${nseVulns.length - 3} more</div>` : ''}
+    </div>
+  ` : '';
+
   card.innerHTML = `
     <div class="entity-head">
       <div class="entity-icon" data-os-icon="">\u25a3</div>
@@ -2715,6 +2876,7 @@ function createEntityCard(host) {
         ${host.hostname ? `<div class="entity-host">${host.hostname}</div>` : ''}
         <div class="entity-tags"></div>
       </div>
+      ${nseVulns.length > 0 ? `<span class="badge badge-critical" title="NSE vulns detected">${icon('shield')}</span>` : ''}
       ${criticalAdmin > 0 ? `<span class="badge badge-warning" title="Admin ports exposed">${icon('warning')}</span>` : ''}
       ${cves.length > 0 ? `<span class="badge badge-critical">${cves.length} CVE${cves.length !== 1 ? 's' : ''}</span>` : ''}
     </div>
@@ -2734,7 +2896,9 @@ function createEntityCard(host) {
         ${mac ? `<div class="signal"><span class="signal-src">MAC</span><span class="signal-val">${mac}${host.macVendor ? ' (' + host.macVendor + ')' : ''}</span></div>` : ''}
         ${open.filter(p => p.product).slice(0, 2).map(p => `<div class="signal"><span class="signal-src">:${p.port}</span><span class="signal-val">${p.product}${p.version ? ' ' + p.version : ''}</span></div>`).join('')}
       </div>` : ''}
+      ${nseHtml}
       ${adminHtml}
+      ${nseVulnHtml}
       ${vulnsHtml}
     </div>
     <div class="entity-foot">
