@@ -99,11 +99,37 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .badge-info{background:rgba(136,146,157,.2);color:#8b949e}
 .badge-cleartext{background:rgba(248,81,73,.3);color:#ff7b72;border:1px solid #f85149}
 .tag{display:inline-flex;align-items:center;padding:.15rem .4rem;font-size:.7rem;border-radius:3px;margin-right:.25rem}
+/* Criticality - Gold/Orange tones */
+.tag-ckt{background:rgba(255,140,0,.25);color:#ff8c00;border:1px solid #ff8c00;font-weight:600}
+.tag-mission-critical{background:rgba(255,69,0,.2);color:#ff6347;border:1px solid #ff6347}
+.tag-mission-essential{background:rgba(255,165,0,.2);color:#ffa500;border:1px solid #ffa500}
+.tag-business-critical{background:rgba(210,153,34,.2);color:#d29922;border:1px solid #d29922}
+/* Tactical - Red/Purple tones */
 .tag-crown{background:rgba(210,153,34,.2);color:#d29922;border:1px solid #d29922}
 .tag-choke{background:rgba(248,81,73,.2);color:#f85149;border:1px solid #f85149}
 .tag-key{background:rgba(163,113,247,.2);color:#a371f7;border:1px solid #a371f7}
+.tag-pivot{background:rgba(219,112,147,.2);color:#db7093;border:1px solid #db7093}
+.tag-attack-surface{background:rgba(255,99,71,.2);color:#ff6347;border:1px solid #ff6347}
+.tag-egress{background:rgba(255,69,0,.2);color:#ff4500;border:1px solid #ff4500}
+/* Environment - Blue/Green/Gray tones */
+.tag-production{background:rgba(35,134,54,.2);color:#238636;border:1px solid #238636}
+.tag-staging{background:rgba(88,166,255,.2);color:#58a6ff;border:1px solid #58a6ff}
+.tag-development{background:rgba(163,113,247,.15);color:#a371f7;border:1px solid rgba(163,113,247,.5)}
+.tag-test{background:rgba(139,148,158,.15);color:#8b949e;border:1px solid rgba(139,148,158,.4)}
+.tag-deprecated{background:rgba(110,84,76,.2);color:#bc8f8f;border:1px solid #bc8f8f;text-decoration:line-through}
+/* Priority */
+.tag-p1{background:rgba(248,81,73,.3);color:#f85149;border:1px solid #f85149;font-weight:600}
+.tag-p2{background:rgba(210,153,34,.25);color:#d29922;border:1px solid #d29922}
+.tag-p3{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.4)}
+.tag-monitor{background:rgba(139,148,158,.1);color:#8b949e;border:1px solid rgba(139,148,158,.3)}
+/* Metadata */
 .tag-owner{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tag-notes{background:rgba(139,148,158,.15);color:#8b949e;border:1px solid rgba(139,148,158,.3);cursor:help}
+/* Label checkbox styling for modal */
+.label-group{display:flex;flex-wrap:wrap;gap:.5rem}
+.label-check{display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.8rem;padding:.25rem .5rem;border-radius:4px;background:#161b22;border:1px solid #21262d}
+.label-check:hover{border-color:#30363d}
+.label-check input{margin:0}
 
 /* === ENTITY CARDS === */
 .entity-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem}
@@ -307,10 +333,13 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .drop-zone-hint{font-size:.8rem;color:#484f58}
 
 /* === CONTEXT MENU === */
-.ctx-menu{position:fixed;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:.5rem 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:1001;display:none}
+.ctx-menu{position:fixed;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:.5rem 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:1001;display:none}
 .ctx-menu.active{display:block}
+.ctx-label{padding:.25rem 1rem;font-size:.7rem;color:#8b949e;text-transform:uppercase;letter-spacing:.05em}
 .ctx-item{display:block;width:100%;padding:.5rem 1rem;color:#c9d1d9;cursor:pointer;font-size:.875rem;text-align:left;background:none;border:none}
 .ctx-item:hover{background:#21262d}
+.ctx-item.ctx-danger{color:#f85149}
+.ctx-item.ctx-danger:hover{background:rgba(248,81,73,.1)}
 .ctx-div{height:1px;background:#21262d;margin:.5rem 0}
 
 /* === SOURCE CARDS === */
@@ -445,38 +474,80 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 
 <!-- Context Menu -->
 <div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-label">Criticality</div>
+  <button class="ctx-item" data-tag="ckt">◆ CKT</button>
+  <button class="ctx-item" data-tag="mission-critical">▲ Mission Critical</button>
+  <div class="ctx-div"></div>
+  <div class="ctx-label">Tactical</div>
   <button class="ctx-item" data-tag="crown">★ Crown Jewel</button>
   <button class="ctx-item" data-tag="choke">◎ Choke Point</button>
-  <button class="ctx-item" data-tag="key">⬡ Key Terrain</button>
+  <button class="ctx-item" data-tag="pivot">⇄ Pivot Point</button>
   <div class="ctx-div"></div>
-  <button class="ctx-item" data-action="annotate">✎ Edit Notes</button>
+  <button class="ctx-item" data-action="annotate">✎ Full Annotation...</button>
   <div class="ctx-div"></div>
-  <button class="ctx-item" data-tag="clear">✕ Clear All</button>
+  <button class="ctx-item ctx-danger" data-tag="clear">✕ Clear All</button>
 </div>
 
 <!-- Annotation Modal -->
 <div class="modal" id="annotate-modal">
-  <div class="modal-content" style="max-width:480px">
+  <div class="modal-content" style="max-width:560px">
     <div class="modal-head">
       <h3>Asset Annotation</h3>
       <button class="modal-close">×</button>
     </div>
     <div class="modal-body">
       <div id="annotate-info" style="margin-bottom:1rem;padding:.75rem;background:#161b22;border-radius:6px;font-family:monospace;font-size:.85rem"></div>
+
       <div class="form-group" style="margin-bottom:1rem">
         <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.25rem">Owner / Responsible Party</label>
-        <input type="text" id="annotate-owner" class="input" placeholder="e.g., John Smith, IT Ops Team" style="width:100%"/>
+        <input type="text" id="annotate-owner" class="input" placeholder="e.g., J. Smith, SOC Team, Network Ops" style="width:100%"/>
       </div>
+
       <div class="form-group" style="margin-bottom:1rem">
         <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.25rem">Notes</label>
-        <textarea id="annotate-notes" class="input" rows="4" placeholder="e.g., Production database server, scheduled maintenance windows..." style="width:100%;resize:vertical"></textarea>
+        <textarea id="annotate-notes" class="input" rows="3" placeholder="Function, dependencies, maintenance windows..." style="width:100%;resize:vertical"></textarea>
       </div>
+
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label style="display:block;font-size:.75rem;color:#d29922;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Criticality</label>
+        <div id="annotate-labels-crit" class="label-group">
+          <label class="label-check"><input type="checkbox" value="ckt"/> CKT (Cyber Key Terrain)</label>
+          <label class="label-check"><input type="checkbox" value="mission-critical"/> Mission Critical</label>
+          <label class="label-check"><input type="checkbox" value="mission-essential"/> Mission Essential</label>
+          <label class="label-check"><input type="checkbox" value="business-critical"/> Business Critical</label>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label style="display:block;font-size:.75rem;color:#f85149;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Tactical</label>
+        <div id="annotate-labels-tact" class="label-group">
+          <label class="label-check"><input type="checkbox" value="crown"/> Crown Jewel</label>
+          <label class="label-check"><input type="checkbox" value="choke"/> Choke Point</label>
+          <label class="label-check"><input type="checkbox" value="key"/> Key Terrain</label>
+          <label class="label-check"><input type="checkbox" value="pivot"/> Pivot Point</label>
+          <label class="label-check"><input type="checkbox" value="attack-surface"/> Attack Surface</label>
+          <label class="label-check"><input type="checkbox" value="egress"/> Egress Point</label>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label style="display:block;font-size:.75rem;color:#58a6ff;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Environment</label>
+        <div id="annotate-labels-env" class="label-group">
+          <label class="label-check"><input type="checkbox" value="production"/> Production</label>
+          <label class="label-check"><input type="checkbox" value="staging"/> Staging</label>
+          <label class="label-check"><input type="checkbox" value="development"/> Development</label>
+          <label class="label-check"><input type="checkbox" value="test"/> Test</label>
+          <label class="label-check"><input type="checkbox" value="deprecated"/> Deprecated</label>
+        </div>
+      </div>
+
       <div class="form-group">
-        <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.5rem">Labels</label>
-        <div id="annotate-labels" style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="crown"/> ★ Crown Jewel</label>
-          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="choke"/> ◎ Choke Point</label>
-          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="key"/> ⬡ Key Terrain</label>
+        <label style="display:block;font-size:.75rem;color:#a371f7;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Priority</label>
+        <div id="annotate-labels-pri" class="label-group">
+          <label class="label-check"><input type="checkbox" value="p1"/> P1 - Immediate</label>
+          <label class="label-check"><input type="checkbox" value="p2"/> P2 - Urgent</label>
+          <label class="label-check"><input type="checkbox" value="p3"/> P3 - Normal</label>
+          <label class="label-check"><input type="checkbox" value="monitor"/> Monitor</label>
         </div>
       </div>
     </div>
@@ -594,10 +665,12 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
         <select id="entity-filter" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
           <option value="all">All Hosts</option>
           <option value="up">Online Only</option>
+          <option value="ckt">CKT / Mission Critical</option>
+          <option value="tagged">All Tagged</option>
           <option value="admin">Admin Ports</option>
           <option value="cleartext">Has Cleartext</option>
-          <option value="risk">High Risk</option>
-          <option value="tagged">Key Terrain</option>
+          <option value="risk">High Risk (50+)</option>
+          <option value="production">Production</option>
         </select>
       </div>
     </div>
@@ -1765,8 +1838,8 @@ function openAnnotationModal(host) {
   document.getElementById('annotate-owner').value = owner;
   document.getElementById('annotate-notes').value = notes;
 
-  // Populate label checkboxes
-  document.querySelectorAll('#annotate-labels input[type="checkbox"]').forEach(cb => {
+  // Populate label checkboxes (all groups)
+  modal.querySelectorAll('.label-group input[type="checkbox"]').forEach(cb => {
     cb.checked = labels.includes(cb.value);
   });
 
@@ -1776,7 +1849,7 @@ function openAnnotationModal(host) {
   saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
 
   newSaveBtn.addEventListener('click', () => {
-    const newLabels = Array.from(document.querySelectorAll('#annotate-labels input:checked')).map(cb => cb.value);
+    const newLabels = Array.from(modal.querySelectorAll('.label-group input:checked')).map(cb => cb.value);
     const newOwner = document.getElementById('annotate-owner').value.trim();
     const newNotes = document.getElementById('annotate-notes').value.trim();
 
@@ -2209,15 +2282,19 @@ function applyFilterAndGroup() {
     const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
     const risk = calculateRisk(host);
     const tagData = getAssetTags(host);
-    const isTagged = Array.isArray(tagData) ? tagData.length > 0 :
-      ((tagData.labels?.length > 0) || tagData.owner || tagData.notes);
+    const labels = Array.isArray(tagData) ? tagData : (tagData.labels || []);
+    const isTagged = labels.length > 0 || tagData.owner || tagData.notes;
+    const isCkt = labels.some(l => ['ckt', 'mission-critical', 'mission-essential', 'crown'].includes(l));
+    const isProd = labels.includes('production');
 
     switch (filter) {
       case 'up': return true;
+      case 'ckt': return isCkt;
+      case 'tagged': return isTagged;
       case 'admin': return hasAdmin;
       case 'cleartext': return hasCleartext;
       case 'risk': return risk >= 50;
-      case 'tagged': return isTagged;
+      case 'production': return isProd;
       default: return true;
     }
   });
@@ -2425,7 +2502,16 @@ function updateEntityCards() {
 }
 
 function updateEntityTags() {
-  const tagLabels = {crown: '★ Crown Jewel', choke: '◎ Choke Point', key: '⬡ Key Terrain'};
+  const tagLabels = {
+    // Criticality
+    'ckt': '◆ CKT', 'mission-critical': '▲ Mission Critical', 'mission-essential': '△ Mission Essential', 'business-critical': '◇ Business Critical',
+    // Tactical
+    'crown': '★ Crown Jewel', 'choke': '◎ Choke Point', 'key': '⬡ Key Terrain', 'pivot': '⇄ Pivot', 'attack-surface': '⚠ Attack Surface', 'egress': '↗ Egress',
+    // Environment
+    'production': '● Prod', 'staging': '◐ Stage', 'development': '◑ Dev', 'test': '○ Test', 'deprecated': '⊘ Deprecated',
+    // Priority
+    'p1': 'P1', 'p2': 'P2', 'p3': 'P3', 'monitor': '👁 Monitor'
+  };
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
     const host = state.data?.hosts?.find(h => h.ip === ip);
@@ -3489,16 +3575,20 @@ document.getElementById('search')?.addEventListener('input', e => {
         });
         risk = Math.min(risk, 100);
         const tagData = getAssetTags(host);
-        const isTagged = Array.isArray(tagData) ? tagData.length > 0 :
-          ((tagData.labels?.length > 0) || tagData.owner || tagData.notes);
+        const labels = Array.isArray(tagData) ? tagData : (tagData.labels || []);
+        const isTagged = labels.length > 0 || tagData.owner || tagData.notes;
+        const isCkt = labels.some(l => ['ckt', 'mission-critical', 'mission-essential', 'crown'].includes(l));
+        const isProd = labels.includes('production');
 
         let passesFilter = true;
         switch (filter) {
           case 'up': passesFilter = host.status === 'up'; break;
+          case 'ckt': passesFilter = isCkt; break;
+          case 'tagged': passesFilter = isTagged; break;
           case 'admin': passesFilter = hasAdmin; break;
           case 'cleartext': passesFilter = hasCleartext; break;
           case 'risk': passesFilter = risk >= 50; break;
-          case 'tagged': passesFilter = isTagged; break;
+          case 'production': passesFilter = isProd; break;
         }
         card.style.display = passesFilter ? '' : 'none';
         return;
