@@ -173,6 +173,21 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .vuln-desc{flex:1;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vulns-more{font-size:.75rem;color:#8b949e;padding:.25rem}
 
+/* === ADMIN PORTS === */
+.admin-ports{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #21262d}
+.admin-title{font-size:.75rem;font-weight:600;color:#d29922;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.admin-title svg{width:14px;height:14px}
+.admin-port{display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.2);border-radius:4px;font-size:.7rem;margin-bottom:.25rem}
+.admin-port-num{font-family:monospace;font-weight:600;color:#e6edf3;min-width:45px}
+.admin-port-name{color:#d29922;font-weight:500;flex:1}
+.admin-port-sev{padding:.1rem .35rem;border-radius:3px;font-weight:600;font-size:.65rem;text-transform:uppercase}
+.admin-port-sev.sev-critical{background:rgba(248,81,73,.3);color:#f85149}
+.admin-port-sev.sev-high{background:rgba(210,153,34,.3);color:#d29922}
+.admin-port-sev.sev-medium{background:rgba(88,166,255,.3);color:#58a6ff}
+.admin-port-sev.sev-low{background:rgba(35,134,54,.3);color:#3fb950}
+.admin-port-cat{color:#8b949e;font-size:.65rem}
+.admin-more{font-size:.7rem;color:#8b949e;padding:.25rem}
+
 /* === DIFF VIEW === */
 .diff-item{display:flex;align-items:center;gap:1rem;padding:.75rem;border-bottom:1px solid #21262d;font-size:.875rem}
 .diff-item:last-child{border-bottom:none}
@@ -526,6 +541,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
         <select id="entity-filter" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
           <option value="all">All Hosts</option>
           <option value="up">Online Only</option>
+          <option value="admin">Admin Ports</option>
           <option value="cleartext">Has Cleartext</option>
           <option value="risk">High Risk</option>
           <option value="tagged">Key Terrain</option>
@@ -959,7 +975,80 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 <xsl:text disable-output-escaping="yes"><![CDATA[
 // === CONSTANTS ===
 const CLEARTEXT = {21:'FTP',23:'Telnet',25:'SMTP',80:'HTTP',110:'POP3',143:'IMAP',161:'SNMP',389:'LDAP',513:'rlogin',514:'RSH',1433:'MSSQL',3306:'MySQL',5432:'PostgreSQL',8080:'HTTP-Alt'};
-const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143:6,161:7,389:6,443:1,445:8,512:9,513:9,514:9,1433:8,1521:8,3306:7,3389:7,5432:6,5900:7,6379:7,27017:8};
+const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143:6,161:7,389:6,443:1,445:8,512:9,513:9,514:9,1433:8,1521:8,3306:7,3389:7,5432:6,5900:7,6379:9,27017:8,2375:10,2376:8,4243:10,6443:10,10250:10,10255:6,2379:10,8500:8,9200:8,5985:8,5986:8,623:10,1099:8,10000:7,9000:8,8291:8,50000:8,11211:8};
+
+// Admin/Management ports by category - high risk if exposed
+const ADMIN_PORTS = {
+  // Container/Orchestration
+  2375: {name:'Docker API',cat:'container',sev:'critical',desc:'Unauthenticated Docker - full host compromise'},
+  2376: {name:'Docker TLS',cat:'container',sev:'high',desc:'Docker with TLS - verify auth'},
+  4243: {name:'Docker API',cat:'container',sev:'critical',desc:'Legacy Docker API - full host compromise'},
+  2377: {name:'Docker Swarm',cat:'container',sev:'high',desc:'Swarm cluster management'},
+  6443: {name:'Kubernetes API',cat:'container',sev:'critical',desc:'K8s API - cluster admin'},
+  10250: {name:'Kubelet',cat:'container',sev:'critical',desc:'Kubelet API - node compromise'},
+  10255: {name:'Kubelet RO',cat:'container',sev:'medium',desc:'Kubelet read-only'},
+  8443: {name:'K8s Dashboard',cat:'container',sev:'high',desc:'K8s dashboard'},
+  2379: {name:'etcd',cat:'container',sev:'critical',desc:'etcd - K8s secrets exposure'},
+  2380: {name:'etcd peer',cat:'container',sev:'high',desc:'etcd peer port'},
+  9000: {name:'Portainer',cat:'container',sev:'high',desc:'Docker/K8s mgmt UI'},
+  5000: {name:'Registry',cat:'container',sev:'medium',desc:'Docker registry'},
+  // Network Infrastructure
+  4786: {name:'Smart Install',cat:'network',sev:'critical',desc:'Cisco Smart Install - RCE'},
+  8291: {name:'Winbox',cat:'network',sev:'high',desc:'MikroTik router admin'},
+  161: {name:'SNMP',cat:'network',sev:'high',desc:'SNMP - default community strings'},
+  162: {name:'SNMP Trap',cat:'network',sev:'medium',desc:'SNMP trap receiver'},
+  830: {name:'NETCONF',cat:'network',sev:'high',desc:'NETCONF SSH - network config'},
+  6030: {name:'Arista eAPI',cat:'network',sev:'high',desc:'Arista eAPI'},
+  // Out-of-Band Management
+  623: {name:'IPMI',cat:'oob',sev:'critical',desc:'IPMI/BMC - hardware control'},
+  5900: {name:'VNC',cat:'oob',sev:'high',desc:'VNC - often weak/no auth'},
+  5901: {name:'VNC:1',cat:'oob',sev:'high',desc:'VNC display :1'},
+  443: {name:'iLO/iDRAC',cat:'oob',sev:'high',desc:'Check for BMC on :443'},
+  17988: {name:'iLO',cat:'oob',sev:'high',desc:'HP iLO alt port'},
+  17990: {name:'iLO',cat:'oob',sev:'high',desc:'HP iLO virtual media'},
+  // Windows Admin
+  5985: {name:'WinRM HTTP',cat:'windows',sev:'high',desc:'Windows Remote Mgmt'},
+  5986: {name:'WinRM HTTPS',cat:'windows',sev:'high',desc:'WinRM over TLS'},
+  3389: {name:'RDP',cat:'windows',sev:'medium',desc:'Remote Desktop'},
+  445: {name:'SMB',cat:'windows',sev:'high',desc:'SMB - check for vulns'},
+  135: {name:'RPC',cat:'windows',sev:'medium',desc:'MS-RPC endpoint mapper'},
+  // DevOps/CI-CD/Orchestration
+  50000: {name:'Jenkins Agent',cat:'devops',sev:'high',desc:'Jenkins agent - code exec'},
+  8080: {name:'Jenkins/Tomcat',cat:'devops',sev:'medium',desc:'Common admin UI port'},
+  8081: {name:'Nexus/Artifactory',cat:'devops',sev:'medium',desc:'Artifact repository'},
+  9090: {name:'Prometheus',cat:'devops',sev:'medium',desc:'Prometheus metrics'},
+  3000: {name:'Grafana',cat:'devops',sev:'medium',desc:'Grafana dashboard'},
+  8500: {name:'Consul',cat:'devops',sev:'high',desc:'Consul HTTP API'},
+  8200: {name:'Vault',cat:'devops',sev:'critical',desc:'HashiCorp Vault'},
+  8140: {name:'Puppet',cat:'devops',sev:'high',desc:'Puppet master'},
+  4505: {name:'SaltStack Pub',cat:'devops',sev:'critical',desc:'Salt master publish'},
+  4506: {name:'SaltStack Req',cat:'devops',sev:'critical',desc:'Salt master request'},
+  443: {name:'Ansible Tower',cat:'devops',sev:'high',desc:'Check for AWX/Tower'},
+  8065: {name:'Mattermost',cat:'devops',sev:'medium',desc:'Mattermost chat'},
+  8111: {name:'TeamCity',cat:'devops',sev:'high',desc:'TeamCity CI server'},
+  8929: {name:'GitLab SSH',cat:'devops',sev:'medium',desc:'GitLab SSH'},
+  9418: {name:'Git',cat:'devops',sev:'medium',desc:'Git protocol'},
+  8082: {name:'ArgoCD',cat:'devops',sev:'high',desc:'ArgoCD server'},
+  7472: {name:'Terraform Ent',cat:'devops',sev:'high',desc:'Terraform Enterprise'},
+  10350: {name:'Tilt',cat:'devops',sev:'medium',desc:'Tilt dev server'},
+  6660: {name:'Rundeck',cat:'devops',sev:'high',desc:'Rundeck automation'},
+  // Databases
+  6379: {name:'Redis',cat:'database',sev:'high',desc:'Redis - no auth default'},
+  27017: {name:'MongoDB',cat:'database',sev:'high',desc:'MongoDB - check auth'},
+  9200: {name:'Elasticsearch',cat:'database',sev:'high',desc:'ES HTTP API'},
+  9300: {name:'ES Transport',cat:'database',sev:'high',desc:'ES cluster'},
+  11211: {name:'Memcached',cat:'database',sev:'high',desc:'Memcached - no auth'},
+  5601: {name:'Kibana',cat:'database',sev:'medium',desc:'Kibana UI'},
+  // Remote Access
+  1099: {name:'Java RMI',cat:'remote',sev:'high',desc:'RMI - deser attacks'},
+  9001: {name:'Supervisor',cat:'remote',sev:'medium',desc:'Supervisord XML-RPC'},
+  10000: {name:'Webmin',cat:'remote',sev:'high',desc:'Webmin panel'},
+  // Suspicious
+  4444: {name:'Metasploit',cat:'suspicious',sev:'critical',desc:'MSF handler - active attack?'},
+  1337: {name:'Elite',cat:'suspicious',sev:'high',desc:'Common backdoor port'},
+  31337: {name:'Back Orifice',cat:'suspicious',sev:'critical',desc:'Classic backdoor'}
+};
+
 const OS_PATTERNS = {win:/windows|microsoft/i,lin:/linux|ubuntu|debian|centos|redhat/i,net:/cisco|juniper|fortinet/i};
 const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10MB max file size
 
@@ -1793,11 +1882,13 @@ function applyFilterAndGroup() {
 
     const open = host.ports.filter(p => p.state === 'open');
     const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+    const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
     const risk = calculateRisk(host);
     const isTagged = state.tags[host.ip] && state.tags[host.ip].length > 0;
 
     switch (filter) {
       case 'up': return true;
+      case 'admin': return hasAdmin;
       case 'cleartext': return hasCleartext;
       case 'risk': return risk >= 50;
       case 'tagged': return isTagged;
@@ -2327,6 +2418,20 @@ function getCvssClass(cvss) {
   return 'low';
 }
 
+// Detect admin/management ports on host
+function getHostAdminPorts(host) {
+  const found = [];
+  host.ports.filter(p => p.state === 'open').forEach(port => {
+    const info = ADMIN_PORTS[port.port];
+    if (info) {
+      found.push({ port: port.port, ...info, service: port.service || '' });
+    }
+  });
+  // Sort by severity: critical > high > medium > low
+  const sevOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  return found.sort((a, b) => (sevOrder[a.sev] || 3) - (sevOrder[b.sev] || 3));
+}
+
 // Create entity card element dynamically
 function createEntityCard(host) {
   const open = host.ports.filter(p => p.state === 'open');
@@ -2334,6 +2439,7 @@ function createEntityCard(host) {
   const os = host.os && host.os[0] ? host.os[0] : null;
   const mac = host.mac;
   const cves = getHostCVEs(host);
+  const adminPorts = getHostAdminPorts(host);
 
   const card = document.createElement('div');
   card.className = 'entity';
@@ -2353,6 +2459,24 @@ function createEntityCard(host) {
     </div>
   ` : '';
 
+  const adminHtml = adminPorts.length > 0 ? `
+    <div class="admin-ports">
+      <div class="admin-title">${icon('warning')} Admin Ports Exposed</div>
+      ${adminPorts.slice(0, 4).map(a => `
+        <div class="admin-port">
+          <span class="admin-port-num">${a.port}</span>
+          <span class="admin-port-name">${a.name}</span>
+          <span class="admin-port-sev sev-${a.sev}">${a.sev}</span>
+          <span class="admin-port-cat">${a.cat}</span>
+        </div>
+      `).join('')}
+      ${adminPorts.length > 4 ? `<div class="admin-more">...and ${adminPorts.length - 4} more</div>` : ''}
+    </div>
+  ` : '';
+
+  // Count critical/high admin ports for badge
+  const criticalAdmin = adminPorts.filter(a => a.sev === 'critical' || a.sev === 'high').length;
+
   card.innerHTML = `
     <div class="entity-head">
       <div class="entity-icon" data-os-icon="">\u25a3</div>
@@ -2361,6 +2485,7 @@ function createEntityCard(host) {
         ${host.hostname ? `<div class="entity-host">${host.hostname}</div>` : ''}
         <div class="entity-tags"></div>
       </div>
+      ${criticalAdmin > 0 ? `<span class="badge badge-warning" title="Admin ports exposed">${icon('warning')}</span>` : ''}
       ${cves.length > 0 ? `<span class="badge badge-critical">${cves.length} CVE${cves.length !== 1 ? 's' : ''}</span>` : ''}
     </div>
     <div class="entity-body">
@@ -2379,6 +2504,7 @@ function createEntityCard(host) {
         ${mac ? `<div class="signal"><span class="signal-src">MAC</span><span class="signal-val">${mac}${host.macVendor ? ' (' + host.macVendor + ')' : ''}</span></div>` : ''}
         ${open.filter(p => p.product).slice(0, 2).map(p => `<div class="signal"><span class="signal-src">:${p.port}</span><span class="signal-val">${p.product}${p.version ? ' ' + p.version : ''}</span></div>`).join('')}
       </div>` : ''}
+      ${adminHtml}
       ${vulnsHtml}
     </div>
     <div class="entity-foot">
@@ -2930,6 +3056,7 @@ document.getElementById('search')?.addEventListener('input', e => {
       if (host) {
         const open = host.ports.filter(p => p.state === 'open');
         const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+        const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
         let risk = 0;
         open.forEach(p => {
           if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
@@ -2941,6 +3068,7 @@ document.getElementById('search')?.addEventListener('input', e => {
         let passesFilter = true;
         switch (filter) {
           case 'up': passesFilter = host.status === 'up'; break;
+          case 'admin': passesFilter = hasAdmin; break;
           case 'cleartext': passesFilter = hasCleartext; break;
           case 'risk': passesFilter = risk >= 50; break;
           case 'tagged': passesFilter = isTagged; break;
