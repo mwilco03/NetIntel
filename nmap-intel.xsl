@@ -514,11 +514,11 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div>
 
 <!-- Annotation Modal -->
-<div class="modal" id="annotate-modal">
-  <div class="modal-content" style="max-width:560px">
+<div class="modal-overlay" id="annotate-modal">
+  <div class="modal" style="max-width:560px">
     <div class="modal-head">
-      <h3>Asset Annotation</h3>
-      <button class="modal-close">×</button>
+      <span class="modal-title">Asset Annotation</span>
+      <button class="modal-close" data-close-modal="">×</button>
     </div>
     <div class="modal-body">
       <div id="annotate-info" style="margin-bottom:1rem;padding:.75rem;background:#161b22;border-radius:6px;font-family:monospace;font-size:.85rem"></div>
@@ -577,7 +577,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-secondary modal-close">Cancel</button>
+      <button class="btn btn-secondary" data-close-modal="">Cancel</button>
       <button class="btn btn-primary" id="annotate-save">Save</button>
     </div>
   </div>
