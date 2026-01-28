@@ -108,6 +108,8 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .entity{background:#0d1117;border:1px solid #21262d;border-radius:8px;overflow:hidden;transition:border-color .15s}
 .entity:hover{border-color:#30363d}
 .entity.tagged{border-color:#a371f7}
+.entity.selected{border-color:#58a6ff;box-shadow:0 0 0 2px rgba(88,166,255,.3);animation:pulse-border .5s ease-out}
+@keyframes pulse-border{0%{box-shadow:0 0 0 4px rgba(88,166,255,.5)}100%{box-shadow:0 0 0 2px rgba(88,166,255,.3)}}
 .entity-head{padding:1rem;display:flex;align-items:flex-start;gap:1rem;border-bottom:1px solid #21262d}
 .entity-icon{width:44px;height:44px;border-radius:8px;background:#21262d;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.25rem}
 .entity-icon.win{background:rgba(0,120,212,.2);color:#0078d4}
@@ -133,6 +135,100 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .signal-val{flex:1;font-family:monospace;color:#c9d1d9}
 .signal-conf{color:#8b949e}
 .entity-foot{padding:.75rem 1rem;border-top:1px solid #21262d;background:#161b22;display:flex;align-items:center;justify-content:space-between;font-size:.75rem;color:#8b949e}
+
+/* === ENTITY GROUPS === */
+.entity-groups{display:flex;flex-direction:column;gap:1.5rem}
+.entity-group{background:#0d1117;border:1px solid #21262d;border-radius:8px;overflow:hidden}
+.group-header{padding:1rem;background:#161b22;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.group-header:hover{background:#1c2128}
+.group-title{display:flex;align-items:center;gap:.75rem;font-weight:600;color:#e6edf3}
+.group-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.group-icon.os-win{background:rgba(0,120,212,.2);color:#0078d4}
+.group-icon.os-lin{background:rgba(255,165,0,.2);color:#ffa500}
+.group-icon.os-net{background:rgba(88,166,255,.2);color:#58a6ff}
+.group-icon.os-unk{background:rgba(136,146,157,.2);color:#8b949e}
+.group-icon.svc{background:rgba(163,113,247,.2);color:#a371f7}
+.group-icon.subnet{background:rgba(35,134,54,.2);color:#3fb950}
+.group-icon.risk-crit{background:rgba(248,81,73,.2);color:#f85149}
+.group-icon.risk-high{background:rgba(210,153,34,.2);color:#d29922}
+.group-icon.risk-med{background:rgba(88,166,255,.2);color:#58a6ff}
+.group-icon.risk-low{background:rgba(35,134,54,.2);color:#3fb950}
+.group-meta{display:flex;align-items:center;gap:1rem;font-size:.8rem;color:#8b949e}
+.group-toggle{color:#8b949e;transition:transform .2s}
+.group-header.collapsed .group-toggle{transform:rotate(-90deg)}
+.group-body{padding:1rem}
+.group-body.collapsed{display:none}
+.group-body .entity-grid{margin:0}
+
+/* === VULNERABILITIES === */
+.vulns{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #21262d}
+.vulns-title{font-size:.75rem;font-weight:600;color:#f85149;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.vuln{display:flex;align-items:center;gap:.5rem;padding:.4rem;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.2);border-radius:4px;font-size:.75rem;margin-bottom:.25rem}
+.vuln-id{font-family:monospace;color:#f85149;font-weight:500}
+.vuln-score{padding:.1rem .3rem;border-radius:3px;font-weight:600;font-size:.7rem}
+.vuln-score.critical{background:rgba(248,81,73,.3);color:#f85149}
+.vuln-score.high{background:rgba(210,153,34,.3);color:#d29922}
+.vuln-score.medium{background:rgba(88,166,255,.3);color:#58a6ff}
+.vuln-score.low{background:rgba(35,134,54,.3);color:#3fb950}
+.vuln-desc{flex:1;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vulns-more{font-size:.75rem;color:#8b949e;padding:.25rem}
+
+/* === DIFF VIEW === */
+.diff-item{display:flex;align-items:center;gap:1rem;padding:.75rem;border-bottom:1px solid #21262d;font-size:.875rem}
+.diff-item:last-child{border-bottom:none}
+.diff-item:hover{background:#161b22}
+.diff-ip{font-family:monospace;font-weight:600;min-width:120px}
+.diff-hostname{color:#8b949e;flex:1}
+.diff-badge{padding:.2rem .5rem;border-radius:4px;font-size:.75rem;font-weight:500}
+.diff-badge.new{background:rgba(35,134,54,.2);color:#3fb950}
+.diff-badge.removed{background:rgba(248,81,73,.2);color:#f85149}
+.diff-badge.changed{background:rgba(210,153,34,.2);color:#d29922}
+.diff-changes{margin-top:.5rem;padding:.5rem;background:#161b22;border-radius:4px;font-size:.8rem}
+.diff-change{display:flex;align-items:center;gap:.5rem;padding:.25rem 0}
+.diff-change.added{color:#3fb950}
+.diff-change.removed{color:#f85149}
+.diff-change .port{margin:0}
+
+/* === TOPOLOGY VIEW === */
+.topo-container{background:#0d1117;border:1px solid #21262d;border-radius:8px;min-height:500px;position:relative;overflow:hidden}
+.topo-canvas{width:100%;height:500px}
+.topo-node{position:absolute;background:#161b22;border:2px solid #30363d;border-radius:8px;padding:.5rem .75rem;font-size:.75rem;cursor:pointer;transition:all .15s;z-index:1}
+.topo-node:hover{border-color:#58a6ff;z-index:10}
+.topo-node.scanner{border-color:#238636;background:rgba(35,134,54,.1)}
+.topo-node.target{border-color:#58a6ff}
+.topo-node.hop{border-color:#8b949e;background:#21262d}
+.topo-node-ip{font-family:monospace;font-weight:600;color:#e6edf3}
+.topo-node-label{color:#8b949e;font-size:.7rem}
+.topo-edge{position:absolute;background:#30363d;height:2px;transform-origin:left center;z-index:0}
+.topo-edge.active{background:#58a6ff}
+.topo-legend{display:flex;gap:1.5rem;padding:1rem;border-top:1px solid #21262d;font-size:.8rem}
+.topo-legend-item{display:flex;align-items:center;gap:.5rem}
+.topo-legend-dot{width:12px;height:12px;border-radius:4px;border:2px solid}
+.topo-controls{padding:1rem;border-bottom:1px solid #21262d;display:flex;gap:1rem;align-items:center}
+
+/* === TIMELINE VIEW === */
+.timeline-container{position:relative}
+.timeline-track{display:flex;gap:1rem;overflow-x:auto;padding:1rem 0}
+.timeline-scan{flex:0 0 200px;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:1rem;cursor:pointer;transition:all .15s}
+.timeline-scan:hover{border-color:#58a6ff}
+.timeline-scan.active{border-color:#58a6ff;background:#161b22}
+.timeline-scan-date{font-weight:600;color:#e6edf3;margin-bottom:.25rem}
+.timeline-scan-time{font-size:.8rem;color:#8b949e;margin-bottom:.5rem}
+.timeline-scan-stats{display:flex;gap:.5rem;font-size:.75rem}
+.timeline-scan-stat{padding:.2rem .4rem;background:#21262d;border-radius:3px}
+.timeline-chart{height:200px;background:#0d1117;border:1px solid #21262d;border-radius:8px;margin-top:1rem;padding:1rem;position:relative}
+.timeline-bar{position:absolute;bottom:2rem;background:#58a6ff;border-radius:2px 2px 0 0;min-width:20px;transition:height .3s}
+.timeline-bar.hosts{background:#238636}
+.timeline-bar.ports{background:#58a6ff}
+.timeline-bar.risks{background:#f85149}
+
+/* === FINGERPRINT === */
+.fp-section{margin-bottom:1rem}
+.fp-title{font-size:.8rem;font-weight:600;color:#8b949e;text-transform:uppercase;margin-bottom:.5rem}
+.fp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem}
+.fp-item{background:#161b22;padding:.5rem .75rem;border-radius:4px;font-size:.8rem}
+.fp-key{color:#8b949e;margin-right:.5rem}
+.fp-val{color:#e6edf3;font-family:monospace}
 
 /* === RISK LIST === */
 .risk-list{list-style:none}
@@ -192,6 +288,13 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .source-label{color:#8b949e;font-size:.7rem;text-transform:uppercase}
 .source-val{color:#c9d1d9;font-family:monospace}
 
+/* === ICONS === */
+.icon{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1em;vertical-align:middle}
+.icon svg{width:100%;height:100%}
+.icon-sm{width:.875em;height:.875em}
+.icon-lg{width:1.25em;height:1.25em}
+.icon-xl{width:1.5em;height:1.5em}
+
 /* === UTILITIES === */
 .hidden{display:none!important}
 .mono{font-family:'Consolas','Monaco',monospace}
@@ -239,7 +342,10 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <ul class="nav">
       <li><a href="#" class="active" data-nav="dashboard">◫ Dashboard</a></li>
       <li><a href="#" data-nav="entities">▤ All Entities</a></li>
+      <li><a href="#" data-nav="topology">◎ Topology</a></li>
+      <li><a href="#" data-nav="timeline">◷ Timeline</a></li>
       <li><a href="#" data-nav="cleartext">⚠ Cleartext</a></li>
+      <li><a href="#" data-nav="diff">⇄ Scan Diff</a></li>
       <li><a href="#" data-nav="sources">◰ Sources</a></li>
     </ul>
     <div class="nav-section">Tools</div>
@@ -275,13 +381,22 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       
       <!-- Entities Section -->
       <xsl:call-template name="entities-section"/>
-      
+
+      <!-- Topology Section -->
+      <xsl:call-template name="topology-section"/>
+
+      <!-- Timeline Section -->
+      <xsl:call-template name="timeline-section"/>
+
       <!-- Cleartext Section -->
       <xsl:call-template name="cleartext-section"/>
-      
+
+      <!-- Diff Section -->
+      <xsl:call-template name="diff-section"/>
+
       <!-- Sources Section -->
       <xsl:call-template name="sources-section"/>
-      
+
     </div>
   </main>
 </div>
@@ -401,6 +516,13 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <div class="section-header">
       <h2 class="section-title">All Entities</h2>
       <div class="flex gap-2">
+        <select id="entity-group" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
+          <option value="none">No Grouping</option>
+          <option value="os">Group by OS</option>
+          <option value="subnet">Group by Subnet</option>
+          <option value="service">Group by Service</option>
+          <option value="risk">Group by Risk Level</option>
+        </select>
         <select id="entity-filter" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
           <option value="all">All Hosts</option>
           <option value="up">Online Only</option>
@@ -557,6 +679,164 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </xsl:template>
 
 <!-- ============================================
+     TOPOLOGY SECTION
+     ============================================ -->
+<xsl:template name="topology-section">
+  <section class="section" data-section="topology">
+    <div class="section-header">
+      <h2 class="section-title">Network Topology</h2>
+      <div class="flex gap-2">
+        <select id="topo-layout" class="btn btn-secondary btn-sm" style="appearance:auto;">
+          <option value="hierarchical">Hierarchical</option>
+          <option value="radial">Radial</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" id="topo-refresh">Refresh</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="topo-controls">
+        <span style="color:#8b949e;font-size:.8rem;">Showing traceroute paths from scan data</span>
+      </div>
+      <div class="topo-container" id="topo-container">
+        <div class="topo-canvas" id="topo-canvas"></div>
+      </div>
+      <div class="topo-legend">
+        <div class="topo-legend-item">
+          <div class="topo-legend-dot" style="border-color:#238636;background:rgba(35,134,54,.2)"></div>
+          <span>Scanner</span>
+        </div>
+        <div class="topo-legend-item">
+          <div class="topo-legend-dot" style="border-color:#58a6ff;background:rgba(88,166,255,.2)"></div>
+          <span>Target</span>
+        </div>
+        <div class="topo-legend-item">
+          <div class="topo-legend-dot" style="border-color:#8b949e;background:#21262d"></div>
+          <span>Hop</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <span class="card-title">Traceroute Details</span>
+      </div>
+      <div class="card-body" id="topo-details">
+        <p style="color:#8b949e;">Select a host to see traceroute details</p>
+      </div>
+    </div>
+  </section>
+</xsl:template>
+
+<!-- ============================================
+     TIMELINE SECTION
+     ============================================ -->
+<xsl:template name="timeline-section">
+  <section class="section" data-section="timeline">
+    <div class="section-header">
+      <h2 class="section-title">Scan Timeline</h2>
+      <button class="btn btn-primary btn-sm" id="timeline-add">+ Add Scan</button>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <p style="color:#8b949e;margin-bottom:1rem;">Track changes across multiple scans over time.</p>
+        <div class="timeline-container">
+          <div class="timeline-track" id="timeline-track">
+            <!-- Current scan -->
+            <div class="timeline-scan active" data-scan="current">
+              <div class="timeline-scan-date"><xsl:value-of select="substring(/nmaprun/@startstr, 1, 10)"/></div>
+              <div class="timeline-scan-time"><xsl:value-of select="substring(/nmaprun/@startstr, 12)"/></div>
+              <div class="timeline-scan-stats">
+                <span class="timeline-scan-stat"><xsl:value-of select="/nmaprun/runstats/hosts/@up"/> hosts</span>
+                <span class="timeline-scan-stat"><xsl:value-of select="count(/nmaprun/host/ports/port[state/@state='open'])"/> ports</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <span class="card-title">Trend Analysis</span>
+      </div>
+      <div class="card-body">
+        <div class="timeline-chart" id="timeline-chart">
+          <p style="color:#8b949e;text-align:center;padding-top:4rem;">Add more scans to see trends</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <span class="card-title">Change Log</span>
+      </div>
+      <div class="card-body" id="timeline-changes">
+        <p style="color:#8b949e;">No changes recorded yet</p>
+      </div>
+    </div>
+  </section>
+</xsl:template>
+
+<!-- ============================================
+     DIFF SECTION
+     ============================================ -->
+<xsl:template name="diff-section">
+  <section class="section" data-section="diff">
+    <div class="section-header">
+      <h2 class="section-title">Scan Comparison</h2>
+    </div>
+
+    <div class="card" id="diff-upload-card">
+      <div class="card-body">
+        <p style="color:#8b949e;margin-bottom:1rem;">Load a comparison scan to see what changed between scans.</p>
+        <div class="drop-zone" id="diff-drop-zone">
+          <div style="font-size:2rem;margin-bottom:1rem;">⇄</div>
+          <div class="drop-zone-text">Drop comparison scan here</div>
+          <div class="drop-zone-hint">Nmap XML format</div>
+          <input type="file" id="diff-file-input" accept=".xml" style="display:none;"/>
+        </div>
+      </div>
+    </div>
+
+    <div id="diff-results" class="hidden">
+      <div class="stats" id="diff-stats"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">New Hosts</span>
+          <span class="badge badge-low" id="diff-new-count">0</span>
+        </div>
+        <div class="card-body" id="diff-new-hosts">
+          <p style="color:#8b949e;">No new hosts</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Removed Hosts</span>
+          <span class="badge badge-critical" id="diff-removed-count">0</span>
+        </div>
+        <div class="card-body" id="diff-removed-hosts">
+          <p style="color:#8b949e;">No removed hosts</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Changed Hosts</span>
+          <span class="badge badge-high" id="diff-changed-count">0</span>
+        </div>
+        <div class="card-body" id="diff-changed-hosts">
+          <p style="color:#8b949e;">No changes detected</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</xsl:template>
+
+<!-- ============================================
      MODALS
      ============================================ -->
 <xsl:template name="modals">
@@ -662,8 +942,9 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       "hostname": "<xsl:value-of select="hostnames/hostname/@name"/>",
       "status": "<xsl:value-of select="status/@state"/>",
       "os": [<xsl:for-each select="os/osmatch">{"name":"<xsl:value-of select="translate(@name, '&quot;', &quot;'&quot;)"/>","accuracy":<xsl:value-of select="@accuracy"/>}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
+      "osFingerprint": "<xsl:value-of select="os/osfingerprint/@fingerprint"/>",
+      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"<xsl:value-of select="service/@servicefp"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>","rtt":"<xsl:value-of select="@rtt"/>","host":"<xsl:value-of select="@host"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
     }<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
   ]
 }
@@ -680,47 +961,371 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 const CLEARTEXT = {21:'FTP',23:'Telnet',25:'SMTP',80:'HTTP',110:'POP3',143:'IMAP',161:'SNMP',389:'LDAP',513:'rlogin',514:'RSH',1433:'MSSQL',3306:'MySQL',5432:'PostgreSQL',8080:'HTTP-Alt'};
 const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143:6,161:7,389:6,443:1,445:8,512:9,513:9,514:9,1433:8,1521:8,3306:7,3389:7,5432:6,5900:7,6379:7,27017:8};
 const OS_PATTERNS = {win:/windows|microsoft/i,lin:/linux|ubuntu|debian|centos|redhat/i,net:/cisco|juniper|fortinet/i};
-const STORAGE_KEY = 'netintel';
+const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10MB max file size
 
-// === STATE ===
-let state = {data:null, tags:{}, vulnDb:null};
+// === HEROICONS (inline SVG) ===
+const ICONS = {
+  server: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 0 0-.12-1.03l-2.268-9.64a3.375 3.375 0 0 0-3.285-2.602H7.923a3.375 3.375 0 0 0-3.285 2.602l-2.268 9.64a4.5 4.5 0 0 0-.12 1.03v.228m19.5 0a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3m19.5 0a3 3 0 0 0-3-3H5.25a3 3 0 0 0-3 3m16.5 0h.008v.008h-.008v-.008Zm-3 0h.008v.008h-.008v-.008Z" /></svg>',
+  computer: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" /></svg>',
+  windows: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5l7.5-1v7H3v-6zm0 13l7.5 1v-7H3v6zm8.5 1.1l9.5 1.4v-8.5h-9.5v7.1zm0-14.2v7.1h9.5V4l-9.5 1.4z"/></svg>',
+  linux: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>',
+  wifi: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" /></svg>',
+  database: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" /></svg>',
+  globe: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" /></svg>',
+  shield: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /></svg>',
+  warning: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>',
+  check: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>',
+  xmark: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>',
+  chart: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>',
+  folder: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>',
+  upload: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>',
+  download: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>',
+  bug: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 0 1 .4-2.253M12 8.25a2.25 2.25 0 0 0-2.248 2.146M12 8.25a2.25 2.25 0 0 1 2.248 2.146M8.683 5a6.032 6.032 0 0 1-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0 1 15.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 0 0-.575-1.752M4.921 6a24.048 24.048 0 0 0-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 0 1-5.223 1.082" /></svg>',
+  star: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>',
+  key: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>',
+  target: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Z" /></svg>',
+  network: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>',
+  chevronDown: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>',
+  magnify: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>'
+};
+
+// Helper to render icon
+function icon(name, cls = '') {
+  return `<span class="icon ${cls}">${ICONS[name] || ''}</span>`;
+}
+
+// =============================================================================
+// REACTIVE STORE - Lightweight state management (~50 lines)
+// =============================================================================
+function createStore(initialState = {}) {
+  const listeners = new Map();
+  let state = { ...initialState };
+
+  return {
+    // Get current state or specific key
+    get(key) {
+      return key ? state[key] : { ...state };
+    },
+
+    // Set state and notify listeners
+    set(key, value) {
+      const oldValue = state[key];
+      if (oldValue === value) return;
+
+      state[key] = value;
+
+      // Notify key-specific listeners
+      if (listeners.has(key)) {
+        listeners.get(key).forEach(fn => fn(value, oldValue));
+      }
+      // Notify wildcard listeners
+      if (listeners.has('*')) {
+        listeners.get('*').forEach(fn => fn(state, key));
+      }
+    },
+
+    // Batch update multiple keys
+    update(updates) {
+      Object.entries(updates).forEach(([key, value]) => {
+        this.set(key, value);
+      });
+    },
+
+    // Subscribe to state changes
+    subscribe(key, callback) {
+      if (!listeners.has(key)) {
+        listeners.set(key, new Set());
+      }
+      listeners.get(key).add(callback);
+
+      // Return unsubscribe function
+      return () => listeners.get(key).delete(callback);
+    },
+
+    // Get full state for persistence
+    toJSON() {
+      return { ...state };
+    }
+  };
+}
+
+// =============================================================================
+// ROUTER - Hash-based SPA routing (~60 lines)
+// =============================================================================
+function createRouter() {
+  const routes = new Map();
+  let currentRoute = null;
+
+  // Parse hash into route object
+  function parseHash(hash) {
+    const clean = (hash || '').replace(/^#\/?/, '');
+    const [path, query] = clean.split('?');
+    const segments = path.split('/').filter(Boolean);
+
+    return {
+      path: '/' + segments.join('/'),
+      segments,
+      section: segments[0] || 'dashboard',
+      param: segments[1] || null,
+      query: Object.fromEntries(new URLSearchParams(query || ''))
+    };
+  }
+
+  // Match route against registered patterns
+  function matchRoute(route) {
+    for (const [pattern, handler] of routes) {
+      const patternParts = pattern.split('/').filter(Boolean);
+      const routeParts = route.segments;
+
+      if (patternParts.length !== routeParts.length) continue;
+
+      const params = {};
+      let match = true;
+
+      for (let i = 0; i < patternParts.length; i++) {
+        if (patternParts[i].startsWith(':')) {
+          params[patternParts[i].slice(1)] = routeParts[i];
+        } else if (patternParts[i] !== routeParts[i]) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) return { handler, params };
+    }
+    return null;
+  }
+
+  // Handle route change
+  function handleRoute() {
+    const route = parseHash(location.hash);
+    const matched = matchRoute(route);
+
+    currentRoute = route;
+
+    if (matched) {
+      matched.handler({ ...route, params: matched.params });
+    } else {
+      // Default: navigate to section
+      navigateToSection(route.section, route.param);
+    }
+  }
+
+  return {
+    // Register a route handler
+    on(pattern, handler) {
+      routes.set(pattern, handler);
+      return this;
+    },
+
+    // Navigate to a path
+    go(path, replace = false) {
+      const newHash = '#' + path.replace(/^\//, '');
+      if (replace) {
+        history.replaceState(null, '', newHash);
+      } else {
+        history.pushState(null, '', newHash);
+      }
+      handleRoute();
+    },
+
+    // Get current route
+    current() {
+      return currentRoute;
+    },
+
+    // Initialize router
+    init() {
+      window.addEventListener('hashchange', handleRoute);
+      window.addEventListener('popstate', handleRoute);
+      // Handle initial route
+      if (location.hash) {
+        handleRoute();
+      }
+      return this;
+    }
+  };
+}
+
+// =============================================================================
+// APP STATE & ROUTER INSTANCES
+// =============================================================================
+const store = createStore({
+  data: null,
+  tags: {},
+  vulnDb: null,
+  currentSection: 'dashboard',
+  selectedHost: null,
+  filter: 'all',
+  groupBy: 'none',
+  subnetMask: 24
+});
+
+const router = createRouter();
+
+// Legacy state reference (for gradual migration)
+let state = {
+  get data() { return store.get('data'); },
+  set data(v) { store.set('data', v); },
+  get tags() { return store.get('tags'); },
+  set tags(v) { store.set('tags', v); },
+  get vulnDb() { return store.get('vulnDb'); },
+  set vulnDb(v) { store.set('vulnDb', v); }
+};
+
+// Subnet mask from store
+let subnetMask = 24;
+store.subscribe('subnetMask', (v) => { subnetMask = v; });
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
-  loadState();
-  state.data = JSON.parse(document.getElementById('scan-data').textContent);
+  loadState(); // Also loads scan data
+  initIcons();
   initNav();
   initModals();
   initContextMenu();
   initDropZones();
+  initFilters();
+  initRouter();
   render();
+  console.log('[NetIntel] Initialized with', state.data?.hosts?.length || 0, 'hosts');
 });
+
+// Initialize router with routes
+function initRouter() {
+  router
+    // Section routes
+    .on('dashboard', () => navigateToSection('dashboard'))
+    .on('entities', () => navigateToSection('entities'))
+    .on('entities/:ip', ({ params }) => {
+      navigateToSection('entities');
+      selectHost(params.ip);
+    })
+    .on('topology', () => navigateToSection('topology'))
+    .on('topology/:ip', ({ params }) => {
+      navigateToSection('topology');
+      showNodeDetails({ id: params.ip, type: 'target', host: state.data.hosts.find(h => h.ip === params.ip) });
+    })
+    .on('timeline', () => navigateToSection('timeline'))
+    .on('cleartext', () => navigateToSection('cleartext'))
+    .on('diff', () => navigateToSection('diff'))
+    .on('sources', () => navigateToSection('sources'))
+    .init();
+
+  // If no hash, don't navigate (stay on dashboard)
+  if (!location.hash) {
+    history.replaceState(null, '', '#/dashboard');
+  }
+}
+
+// Navigate to section (called by router)
+function navigateToSection(section, param = null) {
+  store.set('currentSection', section);
+  store.set('selectedHost', param);
+
+  // Update nav UI
+  document.querySelectorAll('[data-nav]').forEach(a => {
+    a.classList.toggle('active', a.dataset.nav === section);
+  });
+
+  // Update section visibility
+  document.querySelectorAll('[data-section]').forEach(s => {
+    s.classList.toggle('active', s.dataset.section === section);
+  });
+
+  // Section-specific initialization
+  if (section === 'cleartext') renderCleartext();
+  if (section === 'topology') { initTopology(); renderTopology(); }
+  if (section === 'timeline') { initTimeline(); renderTimeline(); }
+}
+
+// Select and highlight a specific host
+function selectHost(ip) {
+  const host = state.data.hosts.find(h => h.ip === ip);
+  if (!host) return;
+
+  store.set('selectedHost', ip);
+
+  // Scroll to and highlight the entity card
+  const card = document.querySelector(`.entity[data-ip="${ip}"]`);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('selected');
+    setTimeout(() => card.classList.remove('selected'), 2000);
+  }
+}
+
+// Replace Unicode symbols with SVG icons
+function initIcons() {
+  const NAV_ICONS = {
+    'dashboard': 'chart',
+    'entities': 'server',
+    'topology': 'network',
+    'timeline': 'chart',
+    'cleartext': 'warning',
+    'diff': 'magnify',
+    'sources': 'folder',
+    'import': 'upload',
+    'export': 'download',
+    'vuln-db': 'bug'
+  };
+
+  // Update nav items
+  document.querySelectorAll('[data-nav], [data-action]').forEach(el => {
+    const key = el.dataset.nav || el.dataset.action;
+    const iconName = NAV_ICONS[key];
+    if (iconName && ICONS[iconName]) {
+      const text = el.textContent.replace(/^[^\w\s]+\s*/, '');
+      el.innerHTML = `${icon(iconName, 'icon-lg')} ${text}`;
+    }
+  });
+
+  // Update sidebar logo
+  const logo = document.querySelector('.sidebar-logo');
+  if (logo) {
+    logo.innerHTML = `${icon('shield', 'icon-xl')} NetIntel`;
+  }
+}
 
 function loadState() {
   try {
-    const s = localStorage.getItem(STORAGE_KEY);
-    if (s) { const p = JSON.parse(s); state.tags = p.tags || {}; state.vulnDb = p.vulnDb; }
-  } catch(e) {}
+    // First load scan data to generate storage key
+    const scanDataEl = document.getElementById('scan-data');
+    if (scanDataEl) {
+      state.data = JSON.parse(scanDataEl.textContent);
+    }
+    const key = getStorageKey();
+    const s = localStorage.getItem(key);
+    if (s) {
+      const p = JSON.parse(s);
+      state.tags = p.tags || {};
+      state.vulnDb = p.vulnDb;
+    }
+    console.log('[NetIntel] State loaded from:', key);
+  } catch(e) {
+    console.error('[NetIntel] Error loading state:', e);
+    state.tags = {};
+    state.vulnDb = null;
+  }
 }
 
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({tags:state.tags,vulnDb:state.vulnDb})); } catch(e) {}
+  try {
+    const key = getStorageKey();
+    localStorage.setItem(key, JSON.stringify({tags:state.tags,vulnDb:state.vulnDb}));
+  } catch(e) {
+    console.error('[NetIntel] Error saving state:', e);
+  }
 }
 
 // === NAVIGATION ===
 function initNav() {
   document.querySelectorAll('[data-nav]').forEach(el => {
-    el.addEventListener('click', e => { e.preventDefault(); navigateTo(el.dataset.nav); });
+    el.addEventListener('click', e => { e.preventDefault(); router.go(el.dataset.nav); });
   });
   document.querySelectorAll('[data-action]').forEach(el => {
     el.addEventListener('click', e => { e.preventDefault(); handleAction(el.dataset.action); });
   });
-}
-
-function navigateTo(section) {
-  document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === section));
-  document.querySelectorAll('[data-section]').forEach(s => s.classList.toggle('active', s.dataset.section === section));
-  if (section === 'cleartext') renderCleartext();
 }
 
 function handleAction(action) {
@@ -778,6 +1383,7 @@ function initContextMenu() {
 
 // === DROP ZONES ===
 function initDropZones() {
+  // Import drop zone
   const dz = document.getElementById('drop-zone');
   const fi = document.getElementById('file-input');
   if (dz && fi) {
@@ -787,6 +1393,505 @@ function initDropZones() {
     dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); importFile(e.dataTransfer.files[0]); });
     fi.addEventListener('change', () => { if (fi.files[0]) importFile(fi.files[0]); });
   }
+
+  // Vulnerability database drop zone
+  const vulnDz = document.getElementById('vuln-drop-zone');
+  const vulnFi = document.getElementById('vuln-input');
+  if (vulnDz && vulnFi) {
+    vulnDz.addEventListener('click', () => vulnFi.click());
+    vulnDz.addEventListener('dragover', e => { e.preventDefault(); vulnDz.classList.add('dragover'); });
+    vulnDz.addEventListener('dragleave', () => vulnDz.classList.remove('dragover'));
+    vulnDz.addEventListener('drop', e => { e.preventDefault(); vulnDz.classList.remove('dragover'); importVulnDb(e.dataTransfer.files[0]); });
+    vulnFi.addEventListener('change', () => { if (vulnFi.files[0]) importVulnDb(vulnFi.files[0]); });
+  }
+
+  // Diff comparison drop zone
+  const diffDz = document.getElementById('diff-drop-zone');
+  const diffFi = document.getElementById('diff-file-input');
+  if (diffDz && diffFi) {
+    diffDz.addEventListener('click', () => diffFi.click());
+    diffDz.addEventListener('dragover', e => { e.preventDefault(); diffDz.classList.add('dragover'); });
+    diffDz.addEventListener('dragleave', () => diffDz.classList.remove('dragover'));
+    diffDz.addEventListener('drop', e => { e.preventDefault(); diffDz.classList.remove('dragover'); loadComparisonScan(e.dataTransfer.files[0]); });
+    diffFi.addEventListener('change', () => { if (diffFi.files[0]) loadComparisonScan(diffFi.files[0]); });
+  }
+}
+
+function importVulnDb(file) {
+  if (!file) return;
+
+  if (file.size > MAX_IMPORT_SIZE) {
+    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = () => {
+    console.error('[NetIntel] Error reading vuln db:', reader.error);
+    alert('Error reading file.');
+  };
+  reader.onload = e => {
+    try {
+      const db = JSON.parse(e.target.result);
+      state.vulnDb = db;
+      saveState();
+
+      const cpeCount = Object.keys(db).length;
+      const cveCount = Object.values(db).reduce((sum, cves) => sum + cves.length, 0);
+
+      document.getElementById('vuln-status').innerHTML =
+        `<p style="color:#3fb950;">✓ Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+
+      console.log('[NetIntel] Loaded vuln db with', cpeCount, 'CPEs');
+    } catch (err) {
+      console.error('[NetIntel] Vuln db parse error:', err);
+      alert('Invalid JSON file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// === SCAN DIFF ===
+function loadComparisonScan(file) {
+  if (!file) return;
+
+  if (file.size > MAX_IMPORT_SIZE) {
+    alert(`File too large. Maximum size is 10MB.`);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = () => alert('Error reading file.');
+  reader.onload = e => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'text/xml');
+      if (!doc.querySelector('nmaprun')) {
+        alert('Not a valid Nmap XML file');
+        return;
+      }
+
+      const comparisonHosts = parseNmapXml(doc);
+      const diff = computeDiff(state.data.hosts, comparisonHosts);
+      renderDiff(diff, file.name);
+
+      console.log('[NetIntel] Diff computed:', diff.summary);
+    } catch (err) {
+      console.error('[NetIntel] Diff error:', err);
+      alert('Error parsing file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function computeDiff(baseHosts, comparisonHosts) {
+  const baseMap = new Map(baseHosts.map(h => [h.ip, h]));
+  const compMap = new Map(comparisonHosts.map(h => [h.ip, h]));
+
+  const diff = {
+    newHosts: [],      // In comparison but not in base
+    removedHosts: [],  // In base but not in comparison
+    changedHosts: [],  // In both but with differences
+    unchangedCount: 0,
+    summary: {}
+  };
+
+  // Find new and changed hosts
+  comparisonHosts.forEach(compHost => {
+    const baseHost = baseMap.get(compHost.ip);
+    if (!baseHost) {
+      diff.newHosts.push(compHost);
+    } else {
+      const changes = compareHosts(baseHost, compHost);
+      if (changes.length > 0) {
+        diff.changedHosts.push({ host: compHost, baseHost, changes });
+      } else {
+        diff.unchangedCount++;
+      }
+    }
+  });
+
+  // Find removed hosts
+  baseHosts.forEach(baseHost => {
+    if (!compMap.has(baseHost.ip)) {
+      diff.removedHosts.push(baseHost);
+    }
+  });
+
+  diff.summary = {
+    new: diff.newHosts.length,
+    removed: diff.removedHosts.length,
+    changed: diff.changedHosts.length,
+    unchanged: diff.unchangedCount
+  };
+
+  return diff;
+}
+
+function compareHosts(baseHost, compHost) {
+  const changes = [];
+
+  // Compare ports
+  const basePorts = new Set(baseHost.ports.filter(p => p.state === 'open').map(p => `${p.port}/${p.proto}`));
+  const compPorts = new Set(compHost.ports.filter(p => p.state === 'open').map(p => `${p.port}/${p.proto}`));
+
+  // New ports
+  compPorts.forEach(p => {
+    if (!basePorts.has(p)) {
+      changes.push({ type: 'port_added', port: p });
+    }
+  });
+
+  // Closed ports
+  basePorts.forEach(p => {
+    if (!compPorts.has(p)) {
+      changes.push({ type: 'port_removed', port: p });
+    }
+  });
+
+  // OS changes
+  const baseOs = baseHost.os && baseHost.os[0] ? baseHost.os[0].name : '';
+  const compOs = compHost.os && compHost.os[0] ? compHost.os[0].name : '';
+  if (baseOs !== compOs && (baseOs || compOs)) {
+    changes.push({ type: 'os_changed', from: baseOs, to: compOs });
+  }
+
+  // Status changes
+  if (baseHost.status !== compHost.status) {
+    changes.push({ type: 'status_changed', from: baseHost.status, to: compHost.status });
+  }
+
+  return changes;
+}
+
+function renderDiff(diff, filename) {
+  // Hide upload card, show results
+  document.getElementById('diff-upload-card').classList.add('hidden');
+  document.getElementById('diff-results').classList.remove('hidden');
+
+  // Update stats
+  const statsEl = document.getElementById('diff-stats');
+  statsEl.innerHTML = `
+    <div class="stat success">
+      <div class="stat-label">New Hosts</div>
+      <div class="stat-value">${diff.summary.new}</div>
+      <div class="stat-detail">appeared in ${filename}</div>
+    </div>
+    <div class="stat danger">
+      <div class="stat-label">Removed Hosts</div>
+      <div class="stat-value">${diff.summary.removed}</div>
+      <div class="stat-detail">no longer present</div>
+    </div>
+    <div class="stat warning">
+      <div class="stat-label">Changed Hosts</div>
+      <div class="stat-value">${diff.summary.changed}</div>
+      <div class="stat-detail">port or service changes</div>
+    </div>
+    <div class="stat info">
+      <div class="stat-label">Unchanged</div>
+      <div class="stat-value">${diff.summary.unchanged}</div>
+      <div class="stat-detail">no differences</div>
+    </div>
+  `;
+
+  // Update counts
+  document.getElementById('diff-new-count').textContent = diff.summary.new;
+  document.getElementById('diff-removed-count').textContent = diff.summary.removed;
+  document.getElementById('diff-changed-count').textContent = diff.summary.changed;
+
+  // Render new hosts
+  const newHostsEl = document.getElementById('diff-new-hosts');
+  newHostsEl.innerHTML = diff.newHosts.length ? diff.newHosts.map(h => `
+    <div class="diff-item">
+      <span class="diff-ip">${h.ip}</span>
+      <span class="diff-hostname">${h.hostname || ''}</span>
+      <span class="diff-badge new">NEW</span>
+      <div class="ports">${h.ports.filter(p => p.state === 'open').slice(0, 5).map(p =>
+        `<span class="port open">${p.port}/${p.proto}</span>`
+      ).join('')}</div>
+    </div>
+  `).join('') : '<p style="color:#8b949e;">No new hosts detected</p>';
+
+  // Render removed hosts
+  const removedHostsEl = document.getElementById('diff-removed-hosts');
+  removedHostsEl.innerHTML = diff.removedHosts.length ? diff.removedHosts.map(h => `
+    <div class="diff-item">
+      <span class="diff-ip">${h.ip}</span>
+      <span class="diff-hostname">${h.hostname || ''}</span>
+      <span class="diff-badge removed">REMOVED</span>
+    </div>
+  `).join('') : '<p style="color:#8b949e;">No hosts removed</p>';
+
+  // Render changed hosts
+  const changedHostsEl = document.getElementById('diff-changed-hosts');
+  changedHostsEl.innerHTML = diff.changedHosts.length ? diff.changedHosts.map(({ host, changes }) => `
+    <div class="diff-item" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <span class="diff-ip">${host.ip}</span>
+        <span class="diff-hostname">${host.hostname || ''}</span>
+        <span class="diff-badge changed">${changes.length} change${changes.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="diff-changes">
+        ${changes.map(c => {
+          if (c.type === 'port_added') return `<div class="diff-change added">${icon('check')} Port ${c.port} opened</div>`;
+          if (c.type === 'port_removed') return `<div class="diff-change removed">${icon('xmark')} Port ${c.port} closed</div>`;
+          if (c.type === 'os_changed') return `<div class="diff-change">OS: ${c.from || 'unknown'} -> ${c.to || 'unknown'}</div>`;
+          if (c.type === 'status_changed') return `<div class="diff-change">Status: ${c.from} -> ${c.to}</div>`;
+          return '';
+        }).join('')}
+      </div>
+    </div>
+  `).join('') : '<p style="color:#8b949e;">No changes detected</p>';
+}
+
+// === SUBNET UTILITIES ===
+// Configurable subnet mask (default /24)
+let subnetMask = 24;
+
+// Calculate subnet info for a given mask
+function getSubnetInfo(mask) {
+  const hostBits = 32 - mask;
+  return {
+    mask,
+    cidr: `/${mask}`,
+    hosts: Math.pow(2, hostBits) - 2,
+    networks: Math.pow(2, mask - 16) // networks in a /16
+  };
+}
+
+// Get subnet key for an IP at given CIDR
+function getSubnetKey(ip, cidr = subnetMask) {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4) return 'other';
+
+  const ipNum = (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3];
+  const maskBits = (0xFFFFFFFF << (32 - cidr)) >>> 0;
+  const networkNum = (ipNum & maskBits) >>> 0;
+
+  const netParts = [
+    (networkNum >>> 24) & 0xFF,
+    (networkNum >>> 16) & 0xFF,
+    (networkNum >>> 8) & 0xFF,
+    networkNum & 0xFF
+  ];
+
+  return `${netParts.join('.')}/${cidr}`;
+}
+
+// Available CIDR options for grouping
+const CIDR_OPTIONS = [8, 16, 20, 24, 28];
+
+// === FILTERS AND GROUPING ===
+const GROUP_CONFIG = {
+  os: {
+    label: 'Operating System',
+    getKey: host => {
+      const osName = host.os && host.os[0] ? host.os[0].name : '';
+      if (OS_PATTERNS.win.test(osName)) return 'windows';
+      if (OS_PATTERNS.lin.test(osName)) return 'linux';
+      if (OS_PATTERNS.net.test(osName)) return 'network';
+      return 'unknown';
+    },
+    getLabel: key => ({ windows: 'Windows', linux: 'Linux', network: 'Network Devices', unknown: 'Unknown OS' }[key] || key),
+    getIcon: key => ({ windows: ['os-win', 'windows'], linux: ['os-lin', 'linux'], network: ['os-net', 'wifi'], unknown: ['os-unk', 'server'] }[key] || ['os-unk', 'server'])
+  },
+  subnet: {
+    label: 'Subnet',
+    getKey: host => getSubnetKey(host.ip, subnetMask),
+    getLabel: key => key,
+    getIcon: () => ['subnet', 'network']
+  },
+  service: {
+    label: 'Primary Service',
+    getKey: host => {
+      const dominated = findDominantService(host);
+      return dominated || 'other';
+    },
+    getLabel: key => SERVICE_LABELS[key] || key,
+    getIcon: key => ({ web: ['svc', 'globe'], database: ['svc', 'database'], mail: ['svc', 'folder'], file: ['svc', 'folder'], remote: ['svc', 'computer'], directory: ['svc', 'key'], other: ['svc', 'server'] }[key] || ['svc', 'server'])
+  },
+  risk: {
+    label: 'Risk Level',
+    getKey: host => {
+      const score = calculateRisk(host);
+      if (score >= 70) return 'critical';
+      if (score >= 50) return 'high';
+      if (score >= 25) return 'medium';
+      return 'low';
+    },
+    getLabel: key => ({ critical: 'Critical Risk (70+)', high: 'High Risk (50-69)', medium: 'Medium Risk (25-49)', low: 'Low Risk (0-24)' }[key]),
+    getIcon: key => ({ critical: ['risk-crit', 'warning'], high: ['risk-high', 'warning'], medium: ['risk-med', 'shield'], low: ['risk-low', 'check'] }[key])
+  }
+};
+
+const SERVICE_LABELS = {
+  web: 'Web Servers',
+  database: 'Databases',
+  mail: 'Mail Servers',
+  file: 'File Sharing',
+  remote: 'Remote Access',
+  directory: 'Directory Services',
+  other: 'Other Services'
+};
+
+const SERVICE_PORTS = {
+  web: [80, 443, 8080, 8443, 8000, 3000],
+  database: [3306, 5432, 1433, 1521, 27017, 6379, 9200],
+  mail: [25, 110, 143, 465, 587, 993, 995],
+  file: [21, 22, 139, 445, 873, 2049],
+  remote: [22, 23, 3389, 5900, 5901],
+  directory: [389, 636, 88, 464]
+};
+
+function findDominantService(host) {
+  const openPorts = host.ports.filter(p => p.state === 'open').map(p => p.port);
+  let maxMatch = 0;
+  let dominant = 'other';
+
+  Object.entries(SERVICE_PORTS).forEach(([svc, ports]) => {
+    const matches = openPorts.filter(p => ports.includes(p)).length;
+    if (matches > maxMatch) {
+      maxMatch = matches;
+      dominant = svc;
+    }
+  });
+
+  return dominant;
+}
+
+function calculateRisk(host) {
+  const open = host.ports.filter(p => p.state === 'open');
+  let risk = 0;
+  open.forEach(p => {
+    if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
+    if (CLEARTEXT[p.port]) risk += 3;
+  });
+  return Math.min(risk, 100);
+}
+
+function initFilters() {
+  const filterEl = document.getElementById('entity-filter');
+  const groupEl = document.getElementById('entity-group');
+
+  if (filterEl) {
+    filterEl.addEventListener('change', () => applyFilterAndGroup());
+  }
+  if (groupEl) {
+    groupEl.addEventListener('change', () => applyFilterAndGroup());
+  }
+}
+
+function applyFilterAndGroup() {
+  const filterEl = document.getElementById('entity-filter');
+  const groupEl = document.getElementById('entity-group');
+  const filter = filterEl ? filterEl.value : 'all';
+  const groupBy = groupEl ? groupEl.value : 'none';
+
+  // Get filtered hosts
+  const filteredHosts = state.data.hosts.filter(host => {
+    if (host.status !== 'up') return false;
+
+    const open = host.ports.filter(p => p.state === 'open');
+    const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+    const risk = calculateRisk(host);
+    const isTagged = state.tags[host.ip] && state.tags[host.ip].length > 0;
+
+    switch (filter) {
+      case 'up': return true;
+      case 'cleartext': return hasCleartext;
+      case 'risk': return risk >= 50;
+      case 'tagged': return isTagged;
+      default: return true;
+    }
+  });
+
+  if (groupBy === 'none') {
+    renderFlatView(filteredHosts);
+  } else {
+    renderGroupedView(filteredHosts, groupBy);
+  }
+}
+
+function renderFlatView(hosts) {
+  const grid = document.getElementById('entity-grid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  grid.className = 'entity-grid';
+
+  hosts.forEach(host => {
+    const card = createEntityCard(host);
+    grid.appendChild(card);
+  });
+
+  updateEntityCards();
+}
+
+function renderGroupedView(hosts, groupBy) {
+  const grid = document.getElementById('entity-grid');
+  if (!grid) return;
+
+  const config = GROUP_CONFIG[groupBy];
+  if (!config) return;
+
+  // Group hosts
+  const groups = {};
+  hosts.forEach(host => {
+    const key = config.getKey(host);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(host);
+  });
+
+  // Sort groups by count (descending)
+  const sortedKeys = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
+
+  grid.innerHTML = '';
+  grid.className = 'entity-groups';
+
+  sortedKeys.forEach(key => {
+    const groupHosts = groups[key];
+    const [iconClass, iconName] = config.getIcon(key);
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'entity-group';
+    groupEl.innerHTML = `
+      <div class="group-header" data-group="${key}">
+        <div class="group-title">
+          <div class="group-icon ${iconClass}">${icon(iconName, 'icon-lg')}</div>
+          <span>${config.getLabel(key)}</span>
+        </div>
+        <div class="group-meta">
+          <span>${groupHosts.length} host${groupHosts.length !== 1 ? 's' : ''}</span>
+          <span class="group-toggle">${icon('chevronDown')}</span>
+        </div>
+      </div>
+      <div class="group-body" data-group-body="${key}">
+        <div class="entity-grid"></div>
+      </div>
+    `;
+
+    const innerGrid = groupEl.querySelector('.entity-grid');
+    groupHosts.forEach(host => {
+      const card = createEntityCard(host);
+      innerGrid.appendChild(card);
+    });
+
+    // Toggle collapse
+    const header = groupEl.querySelector('.group-header');
+    const body = groupEl.querySelector('.group-body');
+    header.addEventListener('click', () => {
+      header.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+    });
+
+    grid.appendChild(groupEl);
+  });
+
+  updateEntityCards();
+}
+
+function applyFilter(filter) {
+  applyFilterAndGroup();
 }
 
 // === RENDERING ===
@@ -795,6 +1900,19 @@ function render() {
   updateEntityCards();
   updateOsDist();
   updateKeyTerrain();
+  renderSources();
+  renderVulnDbStatus();
+}
+
+function renderVulnDbStatus() {
+  const el = document.getElementById('vuln-status');
+  if (!el) return;
+
+  if (state.vulnDb) {
+    const cpeCount = Object.keys(state.vulnDb).length;
+    const cveCount = Object.values(state.vulnDb).reduce((sum, cves) => sum + cves.length, 0);
+    el.innerHTML = `<p style="color:#3fb950;">✓ Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+  }
 }
 
 function renderStats() {
@@ -836,7 +1954,7 @@ function renderStats() {
         items.push({ip: host.ip, port: p.port, name: CLEARTEXT[p.port]});
       });
     });
-    list.innerHTML = items.slice(0,5).map(i => 
+    list.innerHTML = items.slice(0,5).map(i =>
       `<div class="cleartext-item"><span class="mono">${i.ip}</span><span>${i.port} - ${i.name}</span><span class="badge badge-cleartext">cleartext</span></div>`
     ).join('') + (items.length > 5 ? `<div style="color:#8b949e;font-size:.8rem;padding:.5rem;">...and ${items.length-5} more</div>` : '');
   }
@@ -890,12 +2008,13 @@ function updateEntityCards() {
 }
 
 function updateEntityTags() {
+  const tagLabels = {crown: '★ Crown Jewel', choke: '◎ Choke Point', key: '⬡ Key Terrain'};
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
     const tags = state.tags[ip] || [];
     const tagsEl = card.querySelector('.entity-tags');
     if (tagsEl) {
-      tagsEl.innerHTML = tags.map(t => `<span class="tag tag-${t}">${t === 'crown' ? '★ Crown Jewel' : t === 'choke' ? '◎ Choke Point' : '⬡ Key Terrain'}</span>`).join('');
+      tagsEl.innerHTML = tags.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
     }
     card.classList.toggle('tagged', tags.length > 0);
   });
@@ -913,7 +2032,7 @@ function updateOsDist() {
   });
   
   const el = document.getElementById('os-dist');
-  el.innerHTML = Object.entries(dist).map(([k,v]) => 
+  el.innerHTML = Object.entries(dist).map(([k,v]) =>
     `<div class="flex items-center justify-between mb-4"><span style="text-transform:capitalize;">${k}</span><span class="badge badge-info">${v}</span></div>`
   ).join('') || '<p style="color:#8b949e;">No OS data available</p>';
 }
@@ -922,9 +2041,33 @@ function updateKeyTerrain() {
   const tagged = Object.entries(state.tags).filter(([_,t]) => t.length > 0);
   document.getElementById('terrain-count').textContent = tagged.length + ' tagged';
   const el = document.getElementById('terrain-list');
-  el.innerHTML = tagged.length ? tagged.slice(0,5).map(([ip,tags]) => 
+  el.innerHTML = tagged.length ? tagged.slice(0,5).map(([ip,tags]) =>
     `<div class="flex items-center justify-between mb-4"><span class="mono">${ip}</span><div>${tags.map(t => `<span class="tag tag-${t}">${t}</span>`).join('')}</div></div>`
   ).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag as key terrain</p>';
+}
+
+function renderSources() {
+  const el = document.getElementById('additional-sources');
+  if (!el || !state.data.sources || state.data.sources.length === 0) return;
+
+  el.innerHTML = state.data.sources.map(src => `
+    <div class="source-card">
+      <div class="source-head">
+        <span style="font-size:1.25rem;">↑</span>
+        <span class="source-name">${src.name}</span>
+      </div>
+      <div class="source-meta">
+        <div>
+          <div class="source-label">Hosts</div>
+          <div class="source-val">${src.hosts}</div>
+        </div>
+        <div>
+          <div class="source-label">Imported</div>
+          <div class="source-val">${new Date(src.timestamp).toLocaleString()}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderCleartext() {
@@ -962,19 +2105,289 @@ function renderCleartext() {
 // === IMPORT/EXPORT ===
 function importFile(file) {
   if (!file) return;
+
+  // File size check (10MB limit)
+  if (file.size > MAX_IMPORT_SIZE) {
+    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
+    return;
+  }
+
   const reader = new FileReader();
+  reader.onerror = () => {
+    console.error('[NetIntel] Error reading file:', reader.error);
+    alert('Error reading file. Please try again.');
+  };
   reader.onload = e => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(e.target.result, 'text/xml');
-    if (doc.querySelector('nmaprun')) {
-      // Parse and merge (simplified)
-      alert('Import successful! (Full merge logic TODO)');
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'text/xml');
+      const parseError = doc.querySelector('parsererror');
+      if (parseError) {
+        alert('Invalid XML file: ' + parseError.textContent.slice(0, 100));
+        return;
+      }
+      const nmaprun = doc.querySelector('nmaprun');
+      if (!nmaprun) {
+        alert('Not a valid Nmap XML file (missing nmaprun element)');
+        return;
+      }
+
+      // Parse and merge the new scan data
+      const newHosts = parseNmapXml(doc);
+      const sourceName = `Imported: ${file.name}`;
+      mergeHosts(newHosts, sourceName);
+
       document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-    } else {
-      alert('Invalid nmap XML file');
+      console.log('[NetIntel] Imported', newHosts.length, 'hosts from', file.name);
+    } catch (err) {
+      console.error('[NetIntel] Import error:', err);
+      alert('Error parsing file: ' + err.message);
     }
   };
   reader.readAsText(file);
+}
+
+// Parse Nmap XML document into host objects
+function parseNmapXml(doc) {
+  const hosts = [];
+  doc.querySelectorAll('host').forEach(hostEl => {
+    const ipv4 = hostEl.querySelector('address[addrtype="ipv4"]');
+    const ipv6 = hostEl.querySelector('address[addrtype="ipv6"]');
+    const mac = hostEl.querySelector('address[addrtype="mac"]');
+    const hostname = hostEl.querySelector('hostnames hostname');
+    const status = hostEl.querySelector('status');
+    const osMatches = hostEl.querySelectorAll('os osmatch');
+
+    const host = {
+      ip: (ipv4 ? ipv4.getAttribute('addr') : '') || (ipv6 ? ipv6.getAttribute('addr') : ''),
+      mac: mac ? mac.getAttribute('addr') : '',
+      macVendor: mac ? mac.getAttribute('vendor') : '',
+      hostname: hostname ? hostname.getAttribute('name') : '',
+      status: status ? status.getAttribute('state') : 'unknown',
+      os: [],
+      ports: [],
+      trace: []
+    };
+
+    // OS detection
+    osMatches.forEach(om => {
+      host.os.push({
+        name: om.getAttribute('name') || '',
+        accuracy: parseInt(om.getAttribute('accuracy')) || 0
+      });
+    });
+
+    // Ports
+    hostEl.querySelectorAll('ports port').forEach(portEl => {
+      const stateEl = portEl.querySelector('state');
+      const svcEl = portEl.querySelector('service');
+      const cpeEl = portEl.querySelector('cpe');
+      host.ports.push({
+        port: parseInt(portEl.getAttribute('portid')) || 0,
+        proto: portEl.getAttribute('protocol') || 'tcp',
+        state: stateEl ? stateEl.getAttribute('state') : 'unknown',
+        svc: svcEl ? svcEl.getAttribute('name') : '',
+        product: svcEl ? svcEl.getAttribute('product') : '',
+        version: svcEl ? svcEl.getAttribute('version') : '',
+        cpe: cpeEl ? cpeEl.textContent : ''
+      });
+    });
+
+    // Traceroute
+    hostEl.querySelectorAll('trace hop').forEach(hop => {
+      host.trace.push({
+        ttl: parseInt(hop.getAttribute('ttl')) || 0,
+        ip: hop.getAttribute('ipaddr') || ''
+      });
+    });
+
+    if (host.ip) hosts.push(host);
+  });
+  return hosts;
+}
+
+// Merge imported hosts into existing data
+function mergeHosts(newHosts, sourceName) {
+  let added = 0, updated = 0;
+
+  newHosts.forEach(newHost => {
+    const existing = state.data.hosts.find(h => h.ip === newHost.ip);
+    if (existing) {
+      // Merge ports (add new ports, don't duplicate)
+      newHost.ports.forEach(newPort => {
+        const existingPort = existing.ports.find(p => p.port === newPort.port && p.proto === newPort.proto);
+        if (!existingPort) {
+          existing.ports.push(newPort);
+        } else if (newPort.product && !existingPort.product) {
+          // Update if new scan has more detail
+          Object.assign(existingPort, newPort);
+        }
+      });
+
+      // Update OS if new scan has higher confidence
+      if (newHost.os.length > 0) {
+        const newBestOs = newHost.os[0];
+        const existingBestOs = existing.os[0];
+        if (!existingBestOs || newBestOs.accuracy > existingBestOs.accuracy) {
+          existing.os = newHost.os;
+        }
+      }
+
+      // Update status to 'up' if new scan shows it's up
+      if (newHost.status === 'up') existing.status = 'up';
+
+      // Merge traceroute if not present
+      if (newHost.trace.length > 0 && existing.trace.length === 0) {
+        existing.trace = newHost.trace;
+      }
+
+      updated++;
+    } else {
+      // New host - add to collection
+      state.data.hosts.push(newHost);
+      added++;
+    }
+  });
+
+  // Update stats
+  state.data.stats.total = state.data.hosts.length;
+  state.data.stats.up = state.data.hosts.filter(h => h.status === 'up').length;
+  state.data.stats.down = state.data.stats.total - state.data.stats.up;
+
+  // Track source
+  if (!state.data.sources) state.data.sources = [];
+  state.data.sources.push({
+    name: sourceName,
+    hosts: newHosts.length,
+    timestamp: new Date().toISOString()
+  });
+
+  // Re-render UI
+  rebuildEntityGrid();
+  render();
+
+  alert(`Import complete!\nAdded: ${added} new hosts\nUpdated: ${updated} existing hosts`);
+}
+
+// Rebuild entity grid after import (since XSL only runs once)
+function rebuildEntityGrid() {
+  const grid = document.getElementById('entity-grid');
+  if (!grid) return;
+
+  // Clear existing cards
+  grid.innerHTML = '';
+
+  // Rebuild cards for all hosts that are up
+  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+    const card = createEntityCard(host);
+    grid.appendChild(card);
+  });
+}
+
+// === CVE MATCHING ===
+function getHostCVEs(host) {
+  if (!state.vulnDb) return [];
+
+  const cves = [];
+  const seen = new Set();
+
+  host.ports.filter(p => p.state === 'open' && p.cpe).forEach(port => {
+    const cpe = port.cpe;
+    // Try exact match first
+    if (state.vulnDb[cpe]) {
+      state.vulnDb[cpe].forEach(vuln => {
+        if (!seen.has(vuln.cve)) {
+          seen.add(vuln.cve);
+          cves.push({ ...vuln, port: port.port, cpe });
+        }
+      });
+    }
+    // Try prefix match (for version-less CPEs)
+    const cpeBase = cpe.split(':').slice(0, 5).join(':');
+    Object.keys(state.vulnDb).forEach(dbCpe => {
+      if (dbCpe.startsWith(cpeBase) && dbCpe !== cpe) {
+        state.vulnDb[dbCpe].forEach(vuln => {
+          if (!seen.has(vuln.cve)) {
+            seen.add(vuln.cve);
+            cves.push({ ...vuln, port: port.port, cpe: dbCpe });
+          }
+        });
+      }
+    });
+  });
+
+  // Sort by CVSS score descending
+  return cves.sort((a, b) => (b.cvss || 0) - (a.cvss || 0));
+}
+
+function getCvssClass(cvss) {
+  if (cvss >= 9.0) return 'critical';
+  if (cvss >= 7.0) return 'high';
+  if (cvss >= 4.0) return 'medium';
+  return 'low';
+}
+
+// Create entity card element dynamically
+function createEntityCard(host) {
+  const open = host.ports.filter(p => p.state === 'open');
+  const filtered = host.ports.filter(p => p.state === 'filtered');
+  const os = host.os && host.os[0] ? host.os[0] : null;
+  const mac = host.mac;
+  const cves = getHostCVEs(host);
+
+  const card = document.createElement('div');
+  card.className = 'entity';
+  card.dataset.ip = host.ip;
+
+  const vulnsHtml = cves.length > 0 ? `
+    <div class="vulns">
+      <div class="vulns-title">\u26a0 ${cves.length} CVE${cves.length !== 1 ? 's' : ''} Found</div>
+      ${cves.slice(0, 3).map(v => `
+        <div class="vuln">
+          <span class="vuln-id">${v.cve}</span>
+          <span class="vuln-score ${getCvssClass(v.cvss)}">${v.cvss || '?'}</span>
+          <span class="vuln-desc">${v.desc || ''}</span>
+        </div>
+      `).join('')}
+      ${cves.length > 3 ? `<div class="vulns-more">...and ${cves.length - 3} more</div>` : ''}
+    </div>
+  ` : '';
+
+  card.innerHTML = `
+    <div class="entity-head">
+      <div class="entity-icon" data-os-icon="">\u25a3</div>
+      <div class="entity-info">
+        <div class="entity-ip">${host.ip}</div>
+        ${host.hostname ? `<div class="entity-host">${host.hostname}</div>` : ''}
+        <div class="entity-tags"></div>
+      </div>
+      ${cves.length > 0 ? `<span class="badge badge-critical">${cves.length} CVE${cves.length !== 1 ? 's' : ''}</span>` : ''}
+    </div>
+    <div class="entity-body">
+      <div class="entity-stats">
+        <div class="entity-stat"><b>${open.length}</b><span>Open</span></div>
+        <div class="entity-stat"><b>${filtered.length}</b><span>Filtered</span></div>
+        <div class="entity-stat"><b data-risk="">--</b><span>Risk</span></div>
+      </div>
+      <div class="ports">
+        ${open.map(p => `<span class="port open" data-port="${p.port}" data-svc="${p.svc}">${p.port}/${p.proto}</span>`).join('')}
+      </div>
+      ${os || mac ? `
+      <div class="signals">
+        <div class="signals-title">Identification Signals</div>
+        ${os ? `<div class="signal"><span class="signal-src">OS</span><span class="signal-val">${os.name}</span><span class="signal-conf">${os.accuracy}%</span></div>` : ''}
+        ${mac ? `<div class="signal"><span class="signal-src">MAC</span><span class="signal-val">${mac}${host.macVendor ? ' (' + host.macVendor + ')' : ''}</span></div>` : ''}
+        ${open.filter(p => p.product).slice(0, 2).map(p => `<div class="signal"><span class="signal-src">:${p.port}</span><span class="signal-val">${p.product}${p.version ? ' ' + p.version : ''}</span></div>`).join('')}
+      </div>` : ''}
+      ${vulnsHtml}
+    </div>
+    <div class="entity-foot">
+      <span>${(state.data.sources ? state.data.sources.length : 1)} source${state.data.sources && state.data.sources.length !== 1 ? 's' : ''}</span>
+      <button class="btn btn-ghost btn-sm">Details</button>
+    </div>
+  `;
+
+  return card;
 }
 
 function exportData(format) {
@@ -1020,13 +2433,524 @@ function exportData(format) {
   }
 }
 
+// === TOPOLOGY VIEW ===
+function initTopology() {
+  const container = document.getElementById('topo-canvas');
+  if (!container) return;
+
+  const refreshBtn = document.getElementById('topo-refresh');
+  const layoutSelect = document.getElementById('topo-layout');
+
+  if (refreshBtn) refreshBtn.addEventListener('click', () => renderTopology());
+  if (layoutSelect) layoutSelect.addEventListener('change', () => renderTopology());
+}
+
+function renderTopology() {
+  const container = document.getElementById('topo-canvas');
+  if (!container) return;
+
+  const layoutSelect = document.getElementById('topo-layout');
+  const layout = layoutSelect ? layoutSelect.value : 'hierarchical';
+
+  // Collect all unique nodes and edges from traceroute data
+  const nodes = new Map();
+  const edges = [];
+
+  // Add scanner node (assumed to be at hop 0)
+  nodes.set('scanner', { id: 'scanner', type: 'scanner', label: 'Scanner' });
+
+  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+    // Add target node
+    nodes.set(host.ip, {
+      id: host.ip,
+      type: 'target',
+      label: host.hostname || host.ip,
+      host
+    });
+
+    // Process traceroute hops
+    if (host.trace && host.trace.length > 0) {
+      let prevNode = 'scanner';
+      host.trace.forEach((hop, i) => {
+        if (hop.ip && hop.ip !== '*') {
+          // Add hop node if not already a target
+          if (!nodes.has(hop.ip)) {
+            nodes.set(hop.ip, {
+              id: hop.ip,
+              type: 'hop',
+              label: hop.host || hop.ip,
+              ttl: hop.ttl
+            });
+          }
+
+          // Add edge from previous node
+          edges.push({ from: prevNode, to: hop.ip, ttl: hop.ttl });
+          prevNode = hop.ip;
+        }
+      });
+
+      // Add edge to target
+      if (prevNode !== host.ip) {
+        edges.push({ from: prevNode, to: host.ip });
+      }
+    } else {
+      // No traceroute - direct connection from scanner
+      edges.push({ from: 'scanner', to: host.ip });
+    }
+  });
+
+  // Calculate positions based on layout
+  const positions = calculateLayout(nodes, edges, layout, container);
+
+  // Clear and render
+  container.innerHTML = '';
+
+  // Render edges first (behind nodes)
+  edges.forEach(edge => {
+    const fromPos = positions.get(edge.from);
+    const toPos = positions.get(edge.to);
+    if (fromPos && toPos) {
+      renderEdge(container, fromPos, toPos);
+    }
+  });
+
+  // Render nodes
+  nodes.forEach((node, id) => {
+    const pos = positions.get(id);
+    if (pos) {
+      renderNode(container, node, pos);
+    }
+  });
+
+  // Update details panel
+  updateTopoDetails(nodes, edges);
+}
+
+function calculateLayout(nodes, edges, layout, container) {
+  const positions = new Map();
+  const width = container.offsetWidth || 800;
+  const height = container.offsetHeight || 500;
+  const padding = 80;
+
+  if (layout === 'radial') {
+    // Radial layout - scanner in center
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2 - padding;
+
+    positions.set('scanner', { x: centerX, y: centerY });
+
+    // Group nodes by distance from scanner
+    const hops = new Map();
+    nodes.forEach((node, id) => {
+      if (id === 'scanner') return;
+      const maxTtl = node.ttl || (node.type === 'target' ? 10 : 5);
+      if (!hops.has(maxTtl)) hops.set(maxTtl, []);
+      hops.get(maxTtl).push(id);
+    });
+
+    // Position each ring
+    const sortedTtls = Array.from(hops.keys()).sort((a, b) => a - b);
+    sortedTtls.forEach((ttl, ringIndex) => {
+      const ringNodes = hops.get(ttl);
+      const ringRadius = (radius / sortedTtls.length) * (ringIndex + 1);
+      ringNodes.forEach((id, i) => {
+        const angle = (2 * Math.PI * i) / ringNodes.length - Math.PI / 2;
+        positions.set(id, {
+          x: centerX + ringRadius * Math.cos(angle),
+          y: centerY + ringRadius * Math.sin(angle)
+        });
+      });
+    });
+  } else {
+    // Hierarchical layout
+    positions.set('scanner', { x: padding, y: height / 2 });
+
+    // Group by hop count
+    const levels = new Map();
+    nodes.forEach((node, id) => {
+      if (id === 'scanner') return;
+      const level = node.ttl || (node.type === 'target' ? 10 : 5);
+      if (!levels.has(level)) levels.set(level, []);
+      levels.get(level).push(id);
+    });
+
+    const sortedLevels = Array.from(levels.keys()).sort((a, b) => a - b);
+    const levelWidth = (width - padding * 2) / (sortedLevels.length + 1);
+
+    sortedLevels.forEach((level, levelIndex) => {
+      const levelNodes = levels.get(level);
+      const levelHeight = height - padding * 2;
+      const nodeSpacing = levelHeight / (levelNodes.length + 1);
+
+      levelNodes.forEach((id, i) => {
+        positions.set(id, {
+          x: padding + levelWidth * (levelIndex + 1),
+          y: padding + nodeSpacing * (i + 1)
+        });
+      });
+    });
+  }
+
+  return positions;
+}
+
+function renderNode(container, node, pos) {
+  const el = document.createElement('div');
+  el.className = `topo-node ${node.type}`;
+  el.style.left = `${pos.x - 50}px`;
+  el.style.top = `${pos.y - 20}px`;
+  el.innerHTML = `
+    <div class="topo-node-ip">${node.id === 'scanner' ? 'Scanner' : node.id}</div>
+    ${node.label && node.label !== node.id ? `<div class="topo-node-label">${node.label}</div>` : ''}
+  `;
+  el.addEventListener('click', () => showNodeDetails(node));
+  container.appendChild(el);
+}
+
+function renderEdge(container, from, to) {
+  const el = document.createElement('div');
+  el.className = 'topo-edge';
+
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  el.style.left = `${from.x}px`;
+  el.style.top = `${from.y}px`;
+  el.style.width = `${length}px`;
+  el.style.transform = `rotate(${angle}deg)`;
+
+  container.appendChild(el);
+}
+
+function showNodeDetails(node) {
+  const detailsEl = document.getElementById('topo-details');
+  if (!detailsEl) return;
+
+  if (node.type === 'scanner') {
+    detailsEl.innerHTML = '<p style="color:#8b949e;">Scanner node (origin of all traceroutes)</p>';
+    return;
+  }
+
+  if (node.host) {
+    const h = node.host;
+    const fp = parseFingerprint(h.osFingerprint);
+    detailsEl.innerHTML = `
+      <div class="mb-4">
+        <strong>${h.ip}</strong> ${h.hostname ? `(${h.hostname})` : ''}
+      </div>
+      ${h.trace.length > 0 ? `
+        <div class="fp-section">
+          <div class="fp-title">Traceroute Path (${h.trace.length} hops)</div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr><th>TTL</th><th>IP</th><th>Hostname</th><th>RTT</th></tr></thead>
+              <tbody>
+                ${h.trace.map(hop => `
+                  <tr>
+                    <td>${hop.ttl}</td>
+                    <td class="mono">${hop.ip || '*'}</td>
+                    <td>${hop.host || ''}</td>
+                    <td>${hop.rtt ? hop.rtt + 'ms' : ''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : '<p style="color:#8b949e;">No traceroute data available</p>'}
+      ${fp ? `
+        <div class="fp-section mt-4">
+          <div class="fp-title">OS Fingerprint</div>
+          <div class="fp-grid">
+            ${Object.entries(fp).slice(0, 12).map(([k, v]) => `
+              <div class="fp-item"><span class="fp-key">${k}:</span><span class="fp-val">${v}</span></div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `;
+  } else {
+    detailsEl.innerHTML = `
+      <div class="mb-4">
+        <strong>${node.id}</strong> - Intermediate hop
+        ${node.label && node.label !== node.id ? `<br><span style="color:#8b949e;">${node.label}</span>` : ''}
+      </div>
+    `;
+  }
+}
+
+function updateTopoDetails(nodes, edges) {
+  const targetCount = Array.from(nodes.values()).filter(n => n.type === 'target').length;
+  const hopCount = Array.from(nodes.values()).filter(n => n.type === 'hop').length;
+
+  const detailsEl = document.getElementById('topo-details');
+  if (detailsEl && !detailsEl.querySelector('.tbl-wrap')) {
+    detailsEl.innerHTML = `
+      <p style="color:#8b949e;">
+        Showing ${targetCount} targets and ${hopCount} intermediate hops.
+        Click on a node to see details.
+      </p>
+    `;
+  }
+}
+
+// === FINGERPRINT PARSING ===
+function parseFingerprint(fp) {
+  if (!fp) return null;
+
+  // Nmap fingerprints are URL-encoded key=value pairs separated by %
+  // Example: SCAN(V=7.94%E=4%D=11/5%OT=22%CT=1%CU=%PV=Y%DS=2...)
+  const result = {};
+
+  try {
+    // Decode URL encoding
+    const decoded = decodeURIComponent(fp.replace(/\+/g, ' '));
+
+    // Parse sections like SCAN(...) SEQ(...) OPS(...) etc
+    const sectionRegex = /([A-Z]+)\(([^)]+)\)/g;
+    let match;
+
+    while ((match = sectionRegex.exec(decoded)) !== null) {
+      const sectionName = match[1];
+      const sectionData = match[2];
+
+      // Parse key=value pairs within section
+      sectionData.split('%').forEach(pair => {
+        const [key, value] = pair.split('=');
+        if (key && value !== undefined) {
+          result[`${sectionName}.${key}`] = value;
+        }
+      });
+    }
+  } catch (e) {
+    console.error('[NetIntel] Error parsing fingerprint:', e);
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+// Parse service fingerprint
+function parseServiceFingerprint(fp) {
+  if (!fp) return null;
+
+  const result = {};
+  try {
+    const decoded = decodeURIComponent(fp);
+    // Service fingerprints often have SF: prefix and contain probe responses
+    const parts = decoded.split(/SF[-:]?/);
+    if (parts.length > 1) {
+      result.response = parts[1].substring(0, 200); // Truncate
+    }
+  } catch (e) {
+    // Ignore parse errors
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+// === TIMELINE VIEW ===
+let timelineScans = [];
+
+function initTimeline() {
+  const addBtn = document.getElementById('timeline-add');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      // Create file input dynamically
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.xml';
+      input.addEventListener('change', () => {
+        if (input.files[0]) addTimelineScan(input.files[0]);
+      });
+      input.click();
+    });
+  }
+
+  // Initialize with current scan
+  timelineScans = [{
+    id: 'current',
+    timestamp: new Date(state.data.scanInfo.start * 1000),
+    startstr: state.data.scanInfo.startstr,
+    hosts: state.data.hosts,
+    stats: state.data.stats
+  }];
+}
+
+function addTimelineScan(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'text/xml');
+      if (!doc.querySelector('nmaprun')) {
+        alert('Not a valid Nmap XML file');
+        return;
+      }
+
+      const nmaprun = doc.querySelector('nmaprun');
+      const hosts = parseNmapXml(doc);
+      const runstats = doc.querySelector('runstats hosts');
+
+      const scan = {
+        id: `scan-${Date.now()}`,
+        timestamp: new Date(nmaprun.getAttribute('start') * 1000),
+        startstr: nmaprun.getAttribute('startstr'),
+        filename: file.name,
+        hosts,
+        stats: {
+          total: parseInt(runstats?.getAttribute('total') || hosts.length),
+          up: parseInt(runstats?.getAttribute('up') || hosts.filter(h => h.status === 'up').length),
+          down: parseInt(runstats?.getAttribute('down') || 0)
+        }
+      };
+
+      timelineScans.push(scan);
+      timelineScans.sort((a, b) => a.timestamp - b.timestamp);
+
+      renderTimeline();
+      console.log('[NetIntel] Added timeline scan:', file.name);
+    } catch (err) {
+      console.error('[NetIntel] Timeline parse error:', err);
+      alert('Error parsing scan file');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderTimeline() {
+  const track = document.getElementById('timeline-track');
+  if (!track) return;
+
+  track.innerHTML = timelineScans.map((scan, i) => `
+    <div class="timeline-scan ${i === timelineScans.length - 1 ? 'active' : ''}" data-scan="${scan.id}">
+      <div class="timeline-scan-date">${scan.timestamp.toLocaleDateString()}</div>
+      <div class="timeline-scan-time">${scan.timestamp.toLocaleTimeString()}</div>
+      <div class="timeline-scan-stats">
+        <span class="timeline-scan-stat">${scan.stats.up} hosts</span>
+        <span class="timeline-scan-stat">${scan.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0)} ports</span>
+      </div>
+      ${scan.filename ? `<div style="font-size:.7rem;color:#8b949e;margin-top:.25rem;">${scan.filename}</div>` : ''}
+    </div>
+  `).join('');
+
+  // Click handlers
+  track.querySelectorAll('.timeline-scan').forEach(el => {
+    el.addEventListener('click', () => {
+      track.querySelectorAll('.timeline-scan').forEach(s => s.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+
+  renderTimelineChart();
+  renderTimelineChanges();
+}
+
+function renderTimelineChart() {
+  const chart = document.getElementById('timeline-chart');
+  if (!chart || timelineScans.length < 2) return;
+
+  const maxHosts = Math.max(...timelineScans.map(s => s.stats.up));
+  const maxPorts = Math.max(...timelineScans.map(s =>
+    s.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0)
+  ));
+
+  const barWidth = Math.max(20, (chart.offsetWidth - 100) / timelineScans.length - 10);
+
+  chart.innerHTML = timelineScans.map((scan, i) => {
+    const hostHeight = (scan.stats.up / maxHosts) * 150;
+    const portCount = scan.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0);
+    const portHeight = (portCount / maxPorts) * 150;
+
+    return `
+      <div style="position:absolute;left:${50 + i * (barWidth + 10)}px;bottom:2rem;text-align:center;">
+        <div class="timeline-bar hosts" style="height:${hostHeight}px;width:${barWidth/2 - 2}px;display:inline-block;" title="${scan.stats.up} hosts"></div>
+        <div class="timeline-bar ports" style="height:${portHeight}px;width:${barWidth/2 - 2}px;display:inline-block;" title="${portCount} ports"></div>
+        <div style="font-size:.7rem;color:#8b949e;margin-top:.25rem;">${scan.timestamp.toLocaleDateString()}</div>
+      </div>
+    `;
+  }).join('') + `
+    <div style="position:absolute;right:1rem;top:1rem;font-size:.75rem;">
+      <span style="color:#238636;">■</span> Hosts
+      <span style="color:#58a6ff;margin-left:.5rem;">■</span> Ports
+    </div>
+  `;
+}
+
+function renderTimelineChanges() {
+  const changesEl = document.getElementById('timeline-changes');
+  if (!changesEl || timelineScans.length < 2) return;
+
+  const changes = [];
+
+  for (let i = 1; i < timelineScans.length; i++) {
+    const prev = timelineScans[i - 1];
+    const curr = timelineScans[i];
+    const diff = computeDiff(prev.hosts, curr.hosts);
+
+    if (diff.summary.new > 0 || diff.summary.removed > 0 || diff.summary.changed > 0) {
+      changes.push({
+        from: prev.timestamp,
+        to: curr.timestamp,
+        diff
+      });
+    }
+  }
+
+  changesEl.innerHTML = changes.length ? changes.map(c => `
+    <div class="diff-item" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#8b949e;">${c.from.toLocaleDateString()} -> ${c.to.toLocaleDateString()}</span>
+        <div>
+          ${c.diff.summary.new > 0 ? `<span class="badge badge-low">+${c.diff.summary.new} new</span>` : ''}
+          ${c.diff.summary.removed > 0 ? `<span class="badge badge-critical">-${c.diff.summary.removed} removed</span>` : ''}
+          ${c.diff.summary.changed > 0 ? `<span class="badge badge-high">${c.diff.summary.changed} changed</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('') : '<p style="color:#8b949e;">No changes between scans</p>';
+}
+
 // === SEARCH ===
 document.getElementById('search')?.addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
+  const filterEl = document.getElementById('entity-filter');
+  const filter = filterEl ? filterEl.value : 'all';
+
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
     const text = card.textContent.toLowerCase();
-    card.style.display = !q || ip.includes(q) || text.includes(q) ? '' : 'none';
+    const matchesSearch = !q || ip.includes(q) || text.includes(q);
+
+    // Also respect current filter
+    if (matchesSearch && filter !== 'all') {
+      const host = state.data.hosts.find(h => h.ip === ip);
+      if (host) {
+        const open = host.ports.filter(p => p.state === 'open');
+        const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+        let risk = 0;
+        open.forEach(p => {
+          if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
+          if (CLEARTEXT[p.port]) risk += 3;
+        });
+        risk = Math.min(risk, 100);
+        const isTagged = state.tags[ip] && state.tags[ip].length > 0;
+
+        let passesFilter = true;
+        switch (filter) {
+          case 'up': passesFilter = host.status === 'up'; break;
+          case 'cleartext': passesFilter = hasCleartext; break;
+          case 'risk': passesFilter = risk >= 50; break;
+          case 'tagged': passesFilter = isTagged; break;
+        }
+        card.style.display = passesFilter ? '' : 'none';
+        return;
+      }
+    }
+
+    card.style.display = matchesSearch ? '' : 'none';
   });
 });
 ]]></xsl:text>
