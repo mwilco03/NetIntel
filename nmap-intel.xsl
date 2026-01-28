@@ -187,6 +187,47 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .diff-change.removed{color:#f85149}
 .diff-change .port{margin:0}
 
+/* === TOPOLOGY VIEW === */
+.topo-container{background:#0d1117;border:1px solid #21262d;border-radius:8px;min-height:500px;position:relative;overflow:hidden}
+.topo-canvas{width:100%;height:500px}
+.topo-node{position:absolute;background:#161b22;border:2px solid #30363d;border-radius:8px;padding:.5rem .75rem;font-size:.75rem;cursor:pointer;transition:all .15s;z-index:1}
+.topo-node:hover{border-color:#58a6ff;z-index:10}
+.topo-node.scanner{border-color:#238636;background:rgba(35,134,54,.1)}
+.topo-node.target{border-color:#58a6ff}
+.topo-node.hop{border-color:#8b949e;background:#21262d}
+.topo-node-ip{font-family:monospace;font-weight:600;color:#e6edf3}
+.topo-node-label{color:#8b949e;font-size:.7rem}
+.topo-edge{position:absolute;background:#30363d;height:2px;transform-origin:left center;z-index:0}
+.topo-edge.active{background:#58a6ff}
+.topo-legend{display:flex;gap:1.5rem;padding:1rem;border-top:1px solid #21262d;font-size:.8rem}
+.topo-legend-item{display:flex;align-items:center;gap:.5rem}
+.topo-legend-dot{width:12px;height:12px;border-radius:4px;border:2px solid}
+.topo-controls{padding:1rem;border-bottom:1px solid #21262d;display:flex;gap:1rem;align-items:center}
+
+/* === TIMELINE VIEW === */
+.timeline-container{position:relative}
+.timeline-track{display:flex;gap:1rem;overflow-x:auto;padding:1rem 0}
+.timeline-scan{flex:0 0 200px;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:1rem;cursor:pointer;transition:all .15s}
+.timeline-scan:hover{border-color:#58a6ff}
+.timeline-scan.active{border-color:#58a6ff;background:#161b22}
+.timeline-scan-date{font-weight:600;color:#e6edf3;margin-bottom:.25rem}
+.timeline-scan-time{font-size:.8rem;color:#8b949e;margin-bottom:.5rem}
+.timeline-scan-stats{display:flex;gap:.5rem;font-size:.75rem}
+.timeline-scan-stat{padding:.2rem .4rem;background:#21262d;border-radius:3px}
+.timeline-chart{height:200px;background:#0d1117;border:1px solid #21262d;border-radius:8px;margin-top:1rem;padding:1rem;position:relative}
+.timeline-bar{position:absolute;bottom:2rem;background:#58a6ff;border-radius:2px 2px 0 0;min-width:20px;transition:height .3s}
+.timeline-bar.hosts{background:#238636}
+.timeline-bar.ports{background:#58a6ff}
+.timeline-bar.risks{background:#f85149}
+
+/* === FINGERPRINT === */
+.fp-section{margin-bottom:1rem}
+.fp-title{font-size:.8rem;font-weight:600;color:#8b949e;text-transform:uppercase;margin-bottom:.5rem}
+.fp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem}
+.fp-item{background:#161b22;padding:.5rem .75rem;border-radius:4px;font-size:.8rem}
+.fp-key{color:#8b949e;margin-right:.5rem}
+.fp-val{color:#e6edf3;font-family:monospace}
+
 /* === RISK LIST === */
 .risk-list{list-style:none}
 .risk-item{display:flex;align-items:center;gap:1rem;padding:.75rem;border-bottom:1px solid #21262d}
@@ -299,6 +340,8 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <ul class="nav">
       <li><a href="#" class="active" data-nav="dashboard">◫ Dashboard</a></li>
       <li><a href="#" data-nav="entities">▤ All Entities</a></li>
+      <li><a href="#" data-nav="topology">◎ Topology</a></li>
+      <li><a href="#" data-nav="timeline">◷ Timeline</a></li>
       <li><a href="#" data-nav="cleartext">⚠ Cleartext</a></li>
       <li><a href="#" data-nav="diff">⇄ Scan Diff</a></li>
       <li><a href="#" data-nav="sources">◰ Sources</a></li>
@@ -336,7 +379,13 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       
       <!-- Entities Section -->
       <xsl:call-template name="entities-section"/>
-      
+
+      <!-- Topology Section -->
+      <xsl:call-template name="topology-section"/>
+
+      <!-- Timeline Section -->
+      <xsl:call-template name="timeline-section"/>
+
       <!-- Cleartext Section -->
       <xsl:call-template name="cleartext-section"/>
 
@@ -628,6 +677,107 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </xsl:template>
 
 <!-- ============================================
+     TOPOLOGY SECTION
+     ============================================ -->
+<xsl:template name="topology-section">
+  <section class="section" data-section="topology">
+    <div class="section-header">
+      <h2 class="section-title">Network Topology</h2>
+      <div class="flex gap-2">
+        <select id="topo-layout" class="btn btn-secondary btn-sm" style="appearance:auto;">
+          <option value="hierarchical">Hierarchical</option>
+          <option value="radial">Radial</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" id="topo-refresh">Refresh</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="topo-controls">
+        <span style="color:#8b949e;font-size:.8rem;">Showing traceroute paths from scan data</span>
+      </div>
+      <div class="topo-container" id="topo-container">
+        <div class="topo-canvas" id="topo-canvas"></div>
+      </div>
+      <div class="topo-legend">
+        <div class="topo-legend-item">
+          <div class="topo-legend-dot" style="border-color:#238636;background:rgba(35,134,54,.2)"></div>
+          <span>Scanner</span>
+        </div>
+        <div class="topo-legend-item">
+          <div class="topo-legend-dot" style="border-color:#58a6ff;background:rgba(88,166,255,.2)"></div>
+          <span>Target</span>
+        </div>
+        <div class="topo-legend-item">
+          <div class="topo-legend-dot" style="border-color:#8b949e;background:#21262d"></div>
+          <span>Hop</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <span class="card-title">Traceroute Details</span>
+      </div>
+      <div class="card-body" id="topo-details">
+        <p style="color:#8b949e;">Select a host to see traceroute details</p>
+      </div>
+    </div>
+  </section>
+</xsl:template>
+
+<!-- ============================================
+     TIMELINE SECTION
+     ============================================ -->
+<xsl:template name="timeline-section">
+  <section class="section" data-section="timeline">
+    <div class="section-header">
+      <h2 class="section-title">Scan Timeline</h2>
+      <button class="btn btn-primary btn-sm" id="timeline-add">+ Add Scan</button>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <p style="color:#8b949e;margin-bottom:1rem;">Track changes across multiple scans over time.</p>
+        <div class="timeline-container">
+          <div class="timeline-track" id="timeline-track">
+            <!-- Current scan -->
+            <div class="timeline-scan active" data-scan="current">
+              <div class="timeline-scan-date"><xsl:value-of select="substring(/nmaprun/@startstr, 1, 10)"/></div>
+              <div class="timeline-scan-time"><xsl:value-of select="substring(/nmaprun/@startstr, 12)"/></div>
+              <div class="timeline-scan-stats">
+                <span class="timeline-scan-stat"><xsl:value-of select="/nmaprun/runstats/hosts/@up"/> hosts</span>
+                <span class="timeline-scan-stat"><xsl:value-of select="count(/nmaprun/host/ports/port[state/@state='open'])"/> ports</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <span class="card-title">Trend Analysis</span>
+      </div>
+      <div class="card-body">
+        <div class="timeline-chart" id="timeline-chart">
+          <p style="color:#8b949e;text-align:center;padding-top:4rem;">Add more scans to see trends</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <span class="card-title">Change Log</span>
+      </div>
+      <div class="card-body" id="timeline-changes">
+        <p style="color:#8b949e;">No changes recorded yet</p>
+      </div>
+    </div>
+  </section>
+</xsl:template>
+
+<!-- ============================================
      DIFF SECTION
      ============================================ -->
 <xsl:template name="diff-section">
@@ -790,8 +940,9 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       "hostname": "<xsl:value-of select="hostnames/hostname/@name"/>",
       "status": "<xsl:value-of select="status/@state"/>",
       "os": [<xsl:for-each select="os/osmatch">{"name":"<xsl:value-of select="translate(@name, '&quot;', &quot;'&quot;)"/>","accuracy":<xsl:value-of select="@accuracy"/>}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
+      "osFingerprint": "<xsl:value-of select="os/osfingerprint/@fingerprint"/>",
+      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"<xsl:value-of select="service/@servicefp"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>","rtt":"<xsl:value-of select="@rtt"/>","host":"<xsl:value-of select="@host"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
     }<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
   ]
 }
@@ -875,6 +1026,8 @@ function initIcons() {
   const NAV_ICONS = {
     'dashboard': 'chart',
     'entities': 'server',
+    'topology': 'network',
+    'timeline': 'chart',
     'cleartext': 'warning',
     'diff': 'magnify',
     'sources': 'folder',
@@ -939,12 +1092,6 @@ function initNav() {
   document.querySelectorAll('[data-action]').forEach(el => {
     el.addEventListener('click', e => { e.preventDefault(); handleAction(el.dataset.action); });
   });
-}
-
-function navigateTo(section) {
-  document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === section));
-  document.querySelectorAll('[data-section]').forEach(s => s.classList.toggle('active', s.dataset.section === section));
-  if (section === 'cleartext') renderCleartext();
 }
 
 function handleAction(action) {
@@ -1263,6 +1410,43 @@ function renderDiff(diff, filename) {
   `).join('') : '<p style="color:#8b949e;">No changes detected</p>';
 }
 
+// === SUBNET UTILITIES ===
+// Configurable subnet mask (default /24)
+let subnetMask = 24;
+
+// Calculate subnet info for a given mask
+function getSubnetInfo(mask) {
+  const hostBits = 32 - mask;
+  return {
+    mask,
+    cidr: `/${mask}`,
+    hosts: Math.pow(2, hostBits) - 2,
+    networks: Math.pow(2, mask - 16) // networks in a /16
+  };
+}
+
+// Get subnet key for an IP at given CIDR
+function getSubnetKey(ip, cidr = subnetMask) {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4) return 'other';
+
+  const ipNum = (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3];
+  const maskBits = (0xFFFFFFFF << (32 - cidr)) >>> 0;
+  const networkNum = (ipNum & maskBits) >>> 0;
+
+  const netParts = [
+    (networkNum >>> 24) & 0xFF,
+    (networkNum >>> 16) & 0xFF,
+    (networkNum >>> 8) & 0xFF,
+    networkNum & 0xFF
+  ];
+
+  return `${netParts.join('.')}/${cidr}`;
+}
+
+// Available CIDR options for grouping
+const CIDR_OPTIONS = [8, 16, 20, 24, 28];
+
 // === FILTERS AND GROUPING ===
 const GROUP_CONFIG = {
   os: {
@@ -1279,10 +1463,7 @@ const GROUP_CONFIG = {
   },
   subnet: {
     label: 'Subnet',
-    getKey: host => {
-      const parts = host.ip.split('.');
-      return parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}.0/24` : 'other';
-    },
+    getKey: host => getSubnetKey(host.ip, subnetMask),
     getLabel: key => key,
     getIcon: () => ['subnet', 'network']
   },
@@ -2016,6 +2197,495 @@ function exportData(format) {
     a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
   }
+}
+
+// === TOPOLOGY VIEW ===
+function initTopology() {
+  const container = document.getElementById('topo-canvas');
+  if (!container) return;
+
+  const refreshBtn = document.getElementById('topo-refresh');
+  const layoutSelect = document.getElementById('topo-layout');
+
+  if (refreshBtn) refreshBtn.addEventListener('click', () => renderTopology());
+  if (layoutSelect) layoutSelect.addEventListener('change', () => renderTopology());
+}
+
+function renderTopology() {
+  const container = document.getElementById('topo-canvas');
+  if (!container) return;
+
+  const layoutSelect = document.getElementById('topo-layout');
+  const layout = layoutSelect ? layoutSelect.value : 'hierarchical';
+
+  // Collect all unique nodes and edges from traceroute data
+  const nodes = new Map();
+  const edges = [];
+
+  // Add scanner node (assumed to be at hop 0)
+  nodes.set('scanner', { id: 'scanner', type: 'scanner', label: 'Scanner' });
+
+  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+    // Add target node
+    nodes.set(host.ip, {
+      id: host.ip,
+      type: 'target',
+      label: host.hostname || host.ip,
+      host
+    });
+
+    // Process traceroute hops
+    if (host.trace && host.trace.length > 0) {
+      let prevNode = 'scanner';
+      host.trace.forEach((hop, i) => {
+        if (hop.ip && hop.ip !== '*') {
+          // Add hop node if not already a target
+          if (!nodes.has(hop.ip)) {
+            nodes.set(hop.ip, {
+              id: hop.ip,
+              type: 'hop',
+              label: hop.host || hop.ip,
+              ttl: hop.ttl
+            });
+          }
+
+          // Add edge from previous node
+          edges.push({ from: prevNode, to: hop.ip, ttl: hop.ttl });
+          prevNode = hop.ip;
+        }
+      });
+
+      // Add edge to target
+      if (prevNode !== host.ip) {
+        edges.push({ from: prevNode, to: host.ip });
+      }
+    } else {
+      // No traceroute - direct connection from scanner
+      edges.push({ from: 'scanner', to: host.ip });
+    }
+  });
+
+  // Calculate positions based on layout
+  const positions = calculateLayout(nodes, edges, layout, container);
+
+  // Clear and render
+  container.innerHTML = '';
+
+  // Render edges first (behind nodes)
+  edges.forEach(edge => {
+    const fromPos = positions.get(edge.from);
+    const toPos = positions.get(edge.to);
+    if (fromPos && toPos) {
+      renderEdge(container, fromPos, toPos);
+    }
+  });
+
+  // Render nodes
+  nodes.forEach((node, id) => {
+    const pos = positions.get(id);
+    if (pos) {
+      renderNode(container, node, pos);
+    }
+  });
+
+  // Update details panel
+  updateTopoDetails(nodes, edges);
+}
+
+function calculateLayout(nodes, edges, layout, container) {
+  const positions = new Map();
+  const width = container.offsetWidth || 800;
+  const height = container.offsetHeight || 500;
+  const padding = 80;
+
+  if (layout === 'radial') {
+    // Radial layout - scanner in center
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2 - padding;
+
+    positions.set('scanner', { x: centerX, y: centerY });
+
+    // Group nodes by distance from scanner
+    const hops = new Map();
+    nodes.forEach((node, id) => {
+      if (id === 'scanner') return;
+      const maxTtl = node.ttl || (node.type === 'target' ? 10 : 5);
+      if (!hops.has(maxTtl)) hops.set(maxTtl, []);
+      hops.get(maxTtl).push(id);
+    });
+
+    // Position each ring
+    const sortedTtls = Array.from(hops.keys()).sort((a, b) => a - b);
+    sortedTtls.forEach((ttl, ringIndex) => {
+      const ringNodes = hops.get(ttl);
+      const ringRadius = (radius / sortedTtls.length) * (ringIndex + 1);
+      ringNodes.forEach((id, i) => {
+        const angle = (2 * Math.PI * i) / ringNodes.length - Math.PI / 2;
+        positions.set(id, {
+          x: centerX + ringRadius * Math.cos(angle),
+          y: centerY + ringRadius * Math.sin(angle)
+        });
+      });
+    });
+  } else {
+    // Hierarchical layout
+    positions.set('scanner', { x: padding, y: height / 2 });
+
+    // Group by hop count
+    const levels = new Map();
+    nodes.forEach((node, id) => {
+      if (id === 'scanner') return;
+      const level = node.ttl || (node.type === 'target' ? 10 : 5);
+      if (!levels.has(level)) levels.set(level, []);
+      levels.get(level).push(id);
+    });
+
+    const sortedLevels = Array.from(levels.keys()).sort((a, b) => a - b);
+    const levelWidth = (width - padding * 2) / (sortedLevels.length + 1);
+
+    sortedLevels.forEach((level, levelIndex) => {
+      const levelNodes = levels.get(level);
+      const levelHeight = height - padding * 2;
+      const nodeSpacing = levelHeight / (levelNodes.length + 1);
+
+      levelNodes.forEach((id, i) => {
+        positions.set(id, {
+          x: padding + levelWidth * (levelIndex + 1),
+          y: padding + nodeSpacing * (i + 1)
+        });
+      });
+    });
+  }
+
+  return positions;
+}
+
+function renderNode(container, node, pos) {
+  const el = document.createElement('div');
+  el.className = `topo-node ${node.type}`;
+  el.style.left = `${pos.x - 50}px`;
+  el.style.top = `${pos.y - 20}px`;
+  el.innerHTML = `
+    <div class="topo-node-ip">${node.id === 'scanner' ? 'Scanner' : node.id}</div>
+    ${node.label && node.label !== node.id ? `<div class="topo-node-label">${node.label}</div>` : ''}
+  `;
+  el.addEventListener('click', () => showNodeDetails(node));
+  container.appendChild(el);
+}
+
+function renderEdge(container, from, to) {
+  const el = document.createElement('div');
+  el.className = 'topo-edge';
+
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  el.style.left = `${from.x}px`;
+  el.style.top = `${from.y}px`;
+  el.style.width = `${length}px`;
+  el.style.transform = `rotate(${angle}deg)`;
+
+  container.appendChild(el);
+}
+
+function showNodeDetails(node) {
+  const detailsEl = document.getElementById('topo-details');
+  if (!detailsEl) return;
+
+  if (node.type === 'scanner') {
+    detailsEl.innerHTML = '<p style="color:#8b949e;">Scanner node (origin of all traceroutes)</p>';
+    return;
+  }
+
+  if (node.host) {
+    const h = node.host;
+    const fp = parseFingerprint(h.osFingerprint);
+    detailsEl.innerHTML = `
+      <div class="mb-4">
+        <strong>${h.ip}</strong> ${h.hostname ? `(${h.hostname})` : ''}
+      </div>
+      ${h.trace.length > 0 ? `
+        <div class="fp-section">
+          <div class="fp-title">Traceroute Path (${h.trace.length} hops)</div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr><th>TTL</th><th>IP</th><th>Hostname</th><th>RTT</th></tr></thead>
+              <tbody>
+                ${h.trace.map(hop => `
+                  <tr>
+                    <td>${hop.ttl}</td>
+                    <td class="mono">${hop.ip || '*'}</td>
+                    <td>${hop.host || ''}</td>
+                    <td>${hop.rtt ? hop.rtt + 'ms' : ''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : '<p style="color:#8b949e;">No traceroute data available</p>'}
+      ${fp ? `
+        <div class="fp-section mt-4">
+          <div class="fp-title">OS Fingerprint</div>
+          <div class="fp-grid">
+            ${Object.entries(fp).slice(0, 12).map(([k, v]) => `
+              <div class="fp-item"><span class="fp-key">${k}:</span><span class="fp-val">${v}</span></div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `;
+  } else {
+    detailsEl.innerHTML = `
+      <div class="mb-4">
+        <strong>${node.id}</strong> - Intermediate hop
+        ${node.label && node.label !== node.id ? `<br><span style="color:#8b949e;">${node.label}</span>` : ''}
+      </div>
+    `;
+  }
+}
+
+function updateTopoDetails(nodes, edges) {
+  const targetCount = Array.from(nodes.values()).filter(n => n.type === 'target').length;
+  const hopCount = Array.from(nodes.values()).filter(n => n.type === 'hop').length;
+
+  const detailsEl = document.getElementById('topo-details');
+  if (detailsEl && !detailsEl.querySelector('.tbl-wrap')) {
+    detailsEl.innerHTML = `
+      <p style="color:#8b949e;">
+        Showing ${targetCount} targets and ${hopCount} intermediate hops.
+        Click on a node to see details.
+      </p>
+    `;
+  }
+}
+
+// === FINGERPRINT PARSING ===
+function parseFingerprint(fp) {
+  if (!fp) return null;
+
+  // Nmap fingerprints are URL-encoded key=value pairs separated by %
+  // Example: SCAN(V=7.94%E=4%D=11/5%OT=22%CT=1%CU=%PV=Y%DS=2...)
+  const result = {};
+
+  try {
+    // Decode URL encoding
+    const decoded = decodeURIComponent(fp.replace(/\+/g, ' '));
+
+    // Parse sections like SCAN(...) SEQ(...) OPS(...) etc
+    const sectionRegex = /([A-Z]+)\(([^)]+)\)/g;
+    let match;
+
+    while ((match = sectionRegex.exec(decoded)) !== null) {
+      const sectionName = match[1];
+      const sectionData = match[2];
+
+      // Parse key=value pairs within section
+      sectionData.split('%').forEach(pair => {
+        const [key, value] = pair.split('=');
+        if (key && value !== undefined) {
+          result[`${sectionName}.${key}`] = value;
+        }
+      });
+    }
+  } catch (e) {
+    console.error('[NetIntel] Error parsing fingerprint:', e);
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+// Parse service fingerprint
+function parseServiceFingerprint(fp) {
+  if (!fp) return null;
+
+  const result = {};
+  try {
+    const decoded = decodeURIComponent(fp);
+    // Service fingerprints often have SF: prefix and contain probe responses
+    const parts = decoded.split(/SF[-:]?/);
+    if (parts.length > 1) {
+      result.response = parts[1].substring(0, 200); // Truncate
+    }
+  } catch (e) {
+    // Ignore parse errors
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+// === TIMELINE VIEW ===
+let timelineScans = [];
+
+function initTimeline() {
+  const addBtn = document.getElementById('timeline-add');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      // Create file input dynamically
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.xml';
+      input.addEventListener('change', () => {
+        if (input.files[0]) addTimelineScan(input.files[0]);
+      });
+      input.click();
+    });
+  }
+
+  // Initialize with current scan
+  timelineScans = [{
+    id: 'current',
+    timestamp: new Date(state.data.scanInfo.start * 1000),
+    startstr: state.data.scanInfo.startstr,
+    hosts: state.data.hosts,
+    stats: state.data.stats
+  }];
+}
+
+function addTimelineScan(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'text/xml');
+      if (!doc.querySelector('nmaprun')) {
+        alert('Not a valid Nmap XML file');
+        return;
+      }
+
+      const nmaprun = doc.querySelector('nmaprun');
+      const hosts = parseNmapXml(doc);
+      const runstats = doc.querySelector('runstats hosts');
+
+      const scan = {
+        id: `scan-${Date.now()}`,
+        timestamp: new Date(nmaprun.getAttribute('start') * 1000),
+        startstr: nmaprun.getAttribute('startstr'),
+        filename: file.name,
+        hosts,
+        stats: {
+          total: parseInt(runstats?.getAttribute('total') || hosts.length),
+          up: parseInt(runstats?.getAttribute('up') || hosts.filter(h => h.status === 'up').length),
+          down: parseInt(runstats?.getAttribute('down') || 0)
+        }
+      };
+
+      timelineScans.push(scan);
+      timelineScans.sort((a, b) => a.timestamp - b.timestamp);
+
+      renderTimeline();
+      console.log('[NetIntel] Added timeline scan:', file.name);
+    } catch (err) {
+      console.error('[NetIntel] Timeline parse error:', err);
+      alert('Error parsing scan file');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderTimeline() {
+  const track = document.getElementById('timeline-track');
+  if (!track) return;
+
+  track.innerHTML = timelineScans.map((scan, i) => `
+    <div class="timeline-scan ${i === timelineScans.length - 1 ? 'active' : ''}" data-scan="${scan.id}">
+      <div class="timeline-scan-date">${scan.timestamp.toLocaleDateString()}</div>
+      <div class="timeline-scan-time">${scan.timestamp.toLocaleTimeString()}</div>
+      <div class="timeline-scan-stats">
+        <span class="timeline-scan-stat">${scan.stats.up} hosts</span>
+        <span class="timeline-scan-stat">${scan.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0)} ports</span>
+      </div>
+      ${scan.filename ? `<div style="font-size:.7rem;color:#8b949e;margin-top:.25rem;">${scan.filename}</div>` : ''}
+    </div>
+  `).join('');
+
+  // Click handlers
+  track.querySelectorAll('.timeline-scan').forEach(el => {
+    el.addEventListener('click', () => {
+      track.querySelectorAll('.timeline-scan').forEach(s => s.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+
+  renderTimelineChart();
+  renderTimelineChanges();
+}
+
+function renderTimelineChart() {
+  const chart = document.getElementById('timeline-chart');
+  if (!chart || timelineScans.length < 2) return;
+
+  const maxHosts = Math.max(...timelineScans.map(s => s.stats.up));
+  const maxPorts = Math.max(...timelineScans.map(s =>
+    s.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0)
+  ));
+
+  const barWidth = Math.max(20, (chart.offsetWidth - 100) / timelineScans.length - 10);
+
+  chart.innerHTML = timelineScans.map((scan, i) => {
+    const hostHeight = (scan.stats.up / maxHosts) * 150;
+    const portCount = scan.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0);
+    const portHeight = (portCount / maxPorts) * 150;
+
+    return `
+      <div style="position:absolute;left:${50 + i * (barWidth + 10)}px;bottom:2rem;text-align:center;">
+        <div class="timeline-bar hosts" style="height:${hostHeight}px;width:${barWidth/2 - 2}px;display:inline-block;" title="${scan.stats.up} hosts"></div>
+        <div class="timeline-bar ports" style="height:${portHeight}px;width:${barWidth/2 - 2}px;display:inline-block;" title="${portCount} ports"></div>
+        <div style="font-size:.7rem;color:#8b949e;margin-top:.25rem;">${scan.timestamp.toLocaleDateString()}</div>
+      </div>
+    `;
+  }).join('') + `
+    <div style="position:absolute;right:1rem;top:1rem;font-size:.75rem;">
+      <span style="color:#238636;">■</span> Hosts
+      <span style="color:#58a6ff;margin-left:.5rem;">■</span> Ports
+    </div>
+  `;
+}
+
+function renderTimelineChanges() {
+  const changesEl = document.getElementById('timeline-changes');
+  if (!changesEl || timelineScans.length < 2) return;
+
+  const changes = [];
+
+  for (let i = 1; i < timelineScans.length; i++) {
+    const prev = timelineScans[i - 1];
+    const curr = timelineScans[i];
+    const diff = computeDiff(prev.hosts, curr.hosts);
+
+    if (diff.summary.new > 0 || diff.summary.removed > 0 || diff.summary.changed > 0) {
+      changes.push({
+        from: prev.timestamp,
+        to: curr.timestamp,
+        diff
+      });
+    }
+  }
+
+  changesEl.innerHTML = changes.length ? changes.map(c => `
+    <div class="diff-item" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#8b949e;">${c.from.toLocaleDateString()} -> ${c.to.toLocaleDateString()}</span>
+        <div>
+          ${c.diff.summary.new > 0 ? `<span class="badge badge-low">+${c.diff.summary.new} new</span>` : ''}
+          ${c.diff.summary.removed > 0 ? `<span class="badge badge-critical">-${c.diff.summary.removed} removed</span>` : ''}
+          ${c.diff.summary.changed > 0 ? `<span class="badge badge-high">${c.diff.summary.changed} changed</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('') : '<p style="color:#8b949e;">No changes between scans</p>';
+}
+
+// Initialize topology and timeline on nav
+function navigateTo(section) {
+  document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === section));
+  document.querySelectorAll('[data-section]').forEach(s => s.classList.toggle('active', s.dataset.section === section));
+  if (section === 'cleartext') renderCleartext();
+  if (section === 'topology') { initTopology(); renderTopology(); }
+  if (section === 'timeline') { initTimeline(); renderTimeline(); }
 }
 
 // === SEARCH ===
