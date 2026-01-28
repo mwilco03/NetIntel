@@ -65,6 +65,30 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .btn-ghost{background:transparent;color:#8b949e;border:none;padding:.4rem .6rem}
 .btn-ghost:hover{color:#c9d1d9;background:#21262d}
 .btn-sm{padding:.3rem .6rem;font-size:.8rem}
+.search-count{display:inline-block;margin-left:.5rem;padding:.2rem .5rem;font-size:.75rem;color:#8b949e;background:#161b22;border-radius:4px}
+
+/* === VIEW TOGGLE === */
+.view-toggle{display:flex;background:#161b22;border-radius:6px;padding:2px;gap:2px}
+.view-toggle .btn{background:transparent;border:none;opacity:.7}
+.view-toggle .btn.active{background:#30363d;opacity:1}
+.view-toggle .btn:hover{opacity:1}
+
+/* === AGGREGATION VIEWS === */
+.agg-view{padding:1rem 0}
+.agg-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1rem}
+.agg-header h3{margin:0;font-size:1.1rem;font-weight:600;color:#c9d1d9}
+.agg-subtitle{font-size:.8rem;color:#8b949e}
+.agg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem}
+.agg-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:1rem;cursor:pointer;transition:all .15s}
+.agg-card:hover{border-color:#58a6ff;background:#161b22}
+.agg-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.agg-card-port{font-size:1.25rem;font-weight:600;color:#58a6ff}
+.agg-card-count{font-size:.8rem;padding:.2rem .5rem;background:#238636;color:#fff;border-radius:10px}
+.agg-card-name{font-size:.875rem;color:#c9d1d9;margin-bottom:.25rem}
+.agg-card-hosts{font-size:.75rem;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agg-card.critical{border-color:rgba(248,81,73,.5)}
+.agg-card.warning{border-color:rgba(210,153,34,.5)}
+.agg-card.cleartext{border-color:rgba(255,123,0,.5)}
 
 /* === CARDS === */
 .card{background:#0d1117;border:1px solid #21262d;border-radius:8px;overflow:hidden;margin-bottom:1rem}
@@ -99,11 +123,37 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .badge-info{background:rgba(136,146,157,.2);color:#8b949e}
 .badge-cleartext{background:rgba(248,81,73,.3);color:#ff7b72;border:1px solid #f85149}
 .tag{display:inline-flex;align-items:center;padding:.15rem .4rem;font-size:.7rem;border-radius:3px;margin-right:.25rem}
+/* Criticality - Gold/Orange tones */
+.tag-ckt{background:rgba(255,140,0,.25);color:#ff8c00;border:1px solid #ff8c00;font-weight:600}
+.tag-mission-critical{background:rgba(255,69,0,.2);color:#ff6347;border:1px solid #ff6347}
+.tag-mission-essential{background:rgba(255,165,0,.2);color:#ffa500;border:1px solid #ffa500}
+.tag-business-critical{background:rgba(210,153,34,.2);color:#d29922;border:1px solid #d29922}
+/* Tactical - Red/Purple tones */
 .tag-crown{background:rgba(210,153,34,.2);color:#d29922;border:1px solid #d29922}
 .tag-choke{background:rgba(248,81,73,.2);color:#f85149;border:1px solid #f85149}
 .tag-key{background:rgba(163,113,247,.2);color:#a371f7;border:1px solid #a371f7}
+.tag-pivot{background:rgba(219,112,147,.2);color:#db7093;border:1px solid #db7093}
+.tag-attack-surface{background:rgba(255,99,71,.2);color:#ff6347;border:1px solid #ff6347}
+.tag-egress{background:rgba(255,69,0,.2);color:#ff4500;border:1px solid #ff4500}
+/* Environment - Blue/Green/Gray tones */
+.tag-production{background:rgba(35,134,54,.2);color:#238636;border:1px solid #238636}
+.tag-staging{background:rgba(88,166,255,.2);color:#58a6ff;border:1px solid #58a6ff}
+.tag-development{background:rgba(163,113,247,.15);color:#a371f7;border:1px solid rgba(163,113,247,.5)}
+.tag-test{background:rgba(139,148,158,.15);color:#8b949e;border:1px solid rgba(139,148,158,.4)}
+.tag-deprecated{background:rgba(110,84,76,.2);color:#bc8f8f;border:1px solid #bc8f8f;text-decoration:line-through}
+/* Priority */
+.tag-p1{background:rgba(248,81,73,.3);color:#f85149;border:1px solid #f85149;font-weight:600}
+.tag-p2{background:rgba(210,153,34,.25);color:#d29922;border:1px solid #d29922}
+.tag-p3{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.4)}
+.tag-monitor{background:rgba(139,148,158,.1);color:#8b949e;border:1px solid rgba(139,148,158,.3)}
+/* Metadata */
 .tag-owner{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tag-notes{background:rgba(139,148,158,.15);color:#8b949e;border:1px solid rgba(139,148,158,.3);cursor:help}
+/* Label checkbox styling for modal */
+.label-group{display:flex;flex-wrap:wrap;gap:.5rem}
+.label-check{display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.8rem;padding:.25rem .5rem;border-radius:4px;background:#161b22;border:1px solid #21262d}
+.label-check:hover{border-color:#30363d}
+.label-check input{margin:0}
 
 /* === ENTITY CARDS === */
 .entity-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem}
@@ -307,10 +357,13 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .drop-zone-hint{font-size:.8rem;color:#484f58}
 
 /* === CONTEXT MENU === */
-.ctx-menu{position:fixed;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:.5rem 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:1001;display:none}
+.ctx-menu{position:fixed;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:.5rem 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:1001;display:none}
 .ctx-menu.active{display:block}
+.ctx-label{padding:.25rem 1rem;font-size:.7rem;color:#8b949e;text-transform:uppercase;letter-spacing:.05em}
 .ctx-item{display:block;width:100%;padding:.5rem 1rem;color:#c9d1d9;cursor:pointer;font-size:.875rem;text-align:left;background:none;border:none}
 .ctx-item:hover{background:#21262d}
+.ctx-item.ctx-danger{color:#f85149}
+.ctx-item.ctx-danger:hover{background:rgba(248,81,73,.1)}
 .ctx-div{height:1px;background:#21262d;margin:.5rem 0}
 
 /* === SOURCE CARDS === */
@@ -396,11 +449,12 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <header class="header">
       <div class="header-left">
         <div class="search">
-          <input type="text" id="search" placeholder="Search hosts, ports, services..."/>
+          <input type="text" id="search" placeholder="Search: port:22 service:ssh os:windows tag:ckt cve:CVE-* risk:>50"/>
         </div>
       </div>
       <div class="header-right">
         <span style="font-size:.8rem;color:#8b949e;">Scan: <xsl:value-of select="/nmaprun/@startstr"/></span>
+        <button class="btn btn-ghost btn-sm" data-action="share" title="Copy shareable link">🔗 Share</button>
         <button class="btn btn-secondary btn-sm" data-action="import">Import</button>
         <button class="btn btn-primary btn-sm" data-action="export">Export</button>
       </div>
@@ -445,38 +499,80 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 
 <!-- Context Menu -->
 <div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-label">Criticality</div>
+  <button class="ctx-item" data-tag="ckt">◆ CKT</button>
+  <button class="ctx-item" data-tag="mission-critical">▲ Mission Critical</button>
+  <div class="ctx-div"></div>
+  <div class="ctx-label">Tactical</div>
   <button class="ctx-item" data-tag="crown">★ Crown Jewel</button>
   <button class="ctx-item" data-tag="choke">◎ Choke Point</button>
-  <button class="ctx-item" data-tag="key">⬡ Key Terrain</button>
+  <button class="ctx-item" data-tag="pivot">⇄ Pivot Point</button>
   <div class="ctx-div"></div>
-  <button class="ctx-item" data-action="annotate">✎ Edit Notes</button>
+  <button class="ctx-item" data-action="annotate">✎ Full Annotation...</button>
   <div class="ctx-div"></div>
-  <button class="ctx-item" data-tag="clear">✕ Clear All</button>
+  <button class="ctx-item ctx-danger" data-tag="clear">✕ Clear All</button>
 </div>
 
 <!-- Annotation Modal -->
 <div class="modal" id="annotate-modal">
-  <div class="modal-content" style="max-width:480px">
+  <div class="modal-content" style="max-width:560px">
     <div class="modal-head">
       <h3>Asset Annotation</h3>
       <button class="modal-close">×</button>
     </div>
     <div class="modal-body">
       <div id="annotate-info" style="margin-bottom:1rem;padding:.75rem;background:#161b22;border-radius:6px;font-family:monospace;font-size:.85rem"></div>
+
       <div class="form-group" style="margin-bottom:1rem">
         <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.25rem">Owner / Responsible Party</label>
-        <input type="text" id="annotate-owner" class="input" placeholder="e.g., John Smith, IT Ops Team" style="width:100%"/>
+        <input type="text" id="annotate-owner" class="input" placeholder="e.g., J. Smith, SOC Team, Network Ops" style="width:100%"/>
       </div>
+
       <div class="form-group" style="margin-bottom:1rem">
         <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.25rem">Notes</label>
-        <textarea id="annotate-notes" class="input" rows="4" placeholder="e.g., Production database server, scheduled maintenance windows..." style="width:100%;resize:vertical"></textarea>
+        <textarea id="annotate-notes" class="input" rows="3" placeholder="Function, dependencies, maintenance windows..." style="width:100%;resize:vertical"></textarea>
       </div>
+
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label style="display:block;font-size:.75rem;color:#d29922;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Criticality</label>
+        <div id="annotate-labels-crit" class="label-group">
+          <label class="label-check"><input type="checkbox" value="ckt"/> CKT (Cyber Key Terrain)</label>
+          <label class="label-check"><input type="checkbox" value="mission-critical"/> Mission Critical</label>
+          <label class="label-check"><input type="checkbox" value="mission-essential"/> Mission Essential</label>
+          <label class="label-check"><input type="checkbox" value="business-critical"/> Business Critical</label>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label style="display:block;font-size:.75rem;color:#f85149;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Tactical</label>
+        <div id="annotate-labels-tact" class="label-group">
+          <label class="label-check"><input type="checkbox" value="crown"/> Crown Jewel</label>
+          <label class="label-check"><input type="checkbox" value="choke"/> Choke Point</label>
+          <label class="label-check"><input type="checkbox" value="key"/> Key Terrain</label>
+          <label class="label-check"><input type="checkbox" value="pivot"/> Pivot Point</label>
+          <label class="label-check"><input type="checkbox" value="attack-surface"/> Attack Surface</label>
+          <label class="label-check"><input type="checkbox" value="egress"/> Egress Point</label>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label style="display:block;font-size:.75rem;color:#58a6ff;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Environment</label>
+        <div id="annotate-labels-env" class="label-group">
+          <label class="label-check"><input type="checkbox" value="production"/> Production</label>
+          <label class="label-check"><input type="checkbox" value="staging"/> Staging</label>
+          <label class="label-check"><input type="checkbox" value="development"/> Development</label>
+          <label class="label-check"><input type="checkbox" value="test"/> Test</label>
+          <label class="label-check"><input type="checkbox" value="deprecated"/> Deprecated</label>
+        </div>
+      </div>
+
       <div class="form-group">
-        <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.5rem">Labels</label>
-        <div id="annotate-labels" style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="crown"/> ★ Crown Jewel</label>
-          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="choke"/> ◎ Choke Point</label>
-          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="key"/> ⬡ Key Terrain</label>
+        <label style="display:block;font-size:.75rem;color:#a371f7;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Priority</label>
+        <div id="annotate-labels-pri" class="label-group">
+          <label class="label-check"><input type="checkbox" value="p1"/> P1 - Immediate</label>
+          <label class="label-check"><input type="checkbox" value="p2"/> P2 - Urgent</label>
+          <label class="label-check"><input type="checkbox" value="p3"/> P3 - Normal</label>
+          <label class="label-check"><input type="checkbox" value="monitor"/> Monitor</label>
         </div>
       </div>
     </div>
@@ -584,6 +680,11 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <div class="section-header">
       <h2 class="section-title">All Entities</h2>
       <div class="flex gap-2">
+        <div class="view-toggle">
+          <button class="btn btn-secondary btn-sm active" data-view="cards">▤ Cards</button>
+          <button class="btn btn-secondary btn-sm" data-view="ports">◫ Ports</button>
+          <button class="btn btn-secondary btn-sm" data-view="services">◉ Services</button>
+        </div>
         <select id="entity-group" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
           <option value="none">No Grouping</option>
           <option value="os">Group by OS</option>
@@ -594,18 +695,38 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
         <select id="entity-filter" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
           <option value="all">All Hosts</option>
           <option value="up">Online Only</option>
+          <option value="ckt">CKT / Mission Critical</option>
+          <option value="tagged">All Tagged</option>
           <option value="admin">Admin Ports</option>
           <option value="cleartext">Has Cleartext</option>
-          <option value="risk">High Risk</option>
-          <option value="tagged">Key Terrain</option>
+          <option value="risk">High Risk (50+)</option>
+          <option value="production">Production</option>
         </select>
       </div>
     </div>
-    
+
+    <!-- Card View (default) -->
     <div class="entity-grid" id="entity-grid">
       <xsl:for-each select="/nmaprun/host[status/@state='up']">
         <xsl:call-template name="entity-card"/>
       </xsl:for-each>
+    </div>
+
+    <!-- Aggregation Views (hidden by default) -->
+    <div class="agg-view" id="port-agg-view" style="display:none;">
+      <div class="agg-header">
+        <h3>Port Distribution</h3>
+        <span class="agg-subtitle">Click a port to filter hosts</span>
+      </div>
+      <div class="agg-grid" id="port-agg-grid"></div>
+    </div>
+
+    <div class="agg-view" id="service-agg-view" style="display:none;">
+      <div class="agg-header">
+        <h3>Service Distribution</h3>
+        <span class="agg-subtitle">Click a service to filter hosts</span>
+      </div>
+      <div class="agg-grid" id="service-agg-grid"></div>
     </div>
   </section>
 </xsl:template>
@@ -1301,6 +1422,180 @@ function getHostAllScripts(host) {
   return scripts;
 }
 
+// === SEARCH INDEXES ===
+// Reverse indexes for fast lookups - built on data load
+const searchIndex = {
+  byPort: {},      // port -> [ip, ip, ...]
+  byService: {},   // service -> [ip, ip, ...]
+  byProduct: {},   // product -> [ip, ip, ...]
+  byOs: {},        // os keyword -> [ip, ip, ...]
+  byTag: {},       // tag -> [ip, ip, ...]
+  byCve: {}        // cve -> [ip, ip, ...]
+};
+
+function buildSearchIndex() {
+  // Reset indexes
+  Object.keys(searchIndex).forEach(k => searchIndex[k] = {});
+
+  if (!state.data?.hosts) return;
+
+  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+    const ip = host.ip;
+
+    // Index by port
+    host.ports.filter(p => p.state === 'open').forEach(port => {
+      const portKey = String(port.port);
+      if (!searchIndex.byPort[portKey]) searchIndex.byPort[portKey] = [];
+      searchIndex.byPort[portKey].push(ip);
+
+      // Index by service
+      if (port.svc) {
+        const svc = port.svc.toLowerCase();
+        if (!searchIndex.byService[svc]) searchIndex.byService[svc] = [];
+        if (!searchIndex.byService[svc].includes(ip)) searchIndex.byService[svc].push(ip);
+      }
+
+      // Index by product
+      if (port.product) {
+        const prod = port.product.toLowerCase();
+        if (!searchIndex.byProduct[prod]) searchIndex.byProduct[prod] = [];
+        if (!searchIndex.byProduct[prod].includes(ip)) searchIndex.byProduct[prod].push(ip);
+      }
+    });
+
+    // Index by OS
+    if (host.os && host.os[0]) {
+      const osName = host.os[0].name.toLowerCase();
+      const osWords = osName.split(/\s+/);
+      osWords.forEach(word => {
+        if (word.length > 2) {
+          if (!searchIndex.byOs[word]) searchIndex.byOs[word] = [];
+          if (!searchIndex.byOs[word].includes(ip)) searchIndex.byOs[word].push(ip);
+        }
+      });
+    }
+
+    // Index by tags
+    const tagData = getAssetTags(host);
+    const labels = Array.isArray(tagData) ? tagData : (tagData.labels || []);
+    labels.forEach(tag => {
+      if (!searchIndex.byTag[tag]) searchIndex.byTag[tag] = [];
+      searchIndex.byTag[tag].push(ip);
+    });
+
+    // Index by CVE (if vuln db loaded)
+    const cves = getHostCVEs(host);
+    cves.forEach(cve => {
+      const cveId = cve.cve.toLowerCase();
+      if (!searchIndex.byCve[cveId]) searchIndex.byCve[cveId] = [];
+      searchIndex.byCve[cveId].push(ip);
+    });
+  });
+
+  console.log('[NetIntel] Search index built:',
+    Object.keys(searchIndex.byPort).length, 'ports,',
+    Object.keys(searchIndex.byService).length, 'services,',
+    Object.keys(searchIndex.byTag).length, 'tags');
+}
+
+// === SEARCH QUERY PARSER ===
+// Supports: port:22, service:ssh, os:windows, tag:ckt, cve:CVE-2021-*, owner:john, ip:192.168.*
+function parseSearchQuery(query) {
+  const terms = [];
+  const fieldPattern = /(\w+):("[^"]+"|[\S]+)/g;
+  let match;
+  let remaining = query;
+
+  while ((match = fieldPattern.exec(query)) !== null) {
+    const field = match[1].toLowerCase();
+    let value = match[2].replace(/^"|"$/g, '').toLowerCase();
+    const isWildcard = value.includes('*');
+    terms.push({ field, value, isWildcard });
+    remaining = remaining.replace(match[0], '');
+  }
+
+  // Remaining text is freeform search
+  const freeform = remaining.trim().toLowerCase();
+  if (freeform) {
+    terms.push({ field: 'text', value: freeform, isWildcard: freeform.includes('*') });
+  }
+
+  return terms;
+}
+
+function matchesSearchTerms(host, terms) {
+  if (terms.length === 0) return true;
+
+  return terms.every(term => {
+    const { field, value, isWildcard } = term;
+    const pattern = isWildcard ? new RegExp('^' + value.replace(/\*/g, '.*') + '$', 'i') : null;
+    const matches = (str) => isWildcard ? pattern.test(str) : str.toLowerCase().includes(value);
+
+    switch (field) {
+      case 'port':
+        return host.ports.some(p => p.state === 'open' && matches(String(p.port)));
+
+      case 'service':
+      case 'svc':
+        return host.ports.some(p => p.state === 'open' && p.svc && matches(p.svc));
+
+      case 'product':
+        return host.ports.some(p => p.product && matches(p.product));
+
+      case 'os':
+        return host.os && host.os[0] && matches(host.os[0].name);
+
+      case 'ip':
+        return matches(host.ip);
+
+      case 'host':
+      case 'hostname':
+        return host.hostname && matches(host.hostname);
+
+      case 'mac':
+        return host.mac && matches(host.mac);
+
+      case 'tag':
+      case 'label':
+        const tagData = getAssetTags(host);
+        const labels = Array.isArray(tagData) ? tagData : (tagData.labels || []);
+        return labels.some(l => matches(l));
+
+      case 'owner':
+        const ownerData = getAssetTags(host);
+        return ownerData.owner && matches(ownerData.owner);
+
+      case 'cve':
+        const cves = getHostCVEs(host);
+        return cves.some(c => matches(c.cve));
+
+      case 'admin':
+        if (value === 'true' || value === 'yes' || value === '*') {
+          return host.ports.some(p => p.state === 'open' && ADMIN_PORTS[p.port]);
+        }
+        return host.ports.some(p => p.state === 'open' && ADMIN_PORTS[p.port] &&
+          (matches(ADMIN_PORTS[p.port].name) || matches(ADMIN_PORTS[p.port].cat)));
+
+      case 'risk':
+        const risk = calculateRisk(host);
+        if (value.startsWith('>')) return risk > parseInt(value.slice(1));
+        if (value.startsWith('<')) return risk < parseInt(value.slice(1));
+        return risk >= parseInt(value);
+
+      case 'text':
+      default:
+        // Freeform: search IP, hostname, ports, services, OS
+        const searchText = [
+          host.ip,
+          host.hostname || '',
+          host.ports.filter(p => p.state === 'open').map(p => `${p.port} ${p.svc || ''} ${p.product || ''}`).join(' '),
+          host.os && host.os[0] ? host.os[0].name : ''
+        ].join(' ').toLowerCase();
+        return matches(searchText);
+    }
+  });
+}
+
 // === HEROICONS (inline SVG) ===
 const ICONS = {
   server: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 0 0-.12-1.03l-2.268-9.64a3.375 3.375 0 0 0-3.285-2.602H7.923a3.375 3.375 0 0 0-3.285 2.602l-2.268 9.64a4.5 4.5 0 0 0-.12 1.03v.228m19.5 0a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3m19.5 0a3 3 0 0 0-3-3H5.25a3 3 0 0 0-3 3m16.5 0h.008v.008h-.008v-.008Zm-3 0h.008v.008h-.008v-.008Z" /></svg>',
@@ -1536,9 +1831,16 @@ function initRouter() {
   router
     // Section routes
     .on('dashboard', () => navigateToSection('dashboard'))
-    .on('entities', () => navigateToSection('entities'))
-    .on('entities/:ip', ({ params }) => {
+    .on('entities', ({ query }) => {
       navigateToSection('entities');
+      // Apply filter state from URL query params
+      if (query) {
+        applyUrlFilterState(query);
+      }
+    })
+    .on('entities/:ip', ({ params, query }) => {
+      navigateToSection('entities');
+      if (query) applyUrlFilterState(query);
       selectHost(params.ip);
     })
     .on('topology', () => navigateToSection('topology'))
@@ -1672,6 +1974,36 @@ function handleAction(action) {
   if (action === 'import') document.getElementById('import-modal').classList.add('active');
   else if (action === 'export') document.getElementById('export-modal').classList.add('active');
   else if (action === 'vuln-db') document.getElementById('vuln-modal').classList.add('active');
+  else if (action === 'share') {
+    const url = getShareableUrl();
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('Link copied to clipboard');
+    }).catch(() => {
+      // Fallback for older browsers
+      prompt('Copy this link:', url);
+    });
+  }
+}
+
+// Toast notifications
+function showToast(message, duration = 3000) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  toast.style.cssText = 'background:#238636;color:#fff;padding:.75rem 1.25rem;border-radius:6px;margin-top:.5rem;animation:fadeIn .2s;font-size:.875rem';
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity .2s';
+    setTimeout(() => toast.remove(), 200);
+  }, duration);
 }
 
 // === MODALS ===
@@ -1765,8 +2097,8 @@ function openAnnotationModal(host) {
   document.getElementById('annotate-owner').value = owner;
   document.getElementById('annotate-notes').value = notes;
 
-  // Populate label checkboxes
-  document.querySelectorAll('#annotate-labels input[type="checkbox"]').forEach(cb => {
+  // Populate label checkboxes (all groups)
+  modal.querySelectorAll('.label-group input[type="checkbox"]').forEach(cb => {
     cb.checked = labels.includes(cb.value);
   });
 
@@ -1776,7 +2108,7 @@ function openAnnotationModal(host) {
   saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
 
   newSaveBtn.addEventListener('click', () => {
-    const newLabels = Array.from(document.querySelectorAll('#annotate-labels input:checked')).map(cb => cb.value);
+    const newLabels = Array.from(modal.querySelectorAll('.label-group input:checked')).map(cb => cb.value);
     const newOwner = document.getElementById('annotate-owner').value.trim();
     const newNotes = document.getElementById('annotate-notes').value.trim();
 
@@ -2187,11 +2519,220 @@ function initFilters() {
   const groupEl = document.getElementById('entity-group');
 
   if (filterEl) {
-    filterEl.addEventListener('change', () => applyFilterAndGroup());
+    filterEl.addEventListener('change', () => {
+      applyFilterAndGroup();
+      syncFilterToUrl();
+    });
   }
   if (groupEl) {
-    groupEl.addEventListener('change', () => applyFilterAndGroup());
+    groupEl.addEventListener('change', () => {
+      applyFilterAndGroup();
+      syncFilterToUrl();
+    });
   }
+
+  // View toggle (Cards / Ports / Services)
+  document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      switchEntityView(view);
+      syncFilterToUrl();
+    });
+  });
+}
+
+// Switch between Cards, Ports, and Services views
+function switchEntityView(view) {
+  const cardView = document.getElementById('entity-grid');
+  const portView = document.getElementById('port-agg-view');
+  const serviceView = document.getElementById('service-agg-view');
+
+  cardView.style.display = view === 'cards' ? '' : 'none';
+  portView.style.display = view === 'ports' ? '' : 'none';
+  serviceView.style.display = view === 'services' ? '' : 'none';
+
+  if (view === 'ports') renderPortAggregation();
+  if (view === 'services') renderServiceAggregation();
+}
+
+// Render port aggregation view
+function renderPortAggregation() {
+  const grid = document.getElementById('port-agg-grid');
+  if (!grid || !state.data?.hosts) return;
+
+  // Aggregate ports across all hosts
+  const portMap = {};
+  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+    host.ports.filter(p => p.state === 'open').forEach(p => {
+      if (!portMap[p.port]) {
+        portMap[p.port] = {
+          port: p.port,
+          service: p.svc || 'unknown',
+          product: p.product || '',
+          hosts: [],
+          isAdmin: !!ADMIN_PORTS[p.port],
+          isCleartext: !!CLEARTEXT[p.port]
+        };
+      }
+      portMap[p.port].hosts.push(host.ip);
+    });
+  });
+
+  // Sort by host count (descending)
+  const sorted = Object.values(portMap).sort((a, b) => b.hosts.length - a.hosts.length);
+
+  grid.innerHTML = sorted.map(p => {
+    const adminInfo = ADMIN_PORTS[p.port];
+    const cleartextInfo = CLEARTEXT[p.port];
+    const severity = adminInfo?.sev === 'critical' ? 'critical' : (adminInfo ? 'warning' : (cleartextInfo ? 'cleartext' : ''));
+    const hostPreview = p.hosts.slice(0, 3).join(', ') + (p.hosts.length > 3 ? ` +${p.hosts.length - 3} more` : '');
+
+    return `
+      <div class="agg-card ${severity}" data-port="${p.port}" title="${adminInfo?.desc || cleartextInfo || ''}">
+        <div class="agg-card-header">
+          <span class="agg-card-port">${p.port}</span>
+          <span class="agg-card-count">${p.hosts.length} host${p.hosts.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="agg-card-name">${p.service}${p.product ? ' - ' + p.product : ''}</div>
+        <div class="agg-card-hosts">${hostPreview}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Click to filter
+  grid.querySelectorAll('.agg-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const port = card.dataset.port;
+      document.getElementById('search').value = 'port:' + port;
+      document.getElementById('search').dispatchEvent(new Event('input'));
+      document.querySelector('[data-view="cards"]').click();
+    });
+  });
+}
+
+// Render service aggregation view
+function renderServiceAggregation() {
+  const grid = document.getElementById('service-agg-grid');
+  if (!grid || !state.data?.hosts) return;
+
+  // Aggregate services across all hosts
+  const svcMap = {};
+  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+    host.ports.filter(p => p.state === 'open' && p.svc).forEach(p => {
+      const key = p.svc.toLowerCase();
+      if (!svcMap[key]) {
+        svcMap[key] = {
+          service: p.svc,
+          ports: new Set(),
+          hosts: new Set(),
+          products: new Set()
+        };
+      }
+      svcMap[key].ports.add(p.port);
+      svcMap[key].hosts.add(host.ip);
+      if (p.product) svcMap[key].products.add(p.product);
+    });
+  });
+
+  // Convert Sets and sort by host count
+  const sorted = Object.values(svcMap)
+    .map(s => ({
+      ...s,
+      ports: Array.from(s.ports),
+      hosts: Array.from(s.hosts),
+      products: Array.from(s.products)
+    }))
+    .sort((a, b) => b.hosts.length - a.hosts.length);
+
+  grid.innerHTML = sorted.map(s => {
+    const hostPreview = s.hosts.slice(0, 3).join(', ') + (s.hosts.length > 3 ? ` +${s.hosts.length - 3} more` : '');
+    const portList = s.ports.slice(0, 5).join(', ') + (s.ports.length > 5 ? '...' : '');
+    const isCritical = s.ports.some(p => ADMIN_PORTS[p]?.sev === 'critical');
+    const hasAdmin = s.ports.some(p => ADMIN_PORTS[p]);
+    const hasCleartext = s.ports.some(p => CLEARTEXT[p]);
+    const severity = isCritical ? 'critical' : (hasAdmin ? 'warning' : (hasCleartext ? 'cleartext' : ''));
+
+    return `
+      <div class="agg-card ${severity}" data-service="${s.service}">
+        <div class="agg-card-header">
+          <span class="agg-card-port">${s.service}</span>
+          <span class="agg-card-count">${s.hosts.length} host${s.hosts.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="agg-card-name">Ports: ${portList}</div>
+        <div class="agg-card-hosts">${hostPreview}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Click to filter
+  grid.querySelectorAll('.agg-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const svc = card.dataset.service;
+      document.getElementById('search').value = 'service:' + svc;
+      document.getElementById('search').dispatchEvent(new Event('input'));
+      document.querySelector('[data-view="cards"]').click();
+    });
+  });
+}
+
+// Apply filter state from URL query parameters
+function applyUrlFilterState(query) {
+  const filterEl = document.getElementById('entity-filter');
+  const groupEl = document.getElementById('entity-group');
+  const searchEl = document.getElementById('search');
+
+  if (query.filter && filterEl) {
+    filterEl.value = query.filter;
+  }
+  if (query.group && groupEl) {
+    groupEl.value = query.group;
+  }
+  if (query.q && searchEl) {
+    searchEl.value = query.q;
+    // Trigger search
+    searchEl.dispatchEvent(new Event('input'));
+  }
+  if (query.view && ['cards', 'ports', 'services'].includes(query.view)) {
+    document.querySelector(`[data-view="${query.view}"]`)?.click();
+  }
+
+  // Apply after setting values
+  setTimeout(() => applyFilterAndGroup(), 0);
+}
+
+// Sync current filter/search state to URL
+function syncFilterToUrl() {
+  const filterEl = document.getElementById('entity-filter');
+  const groupEl = document.getElementById('entity-group');
+  const searchEl = document.getElementById('search');
+  const activeView = document.querySelector('[data-view].active')?.dataset.view;
+
+  const filter = filterEl?.value || 'all';
+  const group = groupEl?.value || 'none';
+  const q = searchEl?.value || '';
+
+  const params = new URLSearchParams();
+  if (filter !== 'all') params.set('filter', filter);
+  if (group !== 'none') params.set('group', group);
+  if (q.trim()) params.set('q', q);
+  if (activeView && activeView !== 'cards') params.set('view', activeView);
+
+  const queryString = params.toString();
+  const newHash = '#/entities' + (queryString ? '?' + queryString : '');
+
+  // Only update if we're on entities page and URL differs
+  if (location.hash.startsWith('#/entities') && location.hash !== newHash) {
+    history.replaceState(null, '', newHash);
+  }
+}
+
+// Get shareable URL for current filter state
+function getShareableUrl() {
+  const base = location.origin + location.pathname;
+  syncFilterToUrl();
+  return base + location.hash;
 }
 
 function applyFilterAndGroup() {
@@ -2209,15 +2750,19 @@ function applyFilterAndGroup() {
     const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
     const risk = calculateRisk(host);
     const tagData = getAssetTags(host);
-    const isTagged = Array.isArray(tagData) ? tagData.length > 0 :
-      ((tagData.labels?.length > 0) || tagData.owner || tagData.notes);
+    const labels = Array.isArray(tagData) ? tagData : (tagData.labels || []);
+    const isTagged = labels.length > 0 || tagData.owner || tagData.notes;
+    const isCkt = labels.some(l => ['ckt', 'mission-critical', 'mission-essential', 'crown'].includes(l));
+    const isProd = labels.includes('production');
 
     switch (filter) {
       case 'up': return true;
+      case 'ckt': return isCkt;
+      case 'tagged': return isTagged;
       case 'admin': return hasAdmin;
       case 'cleartext': return hasCleartext;
       case 'risk': return risk >= 50;
-      case 'tagged': return isTagged;
+      case 'production': return isProd;
       default: return true;
     }
   });
@@ -2313,6 +2858,7 @@ function applyFilter(filter) {
 
 // === RENDERING ===
 function render() {
+  buildSearchIndex();
   renderStats();
   updateEntityCards();
   updateOsDist();
@@ -2425,7 +2971,16 @@ function updateEntityCards() {
 }
 
 function updateEntityTags() {
-  const tagLabels = {crown: '★ Crown Jewel', choke: '◎ Choke Point', key: '⬡ Key Terrain'};
+  const tagLabels = {
+    // Criticality
+    'ckt': '◆ CKT', 'mission-critical': '▲ Mission Critical', 'mission-essential': '△ Mission Essential', 'business-critical': '◇ Business Critical',
+    // Tactical
+    'crown': '★ Crown Jewel', 'choke': '◎ Choke Point', 'key': '⬡ Key Terrain', 'pivot': '⇄ Pivot', 'attack-surface': '⚠ Attack Surface', 'egress': '↗ Egress',
+    // Environment
+    'production': '● Prod', 'staging': '◐ Stage', 'development': '◑ Dev', 'test': '○ Test', 'deprecated': '⊘ Deprecated',
+    // Priority
+    'p1': 'P1', 'p2': 'P2', 'p3': 'P3', 'monitor': '👁 Monitor'
+  };
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
     const host = state.data?.hosts?.find(h => h.ip === ip);
@@ -3465,49 +4020,82 @@ function renderTimelineChanges() {
 }
 
 // === SEARCH ===
+// Field-aware search: port:22, service:ssh, os:windows, tag:ckt, cve:CVE-*, owner:john, risk:>50
 document.getElementById('search')?.addEventListener('input', e => {
-  const q = e.target.value.toLowerCase();
+  const query = e.target.value;
   const filterEl = document.getElementById('entity-filter');
   const filter = filterEl ? filterEl.value : 'all';
+  const searchTerms = parseSearchQuery(query);
+
+  let visible = 0, total = 0;
 
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
-    const text = card.textContent.toLowerCase();
-    const matchesSearch = !q || ip.includes(q) || text.includes(q);
+    const host = state.data.hosts.find(h => h.ip === ip);
+    if (!host) return;
 
-    // Also respect current filter
-    if (matchesSearch && filter !== 'all') {
-      const host = state.data.hosts.find(h => h.ip === ip);
-      if (host) {
-        const open = host.ports.filter(p => p.state === 'open');
-        const hasCleartext = open.some(p => CLEARTEXT[p.port]);
-        const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
-        let risk = 0;
-        open.forEach(p => {
-          if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
-          if (CLEARTEXT[p.port]) risk += 3;
-        });
-        risk = Math.min(risk, 100);
-        const tagData = getAssetTags(host);
-        const isTagged = Array.isArray(tagData) ? tagData.length > 0 :
-          ((tagData.labels?.length > 0) || tagData.owner || tagData.notes);
+    total++;
 
-        let passesFilter = true;
-        switch (filter) {
-          case 'up': passesFilter = host.status === 'up'; break;
-          case 'admin': passesFilter = hasAdmin; break;
-          case 'cleartext': passesFilter = hasCleartext; break;
-          case 'risk': passesFilter = risk >= 50; break;
-          case 'tagged': passesFilter = isTagged; break;
-        }
-        card.style.display = passesFilter ? '' : 'none';
-        return;
+    // Check search terms
+    const matchesSearch = query.trim() === '' || matchesSearchTerms(host, searchTerms);
+
+    // Check filter
+    let passesFilter = true;
+    if (filter !== 'all') {
+      const open = host.ports.filter(p => p.state === 'open');
+      const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+      const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
+      const risk = calculateRisk(host);
+      const tagData = getAssetTags(host);
+      const labels = Array.isArray(tagData) ? tagData : (tagData.labels || []);
+      const isTagged = labels.length > 0 || tagData.owner || tagData.notes;
+      const isCkt = labels.some(l => ['ckt', 'mission-critical', 'mission-essential', 'crown'].includes(l));
+      const isProd = labels.includes('production');
+
+      switch (filter) {
+        case 'up': passesFilter = host.status === 'up'; break;
+        case 'ckt': passesFilter = isCkt; break;
+        case 'tagged': passesFilter = isTagged; break;
+        case 'admin': passesFilter = hasAdmin; break;
+        case 'cleartext': passesFilter = hasCleartext; break;
+        case 'risk': passesFilter = risk >= 50; break;
+        case 'production': passesFilter = isProd; break;
       }
     }
 
-    card.style.display = matchesSearch ? '' : 'none';
+    const show = matchesSearch && passesFilter;
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
   });
+
+  // Update search result count
+  updateSearchCount(visible, total, query);
+
+  // Debounce URL sync to avoid history spam
+  clearTimeout(window._searchUrlTimeout);
+  window._searchUrlTimeout = setTimeout(() => syncFilterToUrl(), 500);
 });
+
+function updateSearchCount(visible, total, query) {
+  let countEl = document.getElementById('search-count');
+  if (!countEl) {
+    const searchBox = document.getElementById('search');
+    if (searchBox) {
+      countEl = document.createElement('span');
+      countEl.id = 'search-count';
+      countEl.className = 'search-count';
+      searchBox.parentNode.insertBefore(countEl, searchBox.nextSibling);
+    }
+  }
+  if (countEl) {
+    if (query.trim()) {
+      countEl.textContent = `${visible} of ${total}`;
+      countEl.style.display = 'inline';
+    } else {
+      countEl.style.display = 'none';
+    }
+  }
+}
 ]]></xsl:text>
 </script>
 </xsl:template>
