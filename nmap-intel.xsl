@@ -1441,9 +1441,10 @@ function buildSearchIndex() {
 
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
     const ip = host.ip;
+    const ports = host.ports || [];
 
     // Index by port
-    host.ports.filter(p => p.state === 'open').forEach(port => {
+    ports.filter(p => p.state === 'open').forEach(port => {
       const portKey = String(port.port);
       if (!searchIndex.byPort[portKey]) searchIndex.byPort[portKey] = [];
       searchIndex.byPort[portKey].push(ip);
@@ -1525,6 +1526,7 @@ function parseSearchQuery(query) {
 
 function matchesSearchTerms(host, terms) {
   if (terms.length === 0) return true;
+  const ports = host.ports || [];
 
   return terms.every(term => {
     const { field, value, isWildcard } = term;
@@ -1533,14 +1535,14 @@ function matchesSearchTerms(host, terms) {
 
     switch (field) {
       case 'port':
-        return host.ports.some(p => p.state === 'open' && matches(String(p.port)));
+        return ports.some(p => p.state === 'open' && matches(String(p.port)));
 
       case 'service':
       case 'svc':
-        return host.ports.some(p => p.state === 'open' && p.svc && matches(p.svc));
+        return ports.some(p => p.state === 'open' && p.svc && matches(p.svc));
 
       case 'product':
-        return host.ports.some(p => p.product && matches(p.product));
+        return ports.some(p => p.product && matches(p.product));
 
       case 'os':
         return host.os && host.os[0] && matches(host.os[0].name);
@@ -1571,9 +1573,9 @@ function matchesSearchTerms(host, terms) {
 
       case 'admin':
         if (value === 'true' || value === 'yes' || value === '*') {
-          return host.ports.some(p => p.state === 'open' && ADMIN_PORTS[p.port]);
+          return ports.some(p => p.state === 'open' && ADMIN_PORTS[p.port]);
         }
-        return host.ports.some(p => p.state === 'open' && ADMIN_PORTS[p.port] &&
+        return ports.some(p => p.state === 'open' && ADMIN_PORTS[p.port] &&
           (matches(ADMIN_PORTS[p.port].name) || matches(ADMIN_PORTS[p.port].cat)));
 
       case 'risk':
@@ -1588,7 +1590,7 @@ function matchesSearchTerms(host, terms) {
         const searchText = [
           host.ip,
           host.hostname || '',
-          host.ports.filter(p => p.state === 'open').map(p => `${p.port} ${p.svc || ''} ${p.product || ''}`).join(' '),
+          ports.filter(p => p.state === 'open').map(p => `${p.port} ${p.svc || ''} ${p.product || ''}`).join(' '),
           host.os && host.os[0] ? host.os[0].name : ''
         ].join(' ').toLowerCase();
         return matches(searchText);
@@ -1951,6 +1953,12 @@ function loadState() {
   }
 }
 
+// Generate unique storage key based on scan timestamp
+function getStorageKey() {
+  const start = state.data?.scanInfo?.start || 'default';
+  return 'netintel_' + start;
+}
+
 function saveState() {
   try {
     const key = getStorageKey();
@@ -2277,8 +2285,8 @@ function compareHosts(baseHost, compHost) {
   const changes = [];
 
   // Compare ports
-  const basePorts = new Set(baseHost.ports.filter(p => p.state === 'open').map(p => `${p.port}/${p.proto}`));
-  const compPorts = new Set(compHost.ports.filter(p => p.state === 'open').map(p => `${p.port}/${p.proto}`));
+  const basePorts = new Set((baseHost.ports || []).filter(p => p.state === 'open').map(p => `${p.port}/${p.proto}`));
+  const compPorts = new Set((compHost.ports || []).filter(p => p.state === 'open').map(p => `${p.port}/${p.proto}`));
 
   // New ports
   compPorts.forEach(p => {
@@ -2351,7 +2359,7 @@ function renderDiff(diff, filename) {
       <span class="diff-ip">${h.ip}</span>
       <span class="diff-hostname">${h.hostname || ''}</span>
       <span class="diff-badge new">NEW</span>
-      <div class="ports">${h.ports.filter(p => p.state === 'open').slice(0, 5).map(p =>
+      <div class="ports">${(h.ports || []).filter(p => p.state === 'open').slice(0, 5).map(p =>
         `<span class="port open">${p.port}/${p.proto}</span>`
       ).join('')}</div>
     </div>
@@ -2489,7 +2497,7 @@ const SERVICE_PORTS = {
 };
 
 function findDominantService(host) {
-  const openPorts = host.ports.filter(p => p.state === 'open').map(p => p.port);
+  const openPorts = (host.ports || []).filter(p => p.state === 'open').map(p => p.port);
   let maxMatch = 0;
   let dominant = 'other';
 
@@ -2505,7 +2513,7 @@ function findDominantService(host) {
 }
 
 function calculateRisk(host) {
-  const open = host.ports.filter(p => p.state === 'open');
+  const open = (host.ports || []).filter(p => p.state === 'open');
   let risk = 0;
   open.forEach(p => {
     if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
@@ -2565,7 +2573,7 @@ function renderPortAggregation() {
   // Aggregate ports across all hosts
   const portMap = {};
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-    host.ports.filter(p => p.state === 'open').forEach(p => {
+    (host.ports || []).filter(p => p.state === 'open').forEach(p => {
       if (!portMap[p.port]) {
         portMap[p.port] = {
           port: p.port,
@@ -2620,7 +2628,7 @@ function renderServiceAggregation() {
   // Aggregate services across all hosts
   const svcMap = {};
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-    host.ports.filter(p => p.state === 'open' && p.svc).forEach(p => {
+    (host.ports || []).filter(p => p.state === 'open' && p.svc).forEach(p => {
       const key = p.svc.toLowerCase();
       if (!svcMap[key]) {
         svcMap[key] = {
@@ -2745,7 +2753,7 @@ function applyFilterAndGroup() {
   const filteredHosts = state.data.hosts.filter(host => {
     if (host.status !== 'up') return false;
 
-    const open = host.ports.filter(p => p.state === 'open');
+    const open = (host.ports || []).filter(p => p.state === 'open');
     const hasCleartext = open.some(p => CLEARTEXT[p.port]);
     const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
     const risk = calculateRisk(host);
@@ -2885,7 +2893,7 @@ function renderStats() {
   const risks = [];
 
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-    const open = host.ports.filter(p => p.state === 'open');
+    const open = (host.ports || []).filter(p => p.state === 'open');
     open.forEach(p => { if (CLEARTEXT[p.port]) clearCount++; });
     
     let risk = 0;
@@ -2915,7 +2923,7 @@ function renderStats() {
     const list = document.getElementById('cleartext-list');
     const items = [];
     state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-      host.ports.filter(p => p.state === 'open' && CLEARTEXT[p.port]).forEach(p => {
+      (host.ports || []).filter(p => p.state === 'open' && CLEARTEXT[p.port]).forEach(p => {
         items.push({ip: host.ip, port: p.port, name: CLEARTEXT[p.port]});
       });
     });
@@ -2940,7 +2948,7 @@ function updateEntityCards() {
     if (!host) return;
     
     // Risk score
-    const open = host.ports.filter(p => p.state === 'open');
+    const open = (host.ports || []).filter(p => p.state === 'open');
     let risk = 0;
     open.forEach(p => {
       if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
@@ -3078,7 +3086,7 @@ function renderSources() {
 function renderCleartext() {
   const items = [];
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-    host.ports.filter(p => p.state === 'open' && CLEARTEXT[p.port]).forEach(p => {
+    (host.ports || []).filter(p => p.state === 'open' && CLEARTEXT[p.port]).forEach(p => {
       items.push({ip: host.ip, hostname: host.hostname, port: p.port, proto: p.proto, name: CLEARTEXT[p.port], svc: p.svc});
     });
   });
@@ -3219,7 +3227,8 @@ function mergeHosts(newHosts, sourceName) {
     const existing = state.data.hosts.find(h => h.ip === newHost.ip);
     if (existing) {
       // Merge ports (add new ports, don't duplicate)
-      newHost.ports.forEach(newPort => {
+      if (!existing.ports) existing.ports = [];
+      (newHost.ports || []).forEach(newPort => {
         const existingPort = existing.ports.find(p => p.port === newPort.port && p.proto === newPort.proto);
         if (!existingPort) {
           existing.ports.push(newPort);
@@ -3296,7 +3305,7 @@ function getHostCVEs(host) {
   const cves = [];
   const seen = new Set();
 
-  host.ports.filter(p => p.state === 'open' && p.cpe).forEach(port => {
+  (host.ports || []).filter(p => p.state === 'open' && p.cpe).forEach(port => {
     const cpe = port.cpe;
     // Try exact match first
     if (state.vulnDb[cpe]) {
@@ -3335,7 +3344,7 @@ function getCvssClass(cvss) {
 // Detect admin/management ports on host
 function getHostAdminPorts(host) {
   const found = [];
-  host.ports.filter(p => p.state === 'open').forEach(port => {
+  (host.ports || []).filter(p => p.state === 'open').forEach(port => {
     const info = ADMIN_PORTS[port.port];
     if (info) {
       found.push({ port: port.port, ...info, service: port.service || '' });
@@ -3348,8 +3357,9 @@ function getHostAdminPorts(host) {
 
 // Create entity card element dynamically
 function createEntityCard(host) {
-  const open = host.ports.filter(p => p.state === 'open');
-  const filtered = host.ports.filter(p => p.state === 'filtered');
+  const ports = host.ports || [];
+  const open = ports.filter(p => p.state === 'open');
+  const filtered = ports.filter(p => p.state === 'filtered');
   const os = host.os && host.os[0] ? host.os[0] : null;
   const mac = host.mac;
   const cves = getHostCVEs(host);
@@ -3491,9 +3501,10 @@ function exportData(format) {
     const rows = [['IP','Hostname','MAC','OS','Open Ports','Risk','Labels','Owner','Notes']];
     state.data.hosts.filter(h => h.status === 'up').forEach(h => {
       const os = h.os && h.os[0] ? h.os[0].name : '';
-      const ports = h.ports.filter(p => p.state === 'open').map(p => p.port).join(';');
+      const hPorts = h.ports || [];
+      const ports = hPorts.filter(p => p.state === 'open').map(p => p.port).join(';');
       let risk = 0;
-      h.ports.filter(p => p.state === 'open').forEach(p => { if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port]; });
+      hPorts.filter(p => p.state === 'open').forEach(p => { if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port]; });
       const tags = includeTags ? getExportTags(h) : { labels: '', owner: '', notes: '' };
       rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, Math.min(risk,100), tags.labels, tags.owner, tags.notes]);
     });
@@ -3502,7 +3513,7 @@ function exportData(format) {
     type = 'text/csv';
   } else if (format === 'cpe') {
     const cpes = new Set();
-    state.data.hosts.forEach(h => h.ports.forEach(p => { if (p.cpe) cpes.add(p.cpe); }));
+    state.data.hosts.forEach(h => (h.ports || []).forEach(p => { if (p.cpe) cpes.add(p.cpe); }));
     content = JSON.stringify(Array.from(cpes), null, 2);
     filename = 'cpe-list.json';
     type = 'application/json';
@@ -3938,7 +3949,7 @@ function renderTimeline() {
       <div class="timeline-scan-time">${scan.timestamp.toLocaleTimeString()}</div>
       <div class="timeline-scan-stats">
         <span class="timeline-scan-stat">${scan.stats.up} hosts</span>
-        <span class="timeline-scan-stat">${scan.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0)} ports</span>
+        <span class="timeline-scan-stat">${scan.hosts.reduce((sum, h) => sum + (h.ports || []).filter(p => p.state === 'open').length, 0)} ports</span>
       </div>
       ${scan.filename ? `<div style="font-size:.7rem;color:#8b949e;margin-top:.25rem;">${scan.filename}</div>` : ''}
     </div>
@@ -3962,14 +3973,14 @@ function renderTimelineChart() {
 
   const maxHosts = Math.max(...timelineScans.map(s => s.stats.up));
   const maxPorts = Math.max(...timelineScans.map(s =>
-    s.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0)
+    s.hosts.reduce((sum, h) => sum + (h.ports || []).filter(p => p.state === 'open').length, 0)
   ));
 
   const barWidth = Math.max(20, (chart.offsetWidth - 100) / timelineScans.length - 10);
 
   chart.innerHTML = timelineScans.map((scan, i) => {
     const hostHeight = (scan.stats.up / maxHosts) * 150;
-    const portCount = scan.hosts.reduce((sum, h) => sum + h.ports.filter(p => p.state === 'open').length, 0);
+    const portCount = scan.hosts.reduce((sum, h) => sum + (h.ports || []).filter(p => p.state === 'open').length, 0);
     const portHeight = (portCount / maxPorts) * 150;
 
     return `
@@ -4044,7 +4055,7 @@ document.getElementById('search')?.addEventListener('input', e => {
     // Check filter
     let passesFilter = true;
     if (filter !== 'all') {
-      const open = host.ports.filter(p => p.state === 'open');
+      const open = (host.ports || []).filter(p => p.state === 'open');
       const hasCleartext = open.some(p => CLEARTEXT[p.port]);
       const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
       const risk = calculateRisk(host);
