@@ -108,6 +108,8 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .entity{background:#0d1117;border:1px solid #21262d;border-radius:8px;overflow:hidden;transition:border-color .15s}
 .entity:hover{border-color:#30363d}
 .entity.tagged{border-color:#a371f7}
+.entity.selected{border-color:#58a6ff;box-shadow:0 0 0 2px rgba(88,166,255,.3);animation:pulse-border .5s ease-out}
+@keyframes pulse-border{0%{box-shadow:0 0 0 4px rgba(88,166,255,.5)}100%{box-shadow:0 0 0 2px rgba(88,166,255,.3)}}
 .entity-head{padding:1rem;display:flex;align-items:flex-start;gap:1rem;border-bottom:1px solid #21262d}
 .entity-icon{width:44px;height:44px;border-radius:8px;background:#21262d;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.25rem}
 .entity-icon.win{background:rgba(0,120,212,.2);color:#0078d4}
@@ -992,21 +994,188 @@ function icon(name, cls = '') {
   return `<span class="icon ${cls}">${ICONS[name] || ''}</span>`;
 }
 
-// Generate unique storage key based on scan info
-function getStorageKey() {
-  if (!state.data || !state.data.scanInfo) return 'netintel-default';
-  const info = state.data.scanInfo;
-  const identifier = `${info.start || ''}-${info.args || ''}`;
-  let hash = 0;
-  for (let i = 0; i < identifier.length; i++) {
-    hash = ((hash << 5) - hash) + identifier.charCodeAt(i);
-    hash |= 0;
-  }
-  return 'netintel-' + Math.abs(hash).toString(36);
+// =============================================================================
+// REACTIVE STORE - Lightweight state management (~50 lines)
+// =============================================================================
+function createStore(initialState = {}) {
+  const listeners = new Map();
+  let state = { ...initialState };
+
+  return {
+    // Get current state or specific key
+    get(key) {
+      return key ? state[key] : { ...state };
+    },
+
+    // Set state and notify listeners
+    set(key, value) {
+      const oldValue = state[key];
+      if (oldValue === value) return;
+
+      state[key] = value;
+
+      // Notify key-specific listeners
+      if (listeners.has(key)) {
+        listeners.get(key).forEach(fn => fn(value, oldValue));
+      }
+      // Notify wildcard listeners
+      if (listeners.has('*')) {
+        listeners.get('*').forEach(fn => fn(state, key));
+      }
+    },
+
+    // Batch update multiple keys
+    update(updates) {
+      Object.entries(updates).forEach(([key, value]) => {
+        this.set(key, value);
+      });
+    },
+
+    // Subscribe to state changes
+    subscribe(key, callback) {
+      if (!listeners.has(key)) {
+        listeners.set(key, new Set());
+      }
+      listeners.get(key).add(callback);
+
+      // Return unsubscribe function
+      return () => listeners.get(key).delete(callback);
+    },
+
+    // Get full state for persistence
+    toJSON() {
+      return { ...state };
+    }
+  };
 }
 
-// === STATE ===
-let state = {data:null, tags:{}, vulnDb:null};
+// =============================================================================
+// ROUTER - Hash-based SPA routing (~60 lines)
+// =============================================================================
+function createRouter() {
+  const routes = new Map();
+  let currentRoute = null;
+
+  // Parse hash into route object
+  function parseHash(hash) {
+    const clean = (hash || '').replace(/^#\/?/, '');
+    const [path, query] = clean.split('?');
+    const segments = path.split('/').filter(Boolean);
+
+    return {
+      path: '/' + segments.join('/'),
+      segments,
+      section: segments[0] || 'dashboard',
+      param: segments[1] || null,
+      query: Object.fromEntries(new URLSearchParams(query || ''))
+    };
+  }
+
+  // Match route against registered patterns
+  function matchRoute(route) {
+    for (const [pattern, handler] of routes) {
+      const patternParts = pattern.split('/').filter(Boolean);
+      const routeParts = route.segments;
+
+      if (patternParts.length !== routeParts.length) continue;
+
+      const params = {};
+      let match = true;
+
+      for (let i = 0; i < patternParts.length; i++) {
+        if (patternParts[i].startsWith(':')) {
+          params[patternParts[i].slice(1)] = routeParts[i];
+        } else if (patternParts[i] !== routeParts[i]) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) return { handler, params };
+    }
+    return null;
+  }
+
+  // Handle route change
+  function handleRoute() {
+    const route = parseHash(location.hash);
+    const matched = matchRoute(route);
+
+    currentRoute = route;
+
+    if (matched) {
+      matched.handler({ ...route, params: matched.params });
+    } else {
+      // Default: navigate to section
+      navigateToSection(route.section, route.param);
+    }
+  }
+
+  return {
+    // Register a route handler
+    on(pattern, handler) {
+      routes.set(pattern, handler);
+      return this;
+    },
+
+    // Navigate to a path
+    go(path, replace = false) {
+      const newHash = '#' + path.replace(/^\//, '');
+      if (replace) {
+        history.replaceState(null, '', newHash);
+      } else {
+        history.pushState(null, '', newHash);
+      }
+      handleRoute();
+    },
+
+    // Get current route
+    current() {
+      return currentRoute;
+    },
+
+    // Initialize router
+    init() {
+      window.addEventListener('hashchange', handleRoute);
+      window.addEventListener('popstate', handleRoute);
+      // Handle initial route
+      if (location.hash) {
+        handleRoute();
+      }
+      return this;
+    }
+  };
+}
+
+// =============================================================================
+// APP STATE & ROUTER INSTANCES
+// =============================================================================
+const store = createStore({
+  data: null,
+  tags: {},
+  vulnDb: null,
+  currentSection: 'dashboard',
+  selectedHost: null,
+  filter: 'all',
+  groupBy: 'none',
+  subnetMask: 24
+});
+
+const router = createRouter();
+
+// Legacy state reference (for gradual migration)
+let state = {
+  get data() { return store.get('data'); },
+  set data(v) { store.set('data', v); },
+  get tags() { return store.get('tags'); },
+  set tags(v) { store.set('tags', v); },
+  get vulnDb() { return store.get('vulnDb'); },
+  set vulnDb(v) { store.set('vulnDb', v); }
+};
+
+// Subnet mask from store
+let subnetMask = 24;
+store.subscribe('subnetMask', (v) => { subnetMask = v; });
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
@@ -1017,9 +1186,74 @@ document.addEventListener('DOMContentLoaded', () => {
   initContextMenu();
   initDropZones();
   initFilters();
+  initRouter();
   render();
   console.log('[NetIntel] Initialized with', state.data?.hosts?.length || 0, 'hosts');
 });
+
+// Initialize router with routes
+function initRouter() {
+  router
+    // Section routes
+    .on('dashboard', () => navigateToSection('dashboard'))
+    .on('entities', () => navigateToSection('entities'))
+    .on('entities/:ip', ({ params }) => {
+      navigateToSection('entities');
+      selectHost(params.ip);
+    })
+    .on('topology', () => navigateToSection('topology'))
+    .on('topology/:ip', ({ params }) => {
+      navigateToSection('topology');
+      showNodeDetails({ id: params.ip, type: 'target', host: state.data.hosts.find(h => h.ip === params.ip) });
+    })
+    .on('timeline', () => navigateToSection('timeline'))
+    .on('cleartext', () => navigateToSection('cleartext'))
+    .on('diff', () => navigateToSection('diff'))
+    .on('sources', () => navigateToSection('sources'))
+    .init();
+
+  // If no hash, don't navigate (stay on dashboard)
+  if (!location.hash) {
+    history.replaceState(null, '', '#/dashboard');
+  }
+}
+
+// Navigate to section (called by router)
+function navigateToSection(section, param = null) {
+  store.set('currentSection', section);
+  store.set('selectedHost', param);
+
+  // Update nav UI
+  document.querySelectorAll('[data-nav]').forEach(a => {
+    a.classList.toggle('active', a.dataset.nav === section);
+  });
+
+  // Update section visibility
+  document.querySelectorAll('[data-section]').forEach(s => {
+    s.classList.toggle('active', s.dataset.section === section);
+  });
+
+  // Section-specific initialization
+  if (section === 'cleartext') renderCleartext();
+  if (section === 'topology') { initTopology(); renderTopology(); }
+  if (section === 'timeline') { initTimeline(); renderTimeline(); }
+}
+
+// Select and highlight a specific host
+function selectHost(ip) {
+  const host = state.data.hosts.find(h => h.ip === ip);
+  if (!host) return;
+
+  store.set('selectedHost', ip);
+
+  // Scroll to and highlight the entity card
+  const card = document.querySelector(`.entity[data-ip="${ip}"]`);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('selected');
+    setTimeout(() => card.classList.remove('selected'), 2000);
+  }
+}
 
 // Replace Unicode symbols with SVG icons
 function initIcons() {
@@ -1087,7 +1321,7 @@ function saveState() {
 // === NAVIGATION ===
 function initNav() {
   document.querySelectorAll('[data-nav]').forEach(el => {
-    el.addEventListener('click', e => { e.preventDefault(); navigateTo(el.dataset.nav); });
+    el.addEventListener('click', e => { e.preventDefault(); router.go(el.dataset.nav); });
   });
   document.querySelectorAll('[data-action]').forEach(el => {
     el.addEventListener('click', e => { e.preventDefault(); handleAction(el.dataset.action); });
@@ -2677,15 +2911,6 @@ function renderTimelineChanges() {
       </div>
     </div>
   `).join('') : '<p style="color:#8b949e;">No changes between scans</p>';
-}
-
-// Initialize topology and timeline on nav
-function navigateTo(section) {
-  document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === section));
-  document.querySelectorAll('[data-section]').forEach(s => s.classList.toggle('active', s.dataset.section === section));
-  if (section === 'cleartext') renderCleartext();
-  if (section === 'topology') { initTopology(); renderTopology(); }
-  if (section === 'timeline') { initTimeline(); renderTimeline(); }
 }
 
 // === SEARCH ===
