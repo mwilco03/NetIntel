@@ -134,6 +134,43 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .signal-conf{color:#8b949e}
 .entity-foot{padding:.75rem 1rem;border-top:1px solid #21262d;background:#161b22;display:flex;align-items:center;justify-content:space-between;font-size:.75rem;color:#8b949e}
 
+/* === ENTITY GROUPS === */
+.entity-groups{display:flex;flex-direction:column;gap:1.5rem}
+.entity-group{background:#0d1117;border:1px solid #21262d;border-radius:8px;overflow:hidden}
+.group-header{padding:1rem;background:#161b22;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.group-header:hover{background:#1c2128}
+.group-title{display:flex;align-items:center;gap:.75rem;font-weight:600;color:#e6edf3}
+.group-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.group-icon.os-win{background:rgba(0,120,212,.2);color:#0078d4}
+.group-icon.os-lin{background:rgba(255,165,0,.2);color:#ffa500}
+.group-icon.os-net{background:rgba(88,166,255,.2);color:#58a6ff}
+.group-icon.os-unk{background:rgba(136,146,157,.2);color:#8b949e}
+.group-icon.svc{background:rgba(163,113,247,.2);color:#a371f7}
+.group-icon.subnet{background:rgba(35,134,54,.2);color:#3fb950}
+.group-icon.risk-crit{background:rgba(248,81,73,.2);color:#f85149}
+.group-icon.risk-high{background:rgba(210,153,34,.2);color:#d29922}
+.group-icon.risk-med{background:rgba(88,166,255,.2);color:#58a6ff}
+.group-icon.risk-low{background:rgba(35,134,54,.2);color:#3fb950}
+.group-meta{display:flex;align-items:center;gap:1rem;font-size:.8rem;color:#8b949e}
+.group-toggle{color:#8b949e;transition:transform .2s}
+.group-header.collapsed .group-toggle{transform:rotate(-90deg)}
+.group-body{padding:1rem}
+.group-body.collapsed{display:none}
+.group-body .entity-grid{margin:0}
+
+/* === VULNERABILITIES === */
+.vulns{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #21262d}
+.vulns-title{font-size:.75rem;font-weight:600;color:#f85149;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.vuln{display:flex;align-items:center;gap:.5rem;padding:.4rem;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.2);border-radius:4px;font-size:.75rem;margin-bottom:.25rem}
+.vuln-id{font-family:monospace;color:#f85149;font-weight:500}
+.vuln-score{padding:.1rem .3rem;border-radius:3px;font-weight:600;font-size:.7rem}
+.vuln-score.critical{background:rgba(248,81,73,.3);color:#f85149}
+.vuln-score.high{background:rgba(210,153,34,.3);color:#d29922}
+.vuln-score.medium{background:rgba(88,166,255,.3);color:#58a6ff}
+.vuln-score.low{background:rgba(35,134,54,.3);color:#3fb950}
+.vuln-desc{flex:1;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vulns-more{font-size:.75rem;color:#8b949e;padding:.25rem}
+
 /* === RISK LIST === */
 .risk-list{list-style:none}
 .risk-item{display:flex;align-items:center;gap:1rem;padding:.75rem;border-bottom:1px solid #21262d}
@@ -401,6 +438,13 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <div class="section-header">
       <h2 class="section-title">All Entities</h2>
       <div class="flex gap-2">
+        <select id="entity-group" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
+          <option value="none">No Grouping</option>
+          <option value="os">Group by OS</option>
+          <option value="subnet">Group by Subnet</option>
+          <option value="service">Group by Service</option>
+          <option value="risk">Group by Risk Level</option>
+        </select>
         <select id="entity-filter" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
           <option value="all">All Hosts</option>
           <option value="up">Online Only</option>
@@ -869,41 +913,220 @@ function importVulnDb(file) {
   reader.readAsText(file);
 }
 
-// === FILTERS ===
+// === FILTERS AND GROUPING ===
+const GROUP_CONFIG = {
+  os: {
+    label: 'Operating System',
+    getKey: host => {
+      const osName = host.os && host.os[0] ? host.os[0].name : '';
+      if (OS_PATTERNS.win.test(osName)) return 'windows';
+      if (OS_PATTERNS.lin.test(osName)) return 'linux';
+      if (OS_PATTERNS.net.test(osName)) return 'network';
+      return 'unknown';
+    },
+    getLabel: key => ({ windows: 'Windows', linux: 'Linux', network: 'Network Devices', unknown: 'Unknown OS' }[key] || key),
+    getIcon: key => ({ windows: ['os-win', '\u229e'], linux: ['os-lin', '\u25c6'], network: ['os-net', '\u25ce'], unknown: ['os-unk', '\u25a3'] }[key] || ['os-unk', '\u25a3'])
+  },
+  subnet: {
+    label: 'Subnet',
+    getKey: host => {
+      const parts = host.ip.split('.');
+      return parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}.0/24` : 'other';
+    },
+    getLabel: key => key,
+    getIcon: () => ['subnet', '\u2261']
+  },
+  service: {
+    label: 'Primary Service',
+    getKey: host => {
+      const dominated = findDominantService(host);
+      return dominated || 'other';
+    },
+    getLabel: key => SERVICE_LABELS[key] || key,
+    getIcon: () => ['svc', '\u2736']
+  },
+  risk: {
+    label: 'Risk Level',
+    getKey: host => {
+      const score = calculateRisk(host);
+      if (score >= 70) return 'critical';
+      if (score >= 50) return 'high';
+      if (score >= 25) return 'medium';
+      return 'low';
+    },
+    getLabel: key => ({ critical: 'Critical Risk (70+)', high: 'High Risk (50-69)', medium: 'Medium Risk (25-49)', low: 'Low Risk (0-24)' }[key]),
+    getIcon: key => ({ critical: ['risk-crit', '\u26a0'], high: ['risk-high', '\u26a0'], medium: ['risk-med', '\u25cf'], low: ['risk-low', '\u2713'] }[key])
+  }
+};
+
+const SERVICE_LABELS = {
+  web: 'Web Servers',
+  database: 'Databases',
+  mail: 'Mail Servers',
+  file: 'File Sharing',
+  remote: 'Remote Access',
+  directory: 'Directory Services',
+  other: 'Other Services'
+};
+
+const SERVICE_PORTS = {
+  web: [80, 443, 8080, 8443, 8000, 3000],
+  database: [3306, 5432, 1433, 1521, 27017, 6379, 9200],
+  mail: [25, 110, 143, 465, 587, 993, 995],
+  file: [21, 22, 139, 445, 873, 2049],
+  remote: [22, 23, 3389, 5900, 5901],
+  directory: [389, 636, 88, 464]
+};
+
+function findDominantService(host) {
+  const openPorts = host.ports.filter(p => p.state === 'open').map(p => p.port);
+  let maxMatch = 0;
+  let dominant = 'other';
+
+  Object.entries(SERVICE_PORTS).forEach(([svc, ports]) => {
+    const matches = openPorts.filter(p => ports.includes(p)).length;
+    if (matches > maxMatch) {
+      maxMatch = matches;
+      dominant = svc;
+    }
+  });
+
+  return dominant;
+}
+
+function calculateRisk(host) {
+  const open = host.ports.filter(p => p.state === 'open');
+  let risk = 0;
+  open.forEach(p => {
+    if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
+    if (CLEARTEXT[p.port]) risk += 3;
+  });
+  return Math.min(risk, 100);
+}
+
 function initFilters() {
   const filterEl = document.getElementById('entity-filter');
-  if (!filterEl) return;
+  const groupEl = document.getElementById('entity-group');
 
-  filterEl.addEventListener('change', () => applyFilter(filterEl.value));
+  if (filterEl) {
+    filterEl.addEventListener('change', () => applyFilterAndGroup());
+  }
+  if (groupEl) {
+    groupEl.addEventListener('change', () => applyFilterAndGroup());
+  }
+}
+
+function applyFilterAndGroup() {
+  const filterEl = document.getElementById('entity-filter');
+  const groupEl = document.getElementById('entity-group');
+  const filter = filterEl ? filterEl.value : 'all';
+  const groupBy = groupEl ? groupEl.value : 'none';
+
+  // Get filtered hosts
+  const filteredHosts = state.data.hosts.filter(host => {
+    if (host.status !== 'up') return false;
+
+    const open = host.ports.filter(p => p.state === 'open');
+    const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+    const risk = calculateRisk(host);
+    const isTagged = state.tags[host.ip] && state.tags[host.ip].length > 0;
+
+    switch (filter) {
+      case 'up': return true;
+      case 'cleartext': return hasCleartext;
+      case 'risk': return risk >= 50;
+      case 'tagged': return isTagged;
+      default: return true;
+    }
+  });
+
+  if (groupBy === 'none') {
+    renderFlatView(filteredHosts);
+  } else {
+    renderGroupedView(filteredHosts, groupBy);
+  }
+}
+
+function renderFlatView(hosts) {
+  const grid = document.getElementById('entity-grid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  grid.className = 'entity-grid';
+
+  hosts.forEach(host => {
+    const card = createEntityCard(host);
+    grid.appendChild(card);
+  });
+
+  updateEntityCards();
+}
+
+function renderGroupedView(hosts, groupBy) {
+  const grid = document.getElementById('entity-grid');
+  if (!grid) return;
+
+  const config = GROUP_CONFIG[groupBy];
+  if (!config) return;
+
+  // Group hosts
+  const groups = {};
+  hosts.forEach(host => {
+    const key = config.getKey(host);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(host);
+  });
+
+  // Sort groups by count (descending)
+  const sortedKeys = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
+
+  grid.innerHTML = '';
+  grid.className = 'entity-groups';
+
+  sortedKeys.forEach(key => {
+    const groupHosts = groups[key];
+    const [iconClass, iconChar] = config.getIcon(key);
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'entity-group';
+    groupEl.innerHTML = `
+      <div class="group-header" data-group="${key}">
+        <div class="group-title">
+          <div class="group-icon ${iconClass}">${iconChar}</div>
+          <span>${config.getLabel(key)}</span>
+        </div>
+        <div class="group-meta">
+          <span>${groupHosts.length} host${groupHosts.length !== 1 ? 's' : ''}</span>
+          <span class="group-toggle">\u25bc</span>
+        </div>
+      </div>
+      <div class="group-body" data-group-body="${key}">
+        <div class="entity-grid"></div>
+      </div>
+    `;
+
+    const innerGrid = groupEl.querySelector('.entity-grid');
+    groupHosts.forEach(host => {
+      const card = createEntityCard(host);
+      innerGrid.appendChild(card);
+    });
+
+    // Toggle collapse
+    const header = groupEl.querySelector('.group-header');
+    const body = groupEl.querySelector('.group-body');
+    header.addEventListener('click', () => {
+      header.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+    });
+
+    grid.appendChild(groupEl);
+  });
+
+  updateEntityCards();
 }
 
 function applyFilter(filter) {
-  document.querySelectorAll('.entity[data-ip]').forEach(card => {
-    const ip = card.dataset.ip;
-    const host = state.data.hosts.find(h => h.ip === ip);
-    if (!host) return;
-
-    let show = true;
-    const open = host.ports.filter(p => p.state === 'open');
-    const hasCleartext = open.some(p => CLEARTEXT[p.port]);
-    let risk = 0;
-    open.forEach(p => {
-      if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
-      if (CLEARTEXT[p.port]) risk += 3;
-    });
-    risk = Math.min(risk, 100);
-    const isTagged = state.tags[ip] && state.tags[ip].length > 0;
-
-    switch (filter) {
-      case 'up': show = host.status === 'up'; break;
-      case 'cleartext': show = hasCleartext; break;
-      case 'risk': show = risk >= 50; break;
-      case 'tagged': show = isTagged; break;
-      default: show = true;
-    }
-
-    card.style.display = show ? '' : 'none';
-  });
+  applyFilterAndGroup();
 }
 
 // === RENDERING ===
@@ -1296,25 +1519,84 @@ function rebuildEntityGrid() {
   });
 }
 
+// === CVE MATCHING ===
+function getHostCVEs(host) {
+  if (!state.vulnDb) return [];
+
+  const cves = [];
+  const seen = new Set();
+
+  host.ports.filter(p => p.state === 'open' && p.cpe).forEach(port => {
+    const cpe = port.cpe;
+    // Try exact match first
+    if (state.vulnDb[cpe]) {
+      state.vulnDb[cpe].forEach(vuln => {
+        if (!seen.has(vuln.cve)) {
+          seen.add(vuln.cve);
+          cves.push({ ...vuln, port: port.port, cpe });
+        }
+      });
+    }
+    // Try prefix match (for version-less CPEs)
+    const cpeBase = cpe.split(':').slice(0, 5).join(':');
+    Object.keys(state.vulnDb).forEach(dbCpe => {
+      if (dbCpe.startsWith(cpeBase) && dbCpe !== cpe) {
+        state.vulnDb[dbCpe].forEach(vuln => {
+          if (!seen.has(vuln.cve)) {
+            seen.add(vuln.cve);
+            cves.push({ ...vuln, port: port.port, cpe: dbCpe });
+          }
+        });
+      }
+    });
+  });
+
+  // Sort by CVSS score descending
+  return cves.sort((a, b) => (b.cvss || 0) - (a.cvss || 0));
+}
+
+function getCvssClass(cvss) {
+  if (cvss >= 9.0) return 'critical';
+  if (cvss >= 7.0) return 'high';
+  if (cvss >= 4.0) return 'medium';
+  return 'low';
+}
+
 // Create entity card element dynamically
 function createEntityCard(host) {
   const open = host.ports.filter(p => p.state === 'open');
   const filtered = host.ports.filter(p => p.state === 'filtered');
   const os = host.os && host.os[0] ? host.os[0] : null;
   const mac = host.mac;
+  const cves = getHostCVEs(host);
 
   const card = document.createElement('div');
   card.className = 'entity';
   card.dataset.ip = host.ip;
 
+  const vulnsHtml = cves.length > 0 ? `
+    <div class="vulns">
+      <div class="vulns-title">\u26a0 ${cves.length} CVE${cves.length !== 1 ? 's' : ''} Found</div>
+      ${cves.slice(0, 3).map(v => `
+        <div class="vuln">
+          <span class="vuln-id">${v.cve}</span>
+          <span class="vuln-score ${getCvssClass(v.cvss)}">${v.cvss || '?'}</span>
+          <span class="vuln-desc">${v.desc || ''}</span>
+        </div>
+      `).join('')}
+      ${cves.length > 3 ? `<div class="vulns-more">...and ${cves.length - 3} more</div>` : ''}
+    </div>
+  ` : '';
+
   card.innerHTML = `
     <div class="entity-head">
-      <div class="entity-icon" data-os-icon="">▣</div>
+      <div class="entity-icon" data-os-icon="">\u25a3</div>
       <div class="entity-info">
         <div class="entity-ip">${host.ip}</div>
         ${host.hostname ? `<div class="entity-host">${host.hostname}</div>` : ''}
         <div class="entity-tags"></div>
       </div>
+      ${cves.length > 0 ? `<span class="badge badge-critical">${cves.length} CVE${cves.length !== 1 ? 's' : ''}</span>` : ''}
     </div>
     <div class="entity-body">
       <div class="entity-stats">
@@ -1332,6 +1614,7 @@ function createEntityCard(host) {
         ${mac ? `<div class="signal"><span class="signal-src">MAC</span><span class="signal-val">${mac}${host.macVendor ? ' (' + host.macVendor + ')' : ''}</span></div>` : ''}
         ${open.filter(p => p.product).slice(0, 2).map(p => `<div class="signal"><span class="signal-src">:${p.port}</span><span class="signal-val">${p.product}${p.version ? ' ' + p.version : ''}</span></div>`).join('')}
       </div>` : ''}
+      ${vulnsHtml}
     </div>
     <div class="entity-foot">
       <span>${(state.data.sources ? state.data.sources.length : 1)} source${state.data.sources && state.data.sources.length !== 1 ? 's' : ''}</span>
