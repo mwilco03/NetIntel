@@ -171,6 +171,22 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .vuln-desc{flex:1;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vulns-more{font-size:.75rem;color:#8b949e;padding:.25rem}
 
+/* === DIFF VIEW === */
+.diff-item{display:flex;align-items:center;gap:1rem;padding:.75rem;border-bottom:1px solid #21262d;font-size:.875rem}
+.diff-item:last-child{border-bottom:none}
+.diff-item:hover{background:#161b22}
+.diff-ip{font-family:monospace;font-weight:600;min-width:120px}
+.diff-hostname{color:#8b949e;flex:1}
+.diff-badge{padding:.2rem .5rem;border-radius:4px;font-size:.75rem;font-weight:500}
+.diff-badge.new{background:rgba(35,134,54,.2);color:#3fb950}
+.diff-badge.removed{background:rgba(248,81,73,.2);color:#f85149}
+.diff-badge.changed{background:rgba(210,153,34,.2);color:#d29922}
+.diff-changes{margin-top:.5rem;padding:.5rem;background:#161b22;border-radius:4px;font-size:.8rem}
+.diff-change{display:flex;align-items:center;gap:.5rem;padding:.25rem 0}
+.diff-change.added{color:#3fb950}
+.diff-change.removed{color:#f85149}
+.diff-change .port{margin:0}
+
 /* === RISK LIST === */
 .risk-list{list-style:none}
 .risk-item{display:flex;align-items:center;gap:1rem;padding:.75rem;border-bottom:1px solid #21262d}
@@ -284,6 +300,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       <li><a href="#" class="active" data-nav="dashboard">◫ Dashboard</a></li>
       <li><a href="#" data-nav="entities">▤ All Entities</a></li>
       <li><a href="#" data-nav="cleartext">⚠ Cleartext</a></li>
+      <li><a href="#" data-nav="diff">⇄ Scan Diff</a></li>
       <li><a href="#" data-nav="sources">◰ Sources</a></li>
     </ul>
     <div class="nav-section">Tools</div>
@@ -322,10 +339,13 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       
       <!-- Cleartext Section -->
       <xsl:call-template name="cleartext-section"/>
-      
+
+      <!-- Diff Section -->
+      <xsl:call-template name="diff-section"/>
+
       <!-- Sources Section -->
       <xsl:call-template name="sources-section"/>
-      
+
     </div>
   </main>
 </div>
@@ -608,6 +628,63 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </xsl:template>
 
 <!-- ============================================
+     DIFF SECTION
+     ============================================ -->
+<xsl:template name="diff-section">
+  <section class="section" data-section="diff">
+    <div class="section-header">
+      <h2 class="section-title">Scan Comparison</h2>
+    </div>
+
+    <div class="card" id="diff-upload-card">
+      <div class="card-body">
+        <p style="color:#8b949e;margin-bottom:1rem;">Load a comparison scan to see what changed between scans.</p>
+        <div class="drop-zone" id="diff-drop-zone">
+          <div style="font-size:2rem;margin-bottom:1rem;">⇄</div>
+          <div class="drop-zone-text">Drop comparison scan here</div>
+          <div class="drop-zone-hint">Nmap XML format</div>
+          <input type="file" id="diff-file-input" accept=".xml" style="display:none;"/>
+        </div>
+      </div>
+    </div>
+
+    <div id="diff-results" class="hidden">
+      <div class="stats" id="diff-stats"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">New Hosts</span>
+          <span class="badge badge-low" id="diff-new-count">0</span>
+        </div>
+        <div class="card-body" id="diff-new-hosts">
+          <p style="color:#8b949e;">No new hosts</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Removed Hosts</span>
+          <span class="badge badge-critical" id="diff-removed-count">0</span>
+        </div>
+        <div class="card-body" id="diff-removed-hosts">
+          <p style="color:#8b949e;">No removed hosts</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Changed Hosts</span>
+          <span class="badge badge-high" id="diff-changed-count">0</span>
+        </div>
+        <div class="card-body" id="diff-changed-hosts">
+          <p style="color:#8b949e;">No changes detected</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</xsl:template>
+
+<!-- ============================================
      MODALS
      ============================================ -->
 <xsl:template name="modals">
@@ -799,6 +876,7 @@ function initIcons() {
     'dashboard': 'chart',
     'entities': 'server',
     'cleartext': 'warning',
+    'diff': 'magnify',
     'sources': 'folder',
     'import': 'upload',
     'export': 'download',
@@ -945,6 +1023,17 @@ function initDropZones() {
     vulnDz.addEventListener('drop', e => { e.preventDefault(); vulnDz.classList.remove('dragover'); importVulnDb(e.dataTransfer.files[0]); });
     vulnFi.addEventListener('change', () => { if (vulnFi.files[0]) importVulnDb(vulnFi.files[0]); });
   }
+
+  // Diff comparison drop zone
+  const diffDz = document.getElementById('diff-drop-zone');
+  const diffFi = document.getElementById('diff-file-input');
+  if (diffDz && diffFi) {
+    diffDz.addEventListener('click', () => diffFi.click());
+    diffDz.addEventListener('dragover', e => { e.preventDefault(); diffDz.classList.add('dragover'); });
+    diffDz.addEventListener('dragleave', () => diffDz.classList.remove('dragover'));
+    diffDz.addEventListener('drop', e => { e.preventDefault(); diffDz.classList.remove('dragover'); loadComparisonScan(e.dataTransfer.files[0]); });
+    diffFi.addEventListener('change', () => { if (diffFi.files[0]) loadComparisonScan(diffFi.files[0]); });
+  }
 }
 
 function importVulnDb(file) {
@@ -979,6 +1068,199 @@ function importVulnDb(file) {
     }
   };
   reader.readAsText(file);
+}
+
+// === SCAN DIFF ===
+function loadComparisonScan(file) {
+  if (!file) return;
+
+  if (file.size > MAX_IMPORT_SIZE) {
+    alert(`File too large. Maximum size is 10MB.`);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = () => alert('Error reading file.');
+  reader.onload = e => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'text/xml');
+      if (!doc.querySelector('nmaprun')) {
+        alert('Not a valid Nmap XML file');
+        return;
+      }
+
+      const comparisonHosts = parseNmapXml(doc);
+      const diff = computeDiff(state.data.hosts, comparisonHosts);
+      renderDiff(diff, file.name);
+
+      console.log('[NetIntel] Diff computed:', diff.summary);
+    } catch (err) {
+      console.error('[NetIntel] Diff error:', err);
+      alert('Error parsing file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function computeDiff(baseHosts, comparisonHosts) {
+  const baseMap = new Map(baseHosts.map(h => [h.ip, h]));
+  const compMap = new Map(comparisonHosts.map(h => [h.ip, h]));
+
+  const diff = {
+    newHosts: [],      // In comparison but not in base
+    removedHosts: [],  // In base but not in comparison
+    changedHosts: [],  // In both but with differences
+    unchangedCount: 0,
+    summary: {}
+  };
+
+  // Find new and changed hosts
+  comparisonHosts.forEach(compHost => {
+    const baseHost = baseMap.get(compHost.ip);
+    if (!baseHost) {
+      diff.newHosts.push(compHost);
+    } else {
+      const changes = compareHosts(baseHost, compHost);
+      if (changes.length > 0) {
+        diff.changedHosts.push({ host: compHost, baseHost, changes });
+      } else {
+        diff.unchangedCount++;
+      }
+    }
+  });
+
+  // Find removed hosts
+  baseHosts.forEach(baseHost => {
+    if (!compMap.has(baseHost.ip)) {
+      diff.removedHosts.push(baseHost);
+    }
+  });
+
+  diff.summary = {
+    new: diff.newHosts.length,
+    removed: diff.removedHosts.length,
+    changed: diff.changedHosts.length,
+    unchanged: diff.unchangedCount
+  };
+
+  return diff;
+}
+
+function compareHosts(baseHost, compHost) {
+  const changes = [];
+
+  // Compare ports
+  const basePorts = new Set(baseHost.ports.filter(p => p.state === 'open').map(p => `${p.port}/${p.proto}`));
+  const compPorts = new Set(compHost.ports.filter(p => p.state === 'open').map(p => `${p.port}/${p.proto}`));
+
+  // New ports
+  compPorts.forEach(p => {
+    if (!basePorts.has(p)) {
+      changes.push({ type: 'port_added', port: p });
+    }
+  });
+
+  // Closed ports
+  basePorts.forEach(p => {
+    if (!compPorts.has(p)) {
+      changes.push({ type: 'port_removed', port: p });
+    }
+  });
+
+  // OS changes
+  const baseOs = baseHost.os && baseHost.os[0] ? baseHost.os[0].name : '';
+  const compOs = compHost.os && compHost.os[0] ? compHost.os[0].name : '';
+  if (baseOs !== compOs && (baseOs || compOs)) {
+    changes.push({ type: 'os_changed', from: baseOs, to: compOs });
+  }
+
+  // Status changes
+  if (baseHost.status !== compHost.status) {
+    changes.push({ type: 'status_changed', from: baseHost.status, to: compHost.status });
+  }
+
+  return changes;
+}
+
+function renderDiff(diff, filename) {
+  // Hide upload card, show results
+  document.getElementById('diff-upload-card').classList.add('hidden');
+  document.getElementById('diff-results').classList.remove('hidden');
+
+  // Update stats
+  const statsEl = document.getElementById('diff-stats');
+  statsEl.innerHTML = `
+    <div class="stat success">
+      <div class="stat-label">New Hosts</div>
+      <div class="stat-value">${diff.summary.new}</div>
+      <div class="stat-detail">appeared in ${filename}</div>
+    </div>
+    <div class="stat danger">
+      <div class="stat-label">Removed Hosts</div>
+      <div class="stat-value">${diff.summary.removed}</div>
+      <div class="stat-detail">no longer present</div>
+    </div>
+    <div class="stat warning">
+      <div class="stat-label">Changed Hosts</div>
+      <div class="stat-value">${diff.summary.changed}</div>
+      <div class="stat-detail">port or service changes</div>
+    </div>
+    <div class="stat info">
+      <div class="stat-label">Unchanged</div>
+      <div class="stat-value">${diff.summary.unchanged}</div>
+      <div class="stat-detail">no differences</div>
+    </div>
+  `;
+
+  // Update counts
+  document.getElementById('diff-new-count').textContent = diff.summary.new;
+  document.getElementById('diff-removed-count').textContent = diff.summary.removed;
+  document.getElementById('diff-changed-count').textContent = diff.summary.changed;
+
+  // Render new hosts
+  const newHostsEl = document.getElementById('diff-new-hosts');
+  newHostsEl.innerHTML = diff.newHosts.length ? diff.newHosts.map(h => `
+    <div class="diff-item">
+      <span class="diff-ip">${h.ip}</span>
+      <span class="diff-hostname">${h.hostname || ''}</span>
+      <span class="diff-badge new">NEW</span>
+      <div class="ports">${h.ports.filter(p => p.state === 'open').slice(0, 5).map(p =>
+        `<span class="port open">${p.port}/${p.proto}</span>`
+      ).join('')}</div>
+    </div>
+  `).join('') : '<p style="color:#8b949e;">No new hosts detected</p>';
+
+  // Render removed hosts
+  const removedHostsEl = document.getElementById('diff-removed-hosts');
+  removedHostsEl.innerHTML = diff.removedHosts.length ? diff.removedHosts.map(h => `
+    <div class="diff-item">
+      <span class="diff-ip">${h.ip}</span>
+      <span class="diff-hostname">${h.hostname || ''}</span>
+      <span class="diff-badge removed">REMOVED</span>
+    </div>
+  `).join('') : '<p style="color:#8b949e;">No hosts removed</p>';
+
+  // Render changed hosts
+  const changedHostsEl = document.getElementById('diff-changed-hosts');
+  changedHostsEl.innerHTML = diff.changedHosts.length ? diff.changedHosts.map(({ host, changes }) => `
+    <div class="diff-item" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <span class="diff-ip">${host.ip}</span>
+        <span class="diff-hostname">${host.hostname || ''}</span>
+        <span class="diff-badge changed">${changes.length} change${changes.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="diff-changes">
+        ${changes.map(c => {
+          if (c.type === 'port_added') return `<div class="diff-change added">${icon('check')} Port ${c.port} opened</div>`;
+          if (c.type === 'port_removed') return `<div class="diff-change removed">${icon('xmark')} Port ${c.port} closed</div>`;
+          if (c.type === 'os_changed') return `<div class="diff-change">OS: ${c.from || 'unknown'} -> ${c.to || 'unknown'}</div>`;
+          if (c.type === 'status_changed') return `<div class="diff-change">Status: ${c.from} -> ${c.to}</div>`;
+          return '';
+        }).join('')}
+      </div>
+    </div>
+  `).join('') : '<p style="color:#8b949e;">No changes detected</p>';
 }
 
 // === FILTERS AND GROUPING ===
