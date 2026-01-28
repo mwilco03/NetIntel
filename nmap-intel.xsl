@@ -102,6 +102,8 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .tag-crown{background:rgba(210,153,34,.2);color:#d29922;border:1px solid #d29922}
 .tag-choke{background:rgba(248,81,73,.2);color:#f85149;border:1px solid #f85149}
 .tag-key{background:rgba(163,113,247,.2);color:#a371f7;border:1px solid #a371f7}
+.tag-owner{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag-notes{background:rgba(139,148,158,.15);color:#8b949e;border:1px solid rgba(139,148,158,.3);cursor:help}
 
 /* === ENTITY CARDS === */
 .entity-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem}
@@ -172,6 +174,37 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .vuln-score.low{background:rgba(35,134,54,.3);color:#3fb950}
 .vuln-desc{flex:1;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vulns-more{font-size:.75rem;color:#8b949e;padding:.25rem}
+
+/* === ADMIN PORTS === */
+.admin-ports{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #21262d}
+.admin-title{font-size:.75rem;font-weight:600;color:#d29922;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.admin-title svg{width:14px;height:14px}
+.admin-port{display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.2);border-radius:4px;font-size:.7rem;margin-bottom:.25rem}
+.admin-port-num{font-family:monospace;font-weight:600;color:#e6edf3;min-width:45px}
+.admin-port-name{color:#d29922;font-weight:500;flex:1}
+.admin-port-sev{padding:.1rem .35rem;border-radius:3px;font-weight:600;font-size:.65rem;text-transform:uppercase}
+.admin-port-sev.sev-critical{background:rgba(248,81,73,.3);color:#f85149}
+.admin-port-sev.sev-high{background:rgba(210,153,34,.3);color:#d29922}
+.admin-port-sev.sev-medium{background:rgba(88,166,255,.3);color:#58a6ff}
+.admin-port-sev.sev-low{background:rgba(35,134,54,.3);color:#3fb950}
+.admin-port-cat{color:#8b949e;font-size:.65rem}
+.admin-more{font-size:.7rem;color:#8b949e;padding:.25rem}
+
+/* === NSE SCRIPT FINDINGS === */
+.nse-findings{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #21262d}
+.nse-title{font-size:.75rem;font-weight:600;color:#58a6ff;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.nse-title svg{width:14px;height:14px}
+.nse-finding{display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.15);border-radius:4px;font-size:.7rem;margin-bottom:.25rem}
+.nse-port{font-family:monospace;color:#8b949e;min-width:40px}
+.nse-type{color:#58a6ff;font-weight:500;min-width:50px}
+.nse-detail{color:#c9d1d9;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nse-more{font-size:.7rem;color:#8b949e;padding:.25rem}
+.nse-vulns{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #21262d}
+.nse-vuln-title{font-size:.75rem;font-weight:600;color:#f85149;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.nse-vuln-title svg{width:14px;height:14px}
+.nse-vuln{display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.2);border-radius:4px;font-size:.7rem;margin-bottom:.25rem}
+.nse-vuln-script{font-family:monospace;color:#f85149;font-weight:500}
+.nse-vuln-port{color:#8b949e}
 
 /* === DIFF VIEW === */
 .diff-item{display:flex;align-items:center;gap:1rem;padding:.75rem;border-bottom:1px solid #21262d;font-size:.875rem}
@@ -416,7 +449,42 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
   <button class="ctx-item" data-tag="choke">◎ Choke Point</button>
   <button class="ctx-item" data-tag="key">⬡ Key Terrain</button>
   <div class="ctx-div"></div>
-  <button class="ctx-item" data-tag="clear">✕ Clear Tags</button>
+  <button class="ctx-item" data-action="annotate">✎ Edit Notes</button>
+  <div class="ctx-div"></div>
+  <button class="ctx-item" data-tag="clear">✕ Clear All</button>
+</div>
+
+<!-- Annotation Modal -->
+<div class="modal" id="annotate-modal">
+  <div class="modal-content" style="max-width:480px">
+    <div class="modal-head">
+      <h3>Asset Annotation</h3>
+      <button class="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="annotate-info" style="margin-bottom:1rem;padding:.75rem;background:#161b22;border-radius:6px;font-family:monospace;font-size:.85rem"></div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.25rem">Owner / Responsible Party</label>
+        <input type="text" id="annotate-owner" class="input" placeholder="e.g., John Smith, IT Ops Team" style="width:100%"/>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.25rem">Notes</label>
+        <textarea id="annotate-notes" class="input" rows="4" placeholder="e.g., Production database server, scheduled maintenance windows..." style="width:100%;resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.5rem">Labels</label>
+        <div id="annotate-labels" style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="crown"/> ★ Crown Jewel</label>
+          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="choke"/> ◎ Choke Point</label>
+          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="key"/> ⬡ Key Terrain</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary modal-close">Cancel</button>
+      <button class="btn btn-primary" id="annotate-save">Save</button>
+    </div>
+  </div>
 </div>
 
 <!-- Embedded Scan Data as JSON -->
@@ -526,6 +594,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
         <select id="entity-filter" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
           <option value="all">All Hosts</option>
           <option value="up">Online Only</option>
+          <option value="admin">Admin Ports</option>
           <option value="cleartext">Has Cleartext</option>
           <option value="risk">High Risk</option>
           <option value="tagged">Key Terrain</option>
@@ -869,17 +938,23 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
         <button class="modal-close" data-close-modal="">×</button>
       </div>
       <div class="modal-body">
+        <p style="font-size:.8rem;color:#8b949e;margin-bottom:.75rem">Scan Data</p>
         <div class="flex flex-wrap gap-2">
           <button class="btn btn-secondary" data-export="csv">Export CSV</button>
           <button class="btn btn-secondary" data-export="json">Export JSON</button>
           <button class="btn btn-secondary" data-export="html">Export Report</button>
-          <button class="btn btn-primary" data-export="cpe">Export CPEs</button>
+          <button class="btn btn-secondary" data-export="cpe">Export CPEs</button>
         </div>
-        <div class="mt-4">
+        <div class="mt-4" style="margin-bottom:.75rem">
           <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;">
-            <input type="checkbox" id="export-tags"/> Include tags and annotations
+            <input type="checkbox" id="export-tags" checked="checked"/> Include tags and annotations in CSV/JSON
           </label>
         </div>
+        <p style="font-size:.8rem;color:#8b949e;margin-bottom:.75rem;margin-top:1rem;padding-top:1rem;border-top:1px solid #21262d">Asset Tags Only</p>
+        <div class="flex flex-wrap gap-2">
+          <button class="btn btn-primary" data-export="tags">Export Tags (JSON)</button>
+        </div>
+        <p style="font-size:.75rem;color:#8b949e;margin-top:.5rem">Tags are keyed by MAC address for portability across scans</p>
       </div>
       <div class="modal-foot">
         <button class="btn btn-secondary" data-close-modal="">Close</button>
@@ -943,7 +1018,8 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       "status": "<xsl:value-of select="status/@state"/>",
       "os": [<xsl:for-each select="os/osmatch">{"name":"<xsl:value-of select="translate(@name, '&quot;', &quot;'&quot;)"/>","accuracy":<xsl:value-of select="@accuracy"/>}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
       "osFingerprint": "<xsl:value-of select="os/osfingerprint/@fingerprint"/>",
-      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"<xsl:value-of select="service/@servicefp"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"<xsl:value-of select="service/@servicefp"/>","scripts":[<xsl:for-each select="script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:value-of select="translate(translate(@output, '&quot;', &quot;'&quot;), '&#10;&#13;', '  ')"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "hostscripts": [<xsl:for-each select="hostscript/script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:value-of select="translate(translate(@output, '&quot;', &quot;'&quot;), '&#10;&#13;', '  ')"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
       "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>","rtt":"<xsl:value-of select="@rtt"/>","host":"<xsl:value-of select="@host"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
     }<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
   ]
@@ -959,9 +1035,271 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 <xsl:text disable-output-escaping="yes"><![CDATA[
 // === CONSTANTS ===
 const CLEARTEXT = {21:'FTP',23:'Telnet',25:'SMTP',80:'HTTP',110:'POP3',143:'IMAP',161:'SNMP',389:'LDAP',513:'rlogin',514:'RSH',1433:'MSSQL',3306:'MySQL',5432:'PostgreSQL',8080:'HTTP-Alt'};
-const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143:6,161:7,389:6,443:1,445:8,512:9,513:9,514:9,1433:8,1521:8,3306:7,3389:7,5432:6,5900:7,6379:7,27017:8};
+const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143:6,161:7,389:6,443:1,445:8,512:9,513:9,514:9,1433:8,1521:8,3306:7,3389:7,5432:6,5900:7,6379:9,27017:8,2375:10,2376:8,4243:10,6443:10,10250:10,10255:6,2379:10,8500:8,9200:8,5985:8,5986:8,623:10,1099:8,10000:7,9000:8,8291:8,50000:8,11211:8};
+
+// Admin/Management ports by category - high risk if exposed
+const ADMIN_PORTS = {
+  // Container/Orchestration
+  2375: {name:'Docker API',cat:'container',sev:'critical',desc:'Unauthenticated Docker - full host compromise'},
+  2376: {name:'Docker TLS',cat:'container',sev:'high',desc:'Docker with TLS - verify auth'},
+  4243: {name:'Docker API',cat:'container',sev:'critical',desc:'Legacy Docker API - full host compromise'},
+  2377: {name:'Docker Swarm',cat:'container',sev:'high',desc:'Swarm cluster management'},
+  6443: {name:'Kubernetes API',cat:'container',sev:'critical',desc:'K8s API - cluster admin'},
+  10250: {name:'Kubelet',cat:'container',sev:'critical',desc:'Kubelet API - node compromise'},
+  10255: {name:'Kubelet RO',cat:'container',sev:'medium',desc:'Kubelet read-only'},
+  8443: {name:'K8s Dashboard',cat:'container',sev:'high',desc:'K8s dashboard'},
+  2379: {name:'etcd',cat:'container',sev:'critical',desc:'etcd - K8s secrets exposure'},
+  2380: {name:'etcd peer',cat:'container',sev:'high',desc:'etcd peer port'},
+  9000: {name:'Portainer',cat:'container',sev:'high',desc:'Docker/K8s mgmt UI'},
+  5000: {name:'Registry',cat:'container',sev:'medium',desc:'Docker registry'},
+  // Network Infrastructure
+  4786: {name:'Smart Install',cat:'network',sev:'critical',desc:'Cisco Smart Install - RCE'},
+  8291: {name:'Winbox',cat:'network',sev:'high',desc:'MikroTik router admin'},
+  161: {name:'SNMP',cat:'network',sev:'high',desc:'SNMP - default community strings'},
+  162: {name:'SNMP Trap',cat:'network',sev:'medium',desc:'SNMP trap receiver'},
+  830: {name:'NETCONF',cat:'network',sev:'high',desc:'NETCONF SSH - network config'},
+  6030: {name:'Arista eAPI',cat:'network',sev:'high',desc:'Arista eAPI'},
+  // Out-of-Band Management
+  623: {name:'IPMI',cat:'oob',sev:'critical',desc:'IPMI/BMC - hardware control'},
+  5900: {name:'VNC',cat:'oob',sev:'high',desc:'VNC - often weak/no auth'},
+  5901: {name:'VNC:1',cat:'oob',sev:'high',desc:'VNC display :1'},
+  443: {name:'iLO/iDRAC',cat:'oob',sev:'high',desc:'Check for BMC on :443'},
+  17988: {name:'iLO',cat:'oob',sev:'high',desc:'HP iLO alt port'},
+  17990: {name:'iLO',cat:'oob',sev:'high',desc:'HP iLO virtual media'},
+  // Windows Admin
+  5985: {name:'WinRM HTTP',cat:'windows',sev:'high',desc:'Windows Remote Mgmt'},
+  5986: {name:'WinRM HTTPS',cat:'windows',sev:'high',desc:'WinRM over TLS'},
+  3389: {name:'RDP',cat:'windows',sev:'medium',desc:'Remote Desktop'},
+  445: {name:'SMB',cat:'windows',sev:'high',desc:'SMB - check for vulns'},
+  135: {name:'RPC',cat:'windows',sev:'medium',desc:'MS-RPC endpoint mapper'},
+  // DevOps/CI-CD/Orchestration
+  50000: {name:'Jenkins Agent',cat:'devops',sev:'high',desc:'Jenkins agent - code exec'},
+  8080: {name:'Jenkins/Tomcat',cat:'devops',sev:'medium',desc:'Common admin UI port'},
+  8081: {name:'Nexus/Artifactory',cat:'devops',sev:'medium',desc:'Artifact repository'},
+  9090: {name:'Prometheus',cat:'devops',sev:'medium',desc:'Prometheus metrics'},
+  3000: {name:'Grafana',cat:'devops',sev:'medium',desc:'Grafana dashboard'},
+  8500: {name:'Consul',cat:'devops',sev:'high',desc:'Consul HTTP API'},
+  8200: {name:'Vault',cat:'devops',sev:'critical',desc:'HashiCorp Vault'},
+  8140: {name:'Puppet',cat:'devops',sev:'high',desc:'Puppet master'},
+  4505: {name:'SaltStack Pub',cat:'devops',sev:'critical',desc:'Salt master publish'},
+  4506: {name:'SaltStack Req',cat:'devops',sev:'critical',desc:'Salt master request'},
+  443: {name:'Ansible Tower',cat:'devops',sev:'high',desc:'Check for AWX/Tower'},
+  8065: {name:'Mattermost',cat:'devops',sev:'medium',desc:'Mattermost chat'},
+  8111: {name:'TeamCity',cat:'devops',sev:'high',desc:'TeamCity CI server'},
+  8929: {name:'GitLab SSH',cat:'devops',sev:'medium',desc:'GitLab SSH'},
+  9418: {name:'Git',cat:'devops',sev:'medium',desc:'Git protocol'},
+  8082: {name:'ArgoCD',cat:'devops',sev:'high',desc:'ArgoCD server'},
+  7472: {name:'Terraform Ent',cat:'devops',sev:'high',desc:'Terraform Enterprise'},
+  10350: {name:'Tilt',cat:'devops',sev:'medium',desc:'Tilt dev server'},
+  6660: {name:'Rundeck',cat:'devops',sev:'high',desc:'Rundeck automation'},
+  // Databases
+  6379: {name:'Redis',cat:'database',sev:'high',desc:'Redis - no auth default'},
+  27017: {name:'MongoDB',cat:'database',sev:'high',desc:'MongoDB - check auth'},
+  9200: {name:'Elasticsearch',cat:'database',sev:'high',desc:'ES HTTP API'},
+  9300: {name:'ES Transport',cat:'database',sev:'high',desc:'ES cluster'},
+  11211: {name:'Memcached',cat:'database',sev:'high',desc:'Memcached - no auth'},
+  5601: {name:'Kibana',cat:'database',sev:'medium',desc:'Kibana UI'},
+  // Remote Access
+  1099: {name:'Java RMI',cat:'remote',sev:'high',desc:'RMI - deser attacks'},
+  9001: {name:'Supervisor',cat:'remote',sev:'medium',desc:'Supervisord XML-RPC'},
+  10000: {name:'Webmin',cat:'remote',sev:'high',desc:'Webmin panel'},
+  // Suspicious
+  4444: {name:'Metasploit',cat:'suspicious',sev:'critical',desc:'MSF handler - active attack?'},
+  1337: {name:'Elite',cat:'suspicious',sev:'high',desc:'Common backdoor port'},
+  31337: {name:'Back Orifice',cat:'suspicious',sev:'critical',desc:'Classic backdoor'}
+};
+
 const OS_PATTERNS = {win:/windows|microsoft/i,lin:/linux|ubuntu|debian|centos|redhat/i,net:/cisco|juniper|fortinet/i};
 const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10MB max file size
+
+// === ASSET IDENTIFICATION ===
+// Use MAC as primary key (stable), fall back to IP if no MAC
+function getAssetKey(host) {
+  if (host.mac) return 'mac:' + host.mac.toUpperCase();
+  return 'ip:' + host.ip;
+}
+
+function getAssetKeyByIp(ip) {
+  if (!state.data?.hosts) return 'ip:' + ip;
+  const host = state.data.hosts.find(h => h.ip === ip);
+  return host ? getAssetKey(host) : 'ip:' + ip;
+}
+
+function getHostByAssetKey(key) {
+  if (!state.data?.hosts) return null;
+  if (key.startsWith('mac:')) {
+    const mac = key.slice(4);
+    return state.data.hosts.find(h => h.mac && h.mac.toUpperCase() === mac);
+  }
+  const ip = key.slice(3);
+  return state.data.hosts.find(h => h.ip === ip);
+}
+
+// Get tags for a host (handles both old IP-based and new MAC-based)
+function getAssetTags(host) {
+  const key = getAssetKey(host);
+  const tags = state.tags[key];
+  // Migration: also check old IP-based tags
+  if (!tags && state.tags[host.ip]) {
+    return state.tags[host.ip];
+  }
+  return tags || { labels: [], owner: '', notes: '' };
+}
+
+// Set tags for a host using stable key
+function setAssetTags(host, tags) {
+  const key = getAssetKey(host);
+  // Store current IP for reference/lookup
+  state.tags[key] = { ...tags, lastIp: host.ip, lastSeen: new Date().toISOString() };
+  // Remove old IP-based entry if migrating
+  if (state.tags[host.ip] && key !== 'ip:' + host.ip) {
+    delete state.tags[host.ip];
+  }
+  saveState();
+}
+
+// Migrate old tags format (IP -> MAC-based with structure)
+function migrateTags() {
+  if (!state.data?.hosts) return;
+  const oldTags = { ...state.tags };
+  let migrated = 0;
+
+  Object.entries(oldTags).forEach(([key, value]) => {
+    // Skip if already in new format (has 'mac:' or 'ip:' prefix)
+    if (key.startsWith('mac:') || key.startsWith('ip:')) return;
+
+    // Old format: key is IP, value is array of labels
+    if (Array.isArray(value)) {
+      const host = state.data.hosts.find(h => h.ip === key);
+      if (host) {
+        const newKey = getAssetKey(host);
+        state.tags[newKey] = {
+          labels: value,
+          owner: '',
+          notes: '',
+          lastIp: key,
+          lastSeen: new Date().toISOString()
+        };
+        delete state.tags[key];
+        migrated++;
+      }
+    }
+  });
+
+  if (migrated > 0) {
+    console.log('[NetIntel] Migrated', migrated, 'tags to MAC-based format');
+    saveState();
+  }
+}
+
+// === NSE SCRIPT PARSING ===
+// Key scripts that provide valuable intel
+const NSE_PARSERS = {
+  'ssl-cert': (output) => {
+    const info = {};
+    const subjectMatch = output.match(/Subject: (.+?)(?:$|  )/);
+    const issuerMatch = output.match(/Issuer: (.+?)(?:$|  )/);
+    const validMatch = output.match(/Not valid after:\s*(\d{4}-\d{2}-\d{2})/);
+    if (subjectMatch) info.subject = subjectMatch[1].trim();
+    if (issuerMatch) info.issuer = issuerMatch[1].trim();
+    if (validMatch) info.expires = validMatch[1];
+    return { type: 'cert', icon: 'shield', ...info };
+  },
+  'http-title': (output) => {
+    const title = output.replace(/^Title:\s*/, '').trim();
+    return { type: 'http', icon: 'globe', title };
+  },
+  'http-server-header': (output) => {
+    return { type: 'http', icon: 'server', server: output.trim() };
+  },
+  'smb-os-discovery': (output) => {
+    const info = {};
+    const osMatch = output.match(/OS: ([^\n]+)/);
+    const compMatch = output.match(/Computer name: ([^\n]+)/);
+    const domainMatch = output.match(/Domain name: ([^\n]+)/);
+    if (osMatch) info.os = osMatch[1].trim();
+    if (compMatch) info.computer = compMatch[1].trim();
+    if (domainMatch) info.domain = domainMatch[1].trim();
+    return { type: 'smb', icon: 'windows', ...info };
+  },
+  'ssh-hostkey': (output) => {
+    const keys = [];
+    const keyMatches = output.matchAll(/(\d+) ([\w-]+) ([^\s]+)/g);
+    for (const m of keyMatches) {
+      keys.push({ bits: m[1], algo: m[2], fingerprint: m[3].slice(0, 16) + '...' });
+    }
+    return { type: 'ssh', icon: 'key', keys: keys.slice(0, 3) };
+  },
+  'ftp-anon': (output) => {
+    const anon = output.toLowerCase().includes('anonymous ftp login allowed');
+    return { type: 'ftp', icon: 'warning', anonymous: anon, sev: anon ? 'high' : 'info' };
+  },
+  'ms-sql-info': (output) => {
+    const info = {};
+    const versionMatch = output.match(/Version:([^\n]+)/i);
+    const instanceMatch = output.match(/Instance name:([^\n]+)/i);
+    if (versionMatch) info.version = versionMatch[1].trim();
+    if (instanceMatch) info.instance = instanceMatch[1].trim();
+    return { type: 'mssql', icon: 'database', ...info };
+  },
+  'mysql-info': (output) => {
+    const info = {};
+    const versionMatch = output.match(/Version: ([^\n]+)/);
+    if (versionMatch) info.version = versionMatch[1].trim();
+    return { type: 'mysql', icon: 'database', ...info };
+  }
+};
+
+// Scripts that indicate vulnerabilities
+const VULN_SCRIPTS = ['smb-vuln-', 'ssl-heartbleed', 'ssl-poodle', 'ssl-ccs-injection', 'vulners', 'vulscan'];
+
+// Get parsed NSE findings for a host
+function getHostNseFindings(host) {
+  const findings = [];
+  const vulns = [];
+
+  // Parse port scripts
+  (host.ports || []).forEach(port => {
+    (port.scripts || []).forEach(script => {
+      // Check for vulnerability scripts
+      if (VULN_SCRIPTS.some(v => script.id.startsWith(v) || script.id.includes(v))) {
+        vulns.push({ port: port.port, script: script.id, output: script.output });
+      }
+      // Parse known scripts
+      else if (NSE_PARSERS[script.id]) {
+        const parsed = NSE_PARSERS[script.id](script.output);
+        findings.push({ port: port.port, script: script.id, ...parsed });
+      }
+    });
+  });
+
+  // Parse host-level scripts
+  (host.hostscripts || []).forEach(script => {
+    if (VULN_SCRIPTS.some(v => script.id.startsWith(v) || script.id.includes(v))) {
+      vulns.push({ port: null, script: script.id, output: script.output });
+    }
+    else if (NSE_PARSERS[script.id]) {
+      const parsed = NSE_PARSERS[script.id](script.output);
+      findings.push({ port: null, script: script.id, ...parsed });
+    }
+  });
+
+  return { findings, vulns };
+}
+
+// Get all scripts for a host (raw, for details view)
+function getHostAllScripts(host) {
+  const scripts = [];
+  (host.ports || []).forEach(port => {
+    (port.scripts || []).forEach(script => {
+      scripts.push({ port: port.port, ...script });
+    });
+  });
+  (host.hostscripts || []).forEach(script => {
+    scripts.push({ port: null, ...script });
+  });
+  return scripts;
+}
 
 // === HEROICONS (inline SVG) ===
 const ICONS = {
@@ -983,6 +1321,7 @@ const ICONS = {
   bug: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 0 1 .4-2.253M12 8.25a2.25 2.25 0 0 0-2.248 2.146M12 8.25a2.25 2.25 0 0 1 2.248 2.146M8.683 5a6.032 6.032 0 0 1-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0 1 15.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 0 0-.575-1.752M4.921 6a24.048 24.048 0 0 0-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 0 1-5.223 1.082" /></svg>',
   star: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>',
   key: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>',
+  search: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>',
   target: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Z" /></svg>',
   network: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>',
   chevronDown: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>',
@@ -1180,6 +1519,7 @@ store.subscribe('subnetMask', (v) => { subnetMask = v; });
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
   loadState(); // Also loads scan data
+  migrateTags(); // Convert old IP-based tags to MAC-based
   initIcons();
   initNav();
   initModals();
@@ -1351,34 +1691,107 @@ function initModals() {
 function initContextMenu() {
   const menu = document.getElementById('ctx-menu');
   let targetIp = null;
-  
+  let targetHost = null;
+
   document.addEventListener('contextmenu', e => {
     const entity = e.target.closest('[data-ip]');
     if (entity) {
       e.preventDefault();
       targetIp = entity.dataset.ip;
+      targetHost = state.data?.hosts?.find(h => h.ip === targetIp);
       menu.style.left = e.pageX + 'px';
       menu.style.top = e.pageY + 'px';
       menu.classList.add('active');
     }
   });
-  
+
   document.addEventListener('click', () => menu.classList.remove('active'));
-  
+
+  // Handle label quick-tags
   menu.querySelectorAll('[data-tag]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (!targetIp) return;
+      if (!targetHost) return;
       const tag = btn.dataset.tag;
-      if (tag === 'clear') delete state.tags[targetIp];
-      else {
-        if (!state.tags[targetIp]) state.tags[targetIp] = [];
-        if (!state.tags[targetIp].includes(tag)) state.tags[targetIp].push(tag);
+      const key = getAssetKey(targetHost);
+
+      if (tag === 'clear') {
+        delete state.tags[key];
+        // Also delete old IP-based entry if exists
+        if (state.tags[targetIp]) delete state.tags[targetIp];
+      } else {
+        let current = state.tags[key] || { labels: [], owner: '', notes: '' };
+        // Handle old format migration
+        if (Array.isArray(current)) current = { labels: current, owner: '', notes: '' };
+        if (!current.labels) current.labels = [];
+        if (!current.labels.includes(tag)) current.labels.push(tag);
+        current.lastIp = targetIp;
+        current.lastSeen = new Date().toISOString();
+        state.tags[key] = current;
       }
       saveState();
       updateEntityTags();
       updateKeyTerrain();
     });
   });
+
+  // Handle annotate action
+  menu.querySelector('[data-action="annotate"]')?.addEventListener('click', () => {
+    if (!targetHost) return;
+    openAnnotationModal(targetHost);
+  });
+}
+
+// === ANNOTATION MODAL ===
+function openAnnotationModal(host) {
+  const modal = document.getElementById('annotate-modal');
+  if (!modal) return;
+
+  const key = getAssetKey(host);
+  const current = getAssetTags(host);
+  const labels = Array.isArray(current) ? current : (current.labels || []);
+  const owner = current.owner || '';
+  const notes = current.notes || '';
+
+  // Populate info
+  const infoEl = document.getElementById('annotate-info');
+  infoEl.innerHTML = `
+    <div><strong>IP:</strong> ${host.ip}</div>
+    ${host.hostname ? `<div><strong>Hostname:</strong> ${host.hostname}</div>` : ''}
+    ${host.mac ? `<div><strong>MAC:</strong> ${host.mac}${host.macVendor ? ' (' + host.macVendor + ')' : ''}</div>` : ''}
+    <div style="margin-top:.5rem;font-size:.75rem;color:#8b949e"><strong>Asset Key:</strong> ${key}</div>
+  `;
+
+  // Populate fields
+  document.getElementById('annotate-owner').value = owner;
+  document.getElementById('annotate-notes').value = notes;
+
+  // Populate label checkboxes
+  document.querySelectorAll('#annotate-labels input[type="checkbox"]').forEach(cb => {
+    cb.checked = labels.includes(cb.value);
+  });
+
+  // Setup save handler (remove old handlers first)
+  const saveBtn = document.getElementById('annotate-save');
+  const newSaveBtn = saveBtn.cloneNode(true);
+  saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+
+  newSaveBtn.addEventListener('click', () => {
+    const newLabels = Array.from(document.querySelectorAll('#annotate-labels input:checked')).map(cb => cb.value);
+    const newOwner = document.getElementById('annotate-owner').value.trim();
+    const newNotes = document.getElementById('annotate-notes').value.trim();
+
+    setAssetTags(host, {
+      labels: newLabels,
+      owner: newOwner,
+      notes: newNotes
+    });
+
+    updateEntityTags();
+    updateKeyTerrain();
+    modal.classList.remove('active');
+  });
+
+  modal.classList.add('active');
 }
 
 // === DROP ZONES ===
@@ -1793,11 +2206,15 @@ function applyFilterAndGroup() {
 
     const open = host.ports.filter(p => p.state === 'open');
     const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+    const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
     const risk = calculateRisk(host);
-    const isTagged = state.tags[host.ip] && state.tags[host.ip].length > 0;
+    const tagData = getAssetTags(host);
+    const isTagged = Array.isArray(tagData) ? tagData.length > 0 :
+      ((tagData.labels?.length > 0) || tagData.owner || tagData.notes);
 
     switch (filter) {
       case 'up': return true;
+      case 'admin': return hasAdmin;
       case 'cleartext': return hasCleartext;
       case 'risk': return risk >= 50;
       case 'tagged': return isTagged;
@@ -2011,12 +2428,23 @@ function updateEntityTags() {
   const tagLabels = {crown: '★ Crown Jewel', choke: '◎ Choke Point', key: '⬡ Key Terrain'};
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
-    const tags = state.tags[ip] || [];
+    const host = state.data?.hosts?.find(h => h.ip === ip);
+    if (!host) return;
+
+    const tagData = getAssetTags(host);
+    const labels = Array.isArray(tagData) ? tagData : (tagData.labels || []);
+    const owner = tagData.owner || '';
+    const notes = tagData.notes || '';
+    const hasAnnotation = owner || notes;
+
     const tagsEl = card.querySelector('.entity-tags');
     if (tagsEl) {
-      tagsEl.innerHTML = tags.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
+      let html = labels.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
+      if (owner) html += `<span class="tag tag-owner" title="Owner: ${owner}">👤 ${owner}</span>`;
+      if (notes) html += `<span class="tag tag-notes" title="${notes}">📝</span>`;
+      tagsEl.innerHTML = html;
     }
-    card.classList.toggle('tagged', tags.length > 0);
+    card.classList.toggle('tagged', labels.length > 0 || hasAnnotation);
   });
 }
 
@@ -2038,12 +2466,32 @@ function updateOsDist() {
 }
 
 function updateKeyTerrain() {
-  const tagged = Object.entries(state.tags).filter(([_,t]) => t.length > 0);
+  // Get all tagged assets with their current IP
+  const tagged = Object.entries(state.tags)
+    .filter(([key, data]) => {
+      if (Array.isArray(data)) return data.length > 0;
+      return (data.labels?.length > 0) || data.owner || data.notes;
+    })
+    .map(([key, data]) => {
+      const host = getHostByAssetKey(key);
+      const ip = host?.ip || data.lastIp || key.replace(/^(mac:|ip:)/, '');
+      const labels = Array.isArray(data) ? data : (data.labels || []);
+      const owner = data.owner || '';
+      return { key, ip, labels, owner, host };
+    });
+
   document.getElementById('terrain-count').textContent = tagged.length + ' tagged';
   const el = document.getElementById('terrain-list');
-  el.innerHTML = tagged.length ? tagged.slice(0,5).map(([ip,tags]) =>
-    `<div class="flex items-center justify-between mb-4"><span class="mono">${ip}</span><div>${tags.map(t => `<span class="tag tag-${t}">${t}</span>`).join('')}</div></div>`
-  ).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag as key terrain</p>';
+
+  el.innerHTML = tagged.length ? tagged.slice(0, 5).map(t => `
+    <div class="flex items-center justify-between mb-4" style="gap:.5rem">
+      <span class="mono" style="flex-shrink:0">${t.ip}</span>
+      <div style="flex:1;display:flex;flex-wrap:wrap;gap:.25rem;justify-content:flex-end">
+        ${t.labels.map(l => `<span class="tag tag-${l}">${l}</span>`).join('')}
+        ${t.owner ? `<span class="tag tag-owner" title="Owner">👤</span>` : ''}
+      </div>
+    </div>
+  `).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag or annotate</p>';
 }
 
 function renderSources() {
@@ -2327,6 +2775,20 @@ function getCvssClass(cvss) {
   return 'low';
 }
 
+// Detect admin/management ports on host
+function getHostAdminPorts(host) {
+  const found = [];
+  host.ports.filter(p => p.state === 'open').forEach(port => {
+    const info = ADMIN_PORTS[port.port];
+    if (info) {
+      found.push({ port: port.port, ...info, service: port.service || '' });
+    }
+  });
+  // Sort by severity: critical > high > medium > low
+  const sevOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  return found.sort((a, b) => (sevOrder[a.sev] || 3) - (sevOrder[b.sev] || 3));
+}
+
 // Create entity card element dynamically
 function createEntityCard(host) {
   const open = host.ports.filter(p => p.state === 'open');
@@ -2334,6 +2796,8 @@ function createEntityCard(host) {
   const os = host.os && host.os[0] ? host.os[0] : null;
   const mac = host.mac;
   const cves = getHostCVEs(host);
+  const adminPorts = getHostAdminPorts(host);
+  const { findings: nseFindings, vulns: nseVulns } = getHostNseFindings(host);
 
   const card = document.createElement('div');
   card.className = 'entity';
@@ -2353,6 +2817,57 @@ function createEntityCard(host) {
     </div>
   ` : '';
 
+  const adminHtml = adminPorts.length > 0 ? `
+    <div class="admin-ports">
+      <div class="admin-title">${icon('warning')} Admin Ports Exposed</div>
+      ${adminPorts.slice(0, 4).map(a => `
+        <div class="admin-port">
+          <span class="admin-port-num">${a.port}</span>
+          <span class="admin-port-name">${a.name}</span>
+          <span class="admin-port-sev sev-${a.sev}">${a.sev}</span>
+          <span class="admin-port-cat">${a.cat}</span>
+        </div>
+      `).join('')}
+      ${adminPorts.length > 4 ? `<div class="admin-more">...and ${adminPorts.length - 4} more</div>` : ''}
+    </div>
+  ` : '';
+
+  // Count critical/high admin ports for badge
+  const criticalAdmin = adminPorts.filter(a => a.sev === 'critical' || a.sev === 'high').length;
+
+  // NSE script findings HTML
+  const nseHtml = nseFindings.length > 0 ? `
+    <div class="nse-findings">
+      <div class="nse-title">${icon('search')} Script Findings</div>
+      ${nseFindings.slice(0, 4).map(f => `
+        <div class="nse-finding">
+          <span class="nse-port">${f.port ? ':' + f.port : 'host'}</span>
+          <span class="nse-type">${f.type}</span>
+          <span class="nse-detail">${
+            f.title || f.subject || f.os || f.server || f.version ||
+            (f.keys ? f.keys.map(k => k.algo).join(', ') : '') ||
+            (f.anonymous ? 'Anonymous FTP!' : '') || f.script
+          }</span>
+        </div>
+      `).join('')}
+      ${nseFindings.length > 4 ? `<div class="nse-more">...and ${nseFindings.length - 4} more</div>` : ''}
+    </div>
+  ` : '';
+
+  // NSE vulnerability findings
+  const nseVulnHtml = nseVulns.length > 0 ? `
+    <div class="nse-vulns">
+      <div class="nse-vuln-title">${icon('warning')} Script Vulnerabilities</div>
+      ${nseVulns.slice(0, 3).map(v => `
+        <div class="nse-vuln">
+          <span class="nse-vuln-script">${v.script}</span>
+          ${v.port ? `<span class="nse-vuln-port">:${v.port}</span>` : ''}
+        </div>
+      `).join('')}
+      ${nseVulns.length > 3 ? `<div class="nse-more">...and ${nseVulns.length - 3} more</div>` : ''}
+    </div>
+  ` : '';
+
   card.innerHTML = `
     <div class="entity-head">
       <div class="entity-icon" data-os-icon="">\u25a3</div>
@@ -2361,6 +2876,8 @@ function createEntityCard(host) {
         ${host.hostname ? `<div class="entity-host">${host.hostname}</div>` : ''}
         <div class="entity-tags"></div>
       </div>
+      ${nseVulns.length > 0 ? `<span class="badge badge-critical" title="NSE vulns detected">${icon('shield')}</span>` : ''}
+      ${criticalAdmin > 0 ? `<span class="badge badge-warning" title="Admin ports exposed">${icon('warning')}</span>` : ''}
       ${cves.length > 0 ? `<span class="badge badge-critical">${cves.length} CVE${cves.length !== 1 ? 's' : ''}</span>` : ''}
     </div>
     <div class="entity-body">
@@ -2379,6 +2896,9 @@ function createEntityCard(host) {
         ${mac ? `<div class="signal"><span class="signal-src">MAC</span><span class="signal-val">${mac}${host.macVendor ? ' (' + host.macVendor + ')' : ''}</span></div>` : ''}
         ${open.filter(p => p.product).slice(0, 2).map(p => `<div class="signal"><span class="signal-src">:${p.port}</span><span class="signal-val">${p.product}${p.version ? ' ' + p.version : ''}</span></div>`).join('')}
       </div>` : ''}
+      ${nseHtml}
+      ${adminHtml}
+      ${nseVulnHtml}
       ${vulnsHtml}
     </div>
     <div class="entity-foot">
@@ -2393,23 +2913,34 @@ function createEntityCard(host) {
 function exportData(format) {
   let content, filename, type;
   const includeTags = document.getElementById('export-tags')?.checked;
-  
+
+  // Helper to get tag info for a host in export-friendly format
+  function getExportTags(host) {
+    const tagData = getAssetTags(host);
+    if (Array.isArray(tagData)) return { labels: tagData.join(';'), owner: '', notes: '' };
+    return {
+      labels: (tagData.labels || []).join(';'),
+      owner: tagData.owner || '',
+      notes: tagData.notes || ''
+    };
+  }
+
   if (format === 'json') {
     const data = {...state.data, tags: includeTags ? state.tags : {}};
     content = JSON.stringify(data, null, 2);
     filename = 'netintel-export.json';
     type = 'application/json';
   } else if (format === 'csv') {
-    const rows = [['IP','Hostname','OS','Open Ports','Risk','Tags']];
+    const rows = [['IP','Hostname','MAC','OS','Open Ports','Risk','Labels','Owner','Notes']];
     state.data.hosts.filter(h => h.status === 'up').forEach(h => {
       const os = h.os && h.os[0] ? h.os[0].name : '';
       const ports = h.ports.filter(p => p.state === 'open').map(p => p.port).join(';');
       let risk = 0;
       h.ports.filter(p => p.state === 'open').forEach(p => { if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port]; });
-      const tags = includeTags && state.tags[h.ip] ? state.tags[h.ip].join(';') : '';
-      rows.push([h.ip, h.hostname, os, ports, Math.min(risk,100), tags]);
+      const tags = includeTags ? getExportTags(h) : { labels: '', owner: '', notes: '' };
+      rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, Math.min(risk,100), tags.labels, tags.owner, tags.notes]);
     });
-    content = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     filename = 'netintel-export.csv';
     type = 'text/csv';
   } else if (format === 'cpe') {
@@ -2418,12 +2949,32 @@ function exportData(format) {
     content = JSON.stringify(Array.from(cpes), null, 2);
     filename = 'cpe-list.json';
     type = 'application/json';
+  } else if (format === 'tags') {
+    // Export just the tags/annotations for reimport
+    const tagExport = {};
+    Object.entries(state.tags).forEach(([key, data]) => {
+      const host = getHostByAssetKey(key);
+      const entry = {
+        key,
+        ip: host?.ip || data.lastIp || '',
+        mac: host?.mac || (key.startsWith('mac:') ? key.slice(4) : ''),
+        hostname: host?.hostname || '',
+        labels: Array.isArray(data) ? data : (data.labels || []),
+        owner: data.owner || '',
+        notes: data.notes || '',
+        lastSeen: data.lastSeen || ''
+      };
+      tagExport[key] = entry;
+    });
+    content = JSON.stringify(tagExport, null, 2);
+    filename = 'netintel-tags.json';
+    type = 'application/json';
   } else if (format === 'html') {
     content = document.documentElement.outerHTML;
     filename = 'netintel-report.html';
     type = 'text/html';
   }
-  
+
   if (content) {
     const blob = new Blob([content], {type});
     const url = URL.createObjectURL(blob);
@@ -2930,17 +3481,21 @@ document.getElementById('search')?.addEventListener('input', e => {
       if (host) {
         const open = host.ports.filter(p => p.state === 'open');
         const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+        const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
         let risk = 0;
         open.forEach(p => {
           if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
           if (CLEARTEXT[p.port]) risk += 3;
         });
         risk = Math.min(risk, 100);
-        const isTagged = state.tags[ip] && state.tags[ip].length > 0;
+        const tagData = getAssetTags(host);
+        const isTagged = Array.isArray(tagData) ? tagData.length > 0 :
+          ((tagData.labels?.length > 0) || tagData.owner || tagData.notes);
 
         let passesFilter = true;
         switch (filter) {
           case 'up': passesFilter = host.status === 'up'; break;
+          case 'admin': passesFilter = hasAdmin; break;
           case 'cleartext': passesFilter = hasCleartext; break;
           case 'risk': passesFilter = risk >= 50; break;
           case 'tagged': passesFilter = isTagged; break;
