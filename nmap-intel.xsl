@@ -1464,7 +1464,7 @@ function buildSearchIndex() {
     });
 
     // Index by OS
-    if (host.os && host.os[0]) {
+    if (host.os && host.os[0] && host.os[0].name) {
       const osName = host.os[0].name.toLowerCase();
       const osWords = osName.split(/\s+/);
       osWords.forEach(word => {
@@ -2879,9 +2879,11 @@ function renderVulnDbStatus() {
 }
 
 function renderStats() {
+  if (!state.data?.hosts) return;
+
   let clearCount = 0, totalRisk = 0, riskCount = 0;
   const risks = [];
-  
+
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
     const open = host.ports.filter(p => p.state === 'open');
     open.forEach(p => { if (CLEARTEXT[p.port]) clearCount++; });
