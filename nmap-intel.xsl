@@ -102,6 +102,8 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .tag-crown{background:rgba(210,153,34,.2);color:#d29922;border:1px solid #d29922}
 .tag-choke{background:rgba(248,81,73,.2);color:#f85149;border:1px solid #f85149}
 .tag-key{background:rgba(163,113,247,.2);color:#a371f7;border:1px solid #a371f7}
+.tag-owner{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag-notes{background:rgba(139,148,158,.15);color:#8b949e;border:1px solid rgba(139,148,158,.3);cursor:help}
 
 /* === ENTITY CARDS === */
 .entity-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem}
@@ -431,7 +433,42 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
   <button class="ctx-item" data-tag="choke">◎ Choke Point</button>
   <button class="ctx-item" data-tag="key">⬡ Key Terrain</button>
   <div class="ctx-div"></div>
-  <button class="ctx-item" data-tag="clear">✕ Clear Tags</button>
+  <button class="ctx-item" data-action="annotate">✎ Edit Notes</button>
+  <div class="ctx-div"></div>
+  <button class="ctx-item" data-tag="clear">✕ Clear All</button>
+</div>
+
+<!-- Annotation Modal -->
+<div class="modal" id="annotate-modal">
+  <div class="modal-content" style="max-width:480px">
+    <div class="modal-head">
+      <h3>Asset Annotation</h3>
+      <button class="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="annotate-info" style="margin-bottom:1rem;padding:.75rem;background:#161b22;border-radius:6px;font-family:monospace;font-size:.85rem"></div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.25rem">Owner / Responsible Party</label>
+        <input type="text" id="annotate-owner" class="input" placeholder="e.g., John Smith, IT Ops Team" style="width:100%"/>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.25rem">Notes</label>
+        <textarea id="annotate-notes" class="input" rows="4" placeholder="e.g., Production database server, scheduled maintenance windows..." style="width:100%;resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:block;font-size:.8rem;color:#8b949e;margin-bottom:.5rem">Labels</label>
+        <div id="annotate-labels" style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="crown"/> ★ Crown Jewel</label>
+          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="choke"/> ◎ Choke Point</label>
+          <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer"><input type="checkbox" value="key"/> ⬡ Key Terrain</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary modal-close">Cancel</button>
+      <button class="btn btn-primary" id="annotate-save">Save</button>
+    </div>
+  </div>
 </div>
 
 <!-- Embedded Scan Data as JSON -->
@@ -885,17 +922,23 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
         <button class="modal-close" data-close-modal="">×</button>
       </div>
       <div class="modal-body">
+        <p style="font-size:.8rem;color:#8b949e;margin-bottom:.75rem">Scan Data</p>
         <div class="flex flex-wrap gap-2">
           <button class="btn btn-secondary" data-export="csv">Export CSV</button>
           <button class="btn btn-secondary" data-export="json">Export JSON</button>
           <button class="btn btn-secondary" data-export="html">Export Report</button>
-          <button class="btn btn-primary" data-export="cpe">Export CPEs</button>
+          <button class="btn btn-secondary" data-export="cpe">Export CPEs</button>
         </div>
-        <div class="mt-4">
+        <div class="mt-4" style="margin-bottom:.75rem">
           <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;">
-            <input type="checkbox" id="export-tags"/> Include tags and annotations
+            <input type="checkbox" id="export-tags" checked="checked"/> Include tags and annotations in CSV/JSON
           </label>
         </div>
+        <p style="font-size:.8rem;color:#8b949e;margin-bottom:.75rem;margin-top:1rem;padding-top:1rem;border-top:1px solid #21262d">Asset Tags Only</p>
+        <div class="flex flex-wrap gap-2">
+          <button class="btn btn-primary" data-export="tags">Export Tags (JSON)</button>
+        </div>
+        <p style="font-size:.75rem;color:#8b949e;margin-top:.5rem">Tags are keyed by MAC address for portability across scans</p>
       </div>
       <div class="modal-foot">
         <button class="btn btn-secondary" data-close-modal="">Close</button>
@@ -1051,6 +1094,86 @@ const ADMIN_PORTS = {
 
 const OS_PATTERNS = {win:/windows|microsoft/i,lin:/linux|ubuntu|debian|centos|redhat/i,net:/cisco|juniper|fortinet/i};
 const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10MB max file size
+
+// === ASSET IDENTIFICATION ===
+// Use MAC as primary key (stable), fall back to IP if no MAC
+function getAssetKey(host) {
+  if (host.mac) return 'mac:' + host.mac.toUpperCase();
+  return 'ip:' + host.ip;
+}
+
+function getAssetKeyByIp(ip) {
+  if (!state.data?.hosts) return 'ip:' + ip;
+  const host = state.data.hosts.find(h => h.ip === ip);
+  return host ? getAssetKey(host) : 'ip:' + ip;
+}
+
+function getHostByAssetKey(key) {
+  if (!state.data?.hosts) return null;
+  if (key.startsWith('mac:')) {
+    const mac = key.slice(4);
+    return state.data.hosts.find(h => h.mac && h.mac.toUpperCase() === mac);
+  }
+  const ip = key.slice(3);
+  return state.data.hosts.find(h => h.ip === ip);
+}
+
+// Get tags for a host (handles both old IP-based and new MAC-based)
+function getAssetTags(host) {
+  const key = getAssetKey(host);
+  const tags = state.tags[key];
+  // Migration: also check old IP-based tags
+  if (!tags && state.tags[host.ip]) {
+    return state.tags[host.ip];
+  }
+  return tags || { labels: [], owner: '', notes: '' };
+}
+
+// Set tags for a host using stable key
+function setAssetTags(host, tags) {
+  const key = getAssetKey(host);
+  // Store current IP for reference/lookup
+  state.tags[key] = { ...tags, lastIp: host.ip, lastSeen: new Date().toISOString() };
+  // Remove old IP-based entry if migrating
+  if (state.tags[host.ip] && key !== 'ip:' + host.ip) {
+    delete state.tags[host.ip];
+  }
+  saveState();
+}
+
+// Migrate old tags format (IP -> MAC-based with structure)
+function migrateTags() {
+  if (!state.data?.hosts) return;
+  const oldTags = { ...state.tags };
+  let migrated = 0;
+
+  Object.entries(oldTags).forEach(([key, value]) => {
+    // Skip if already in new format (has 'mac:' or 'ip:' prefix)
+    if (key.startsWith('mac:') || key.startsWith('ip:')) return;
+
+    // Old format: key is IP, value is array of labels
+    if (Array.isArray(value)) {
+      const host = state.data.hosts.find(h => h.ip === key);
+      if (host) {
+        const newKey = getAssetKey(host);
+        state.tags[newKey] = {
+          labels: value,
+          owner: '',
+          notes: '',
+          lastIp: key,
+          lastSeen: new Date().toISOString()
+        };
+        delete state.tags[key];
+        migrated++;
+      }
+    }
+  });
+
+  if (migrated > 0) {
+    console.log('[NetIntel] Migrated', migrated, 'tags to MAC-based format');
+    saveState();
+  }
+}
 
 // === HEROICONS (inline SVG) ===
 const ICONS = {
@@ -1269,6 +1392,7 @@ store.subscribe('subnetMask', (v) => { subnetMask = v; });
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
   loadState(); // Also loads scan data
+  migrateTags(); // Convert old IP-based tags to MAC-based
   initIcons();
   initNav();
   initModals();
@@ -1440,34 +1564,107 @@ function initModals() {
 function initContextMenu() {
   const menu = document.getElementById('ctx-menu');
   let targetIp = null;
-  
+  let targetHost = null;
+
   document.addEventListener('contextmenu', e => {
     const entity = e.target.closest('[data-ip]');
     if (entity) {
       e.preventDefault();
       targetIp = entity.dataset.ip;
+      targetHost = state.data?.hosts?.find(h => h.ip === targetIp);
       menu.style.left = e.pageX + 'px';
       menu.style.top = e.pageY + 'px';
       menu.classList.add('active');
     }
   });
-  
+
   document.addEventListener('click', () => menu.classList.remove('active'));
-  
+
+  // Handle label quick-tags
   menu.querySelectorAll('[data-tag]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (!targetIp) return;
+      if (!targetHost) return;
       const tag = btn.dataset.tag;
-      if (tag === 'clear') delete state.tags[targetIp];
-      else {
-        if (!state.tags[targetIp]) state.tags[targetIp] = [];
-        if (!state.tags[targetIp].includes(tag)) state.tags[targetIp].push(tag);
+      const key = getAssetKey(targetHost);
+
+      if (tag === 'clear') {
+        delete state.tags[key];
+        // Also delete old IP-based entry if exists
+        if (state.tags[targetIp]) delete state.tags[targetIp];
+      } else {
+        let current = state.tags[key] || { labels: [], owner: '', notes: '' };
+        // Handle old format migration
+        if (Array.isArray(current)) current = { labels: current, owner: '', notes: '' };
+        if (!current.labels) current.labels = [];
+        if (!current.labels.includes(tag)) current.labels.push(tag);
+        current.lastIp = targetIp;
+        current.lastSeen = new Date().toISOString();
+        state.tags[key] = current;
       }
       saveState();
       updateEntityTags();
       updateKeyTerrain();
     });
   });
+
+  // Handle annotate action
+  menu.querySelector('[data-action="annotate"]')?.addEventListener('click', () => {
+    if (!targetHost) return;
+    openAnnotationModal(targetHost);
+  });
+}
+
+// === ANNOTATION MODAL ===
+function openAnnotationModal(host) {
+  const modal = document.getElementById('annotate-modal');
+  if (!modal) return;
+
+  const key = getAssetKey(host);
+  const current = getAssetTags(host);
+  const labels = Array.isArray(current) ? current : (current.labels || []);
+  const owner = current.owner || '';
+  const notes = current.notes || '';
+
+  // Populate info
+  const infoEl = document.getElementById('annotate-info');
+  infoEl.innerHTML = `
+    <div><strong>IP:</strong> ${host.ip}</div>
+    ${host.hostname ? `<div><strong>Hostname:</strong> ${host.hostname}</div>` : ''}
+    ${host.mac ? `<div><strong>MAC:</strong> ${host.mac}${host.macVendor ? ' (' + host.macVendor + ')' : ''}</div>` : ''}
+    <div style="margin-top:.5rem;font-size:.75rem;color:#8b949e"><strong>Asset Key:</strong> ${key}</div>
+  `;
+
+  // Populate fields
+  document.getElementById('annotate-owner').value = owner;
+  document.getElementById('annotate-notes').value = notes;
+
+  // Populate label checkboxes
+  document.querySelectorAll('#annotate-labels input[type="checkbox"]').forEach(cb => {
+    cb.checked = labels.includes(cb.value);
+  });
+
+  // Setup save handler (remove old handlers first)
+  const saveBtn = document.getElementById('annotate-save');
+  const newSaveBtn = saveBtn.cloneNode(true);
+  saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+
+  newSaveBtn.addEventListener('click', () => {
+    const newLabels = Array.from(document.querySelectorAll('#annotate-labels input:checked')).map(cb => cb.value);
+    const newOwner = document.getElementById('annotate-owner').value.trim();
+    const newNotes = document.getElementById('annotate-notes').value.trim();
+
+    setAssetTags(host, {
+      labels: newLabels,
+      owner: newOwner,
+      notes: newNotes
+    });
+
+    updateEntityTags();
+    updateKeyTerrain();
+    modal.classList.remove('active');
+  });
+
+  modal.classList.add('active');
 }
 
 // === DROP ZONES ===
@@ -1884,7 +2081,9 @@ function applyFilterAndGroup() {
     const hasCleartext = open.some(p => CLEARTEXT[p.port]);
     const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
     const risk = calculateRisk(host);
-    const isTagged = state.tags[host.ip] && state.tags[host.ip].length > 0;
+    const tagData = getAssetTags(host);
+    const isTagged = Array.isArray(tagData) ? tagData.length > 0 :
+      ((tagData.labels?.length > 0) || tagData.owner || tagData.notes);
 
     switch (filter) {
       case 'up': return true;
@@ -2102,12 +2301,23 @@ function updateEntityTags() {
   const tagLabels = {crown: '★ Crown Jewel', choke: '◎ Choke Point', key: '⬡ Key Terrain'};
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
-    const tags = state.tags[ip] || [];
+    const host = state.data?.hosts?.find(h => h.ip === ip);
+    if (!host) return;
+
+    const tagData = getAssetTags(host);
+    const labels = Array.isArray(tagData) ? tagData : (tagData.labels || []);
+    const owner = tagData.owner || '';
+    const notes = tagData.notes || '';
+    const hasAnnotation = owner || notes;
+
     const tagsEl = card.querySelector('.entity-tags');
     if (tagsEl) {
-      tagsEl.innerHTML = tags.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
+      let html = labels.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
+      if (owner) html += `<span class="tag tag-owner" title="Owner: ${owner}">👤 ${owner}</span>`;
+      if (notes) html += `<span class="tag tag-notes" title="${notes}">📝</span>`;
+      tagsEl.innerHTML = html;
     }
-    card.classList.toggle('tagged', tags.length > 0);
+    card.classList.toggle('tagged', labels.length > 0 || hasAnnotation);
   });
 }
 
@@ -2129,12 +2339,32 @@ function updateOsDist() {
 }
 
 function updateKeyTerrain() {
-  const tagged = Object.entries(state.tags).filter(([_,t]) => t.length > 0);
+  // Get all tagged assets with their current IP
+  const tagged = Object.entries(state.tags)
+    .filter(([key, data]) => {
+      if (Array.isArray(data)) return data.length > 0;
+      return (data.labels?.length > 0) || data.owner || data.notes;
+    })
+    .map(([key, data]) => {
+      const host = getHostByAssetKey(key);
+      const ip = host?.ip || data.lastIp || key.replace(/^(mac:|ip:)/, '');
+      const labels = Array.isArray(data) ? data : (data.labels || []);
+      const owner = data.owner || '';
+      return { key, ip, labels, owner, host };
+    });
+
   document.getElementById('terrain-count').textContent = tagged.length + ' tagged';
   const el = document.getElementById('terrain-list');
-  el.innerHTML = tagged.length ? tagged.slice(0,5).map(([ip,tags]) =>
-    `<div class="flex items-center justify-between mb-4"><span class="mono">${ip}</span><div>${tags.map(t => `<span class="tag tag-${t}">${t}</span>`).join('')}</div></div>`
-  ).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag as key terrain</p>';
+
+  el.innerHTML = tagged.length ? tagged.slice(0, 5).map(t => `
+    <div class="flex items-center justify-between mb-4" style="gap:.5rem">
+      <span class="mono" style="flex-shrink:0">${t.ip}</span>
+      <div style="flex:1;display:flex;flex-wrap:wrap;gap:.25rem;justify-content:flex-end">
+        ${t.labels.map(l => `<span class="tag tag-${l}">${l}</span>`).join('')}
+        ${t.owner ? `<span class="tag tag-owner" title="Owner">👤</span>` : ''}
+      </div>
+    </div>
+  `).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag or annotate</p>';
 }
 
 function renderSources() {
@@ -2519,23 +2749,34 @@ function createEntityCard(host) {
 function exportData(format) {
   let content, filename, type;
   const includeTags = document.getElementById('export-tags')?.checked;
-  
+
+  // Helper to get tag info for a host in export-friendly format
+  function getExportTags(host) {
+    const tagData = getAssetTags(host);
+    if (Array.isArray(tagData)) return { labels: tagData.join(';'), owner: '', notes: '' };
+    return {
+      labels: (tagData.labels || []).join(';'),
+      owner: tagData.owner || '',
+      notes: tagData.notes || ''
+    };
+  }
+
   if (format === 'json') {
     const data = {...state.data, tags: includeTags ? state.tags : {}};
     content = JSON.stringify(data, null, 2);
     filename = 'netintel-export.json';
     type = 'application/json';
   } else if (format === 'csv') {
-    const rows = [['IP','Hostname','OS','Open Ports','Risk','Tags']];
+    const rows = [['IP','Hostname','MAC','OS','Open Ports','Risk','Labels','Owner','Notes']];
     state.data.hosts.filter(h => h.status === 'up').forEach(h => {
       const os = h.os && h.os[0] ? h.os[0].name : '';
       const ports = h.ports.filter(p => p.state === 'open').map(p => p.port).join(';');
       let risk = 0;
       h.ports.filter(p => p.state === 'open').forEach(p => { if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port]; });
-      const tags = includeTags && state.tags[h.ip] ? state.tags[h.ip].join(';') : '';
-      rows.push([h.ip, h.hostname, os, ports, Math.min(risk,100), tags]);
+      const tags = includeTags ? getExportTags(h) : { labels: '', owner: '', notes: '' };
+      rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, Math.min(risk,100), tags.labels, tags.owner, tags.notes]);
     });
-    content = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     filename = 'netintel-export.csv';
     type = 'text/csv';
   } else if (format === 'cpe') {
@@ -2544,12 +2785,32 @@ function exportData(format) {
     content = JSON.stringify(Array.from(cpes), null, 2);
     filename = 'cpe-list.json';
     type = 'application/json';
+  } else if (format === 'tags') {
+    // Export just the tags/annotations for reimport
+    const tagExport = {};
+    Object.entries(state.tags).forEach(([key, data]) => {
+      const host = getHostByAssetKey(key);
+      const entry = {
+        key,
+        ip: host?.ip || data.lastIp || '',
+        mac: host?.mac || (key.startsWith('mac:') ? key.slice(4) : ''),
+        hostname: host?.hostname || '',
+        labels: Array.isArray(data) ? data : (data.labels || []),
+        owner: data.owner || '',
+        notes: data.notes || '',
+        lastSeen: data.lastSeen || ''
+      };
+      tagExport[key] = entry;
+    });
+    content = JSON.stringify(tagExport, null, 2);
+    filename = 'netintel-tags.json';
+    type = 'application/json';
   } else if (format === 'html') {
     content = document.documentElement.outerHTML;
     filename = 'netintel-report.html';
     type = 'text/html';
   }
-  
+
   if (content) {
     const blob = new Blob([content], {type});
     const url = URL.createObjectURL(blob);
@@ -3063,7 +3324,9 @@ document.getElementById('search')?.addEventListener('input', e => {
           if (CLEARTEXT[p.port]) risk += 3;
         });
         risk = Math.min(risk, 100);
-        const isTagged = state.tags[ip] && state.tags[ip].length > 0;
+        const tagData = getAssetTags(host);
+        const isTagged = Array.isArray(tagData) ? tagData.length > 0 :
+          ((tagData.labels?.length > 0) || tagData.owner || tagData.notes);
 
         let passesFilter = true;
         switch (filter) {
