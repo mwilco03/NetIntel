@@ -424,21 +424,21 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 
   <!-- Sidebar Navigation -->
   <nav class="sidebar">
-    <div class="sidebar-logo">⦿ NetIntel</div>
+    <div class="sidebar-logo">[N] NetIntel</div>
     <ul class="nav">
-      <li><a href="#" class="active" data-nav="dashboard">◫ Dashboard</a></li>
-      <li><a href="#" data-nav="entities">▤ All Entities</a></li>
-      <li><a href="#" data-nav="topology">◎ Topology</a></li>
-      <li><a href="#" data-nav="timeline">◷ Timeline</a></li>
-      <li><a href="#" data-nav="cleartext">⚠ Cleartext</a></li>
-      <li><a href="#" data-nav="diff">⇄ Scan Diff</a></li>
-      <li><a href="#" data-nav="sources">◰ Sources</a></li>
+      <li><a href="#" class="active" data-nav="dashboard"># Dashboard</a></li>
+      <li><a href="#" data-nav="entities">= All Entities</a></li>
+      <li><a href="#" data-nav="topology">o Topology</a></li>
+      <li><a href="#" data-nav="timeline">~ Timeline</a></li>
+      <li><a href="#" data-nav="cleartext">! Cleartext</a></li>
+      <li><a href="#" data-nav="diff">&lt;&gt; Scan Diff</a></li>
+      <li><a href="#" data-nav="sources">[] Sources</a></li>
     </ul>
     <div class="nav-section">Tools</div>
     <ul class="nav">
-      <li><a href="#" data-action="import">↑ Import Data</a></li>
-      <li><a href="#" data-action="export">↓ Export</a></li>
-      <li><a href="#" data-action="vuln-db">⬡ Vuln Database</a></li>
+      <li><a href="#" data-action="import">^ Import Data</a></li>
+      <li><a href="#" data-action="export">v Export</a></li>
+      <li><a href="#" data-action="vuln-db">* Vuln Database</a></li>
     </ul>
   </nav>
 
@@ -454,7 +454,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       </div>
       <div class="header-right">
         <span style="font-size:.8rem;color:#8b949e;">Scan: <xsl:value-of select="/nmaprun/@startstr"/></span>
-        <button class="btn btn-ghost btn-sm" data-action="share" title="Copy shareable link">🔗 Share</button>
+        <button class="btn btn-ghost btn-sm" data-action="share" title="Copy shareable link">[+] Share</button>
         <button class="btn btn-secondary btn-sm" data-action="import">Import</button>
         <button class="btn btn-primary btn-sm" data-action="export">Export</button>
       </div>
@@ -504,9 +504,9 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
   <button class="ctx-item" data-tag="mission-critical">▲ Mission Critical</button>
   <div class="ctx-div"></div>
   <div class="ctx-label">Tactical</div>
-  <button class="ctx-item" data-tag="crown">★ Crown Jewel</button>
-  <button class="ctx-item" data-tag="choke">◎ Choke Point</button>
-  <button class="ctx-item" data-tag="pivot">⇄ Pivot Point</button>
+  <button class="ctx-item" data-tag="crown">* Crown Jewel</button>
+  <button class="ctx-item" data-tag="choke">o Choke Point</button>
+  <button class="ctx-item" data-tag="pivot">&lt;&gt; Pivot Point</button>
   <div class="ctx-div"></div>
   <button class="ctx-item" data-action="annotate">✎ Full Annotation...</button>
   <div class="ctx-div"></div>
@@ -633,7 +633,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     
     <!-- Cleartext Warning Panel (hidden by default, shown by JS) -->
     <div class="cleartext-panel hidden" id="cleartext-panel">
-      <div class="cleartext-head">⚠ Cleartext Protocols Detected</div>
+      <div class="cleartext-head">[!] Cleartext Protocols Detected</div>
       <div id="cleartext-list"></div>
     </div>
     
@@ -641,7 +641,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <div class="card">
       <div class="card-header">
         <span class="card-title">Top Risks</span>
-        <a href="#" class="btn btn-ghost btn-sm" data-nav="entities">View All →</a>
+        <a href="#" class="btn btn-ghost btn-sm" data-nav="entities">View All &gt;&gt;</a>
       </div>
       <ul class="risk-list" id="top-risks">
         <li class="risk-item" style="color:#8b949e;">Calculating risks...</li>
@@ -681,9 +681,9 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       <h2 class="section-title">All Entities</h2>
       <div class="flex gap-2">
         <div class="view-toggle">
-          <button class="btn btn-secondary btn-sm active" data-view="cards">▤ Cards</button>
-          <button class="btn btn-secondary btn-sm" data-view="ports">◫ Ports</button>
-          <button class="btn btn-secondary btn-sm" data-view="services">◉ Services</button>
+          <button class="btn btn-secondary btn-sm active" data-view="cards">= Cards</button>
+          <button class="btn btn-secondary btn-sm" data-view="ports"># Ports</button>
+          <button class="btn btn-secondary btn-sm" data-view="services">@ Services</button>
         </div>
         <select id="entity-group" class="btn btn-secondary btn-sm" style="appearance:auto;padding-right:2rem;">
           <option value="none">No Grouping</option>
@@ -743,7 +743,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
   
   <div class="entity" data-ip="{$ip}">
     <div class="entity-head">
-      <div class="entity-icon" data-os-icon="">▣</div>
+      <div class="entity-icon" data-os-icon="">[=]</div>
       <div class="entity-info">
         <div class="entity-ip"><xsl:value-of select="$ip"/></div>
         <xsl:if test="$hostname">
@@ -982,7 +982,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       <div class="card-body">
         <p style="color:#8b949e;margin-bottom:1rem;">Load a comparison scan to see what changed between scans.</p>
         <div class="drop-zone" id="diff-drop-zone">
-          <div style="font-size:2rem;margin-bottom:1rem;">⇄</div>
+          <div style="font-size:2rem;margin-bottom:1rem;">&lt;&gt;</div>
           <div class="drop-zone-text">Drop comparison scan here</div>
           <div class="drop-zone-hint">Nmap XML format</div>
           <input type="file" id="diff-file-input" accept=".xml" style="display:none;"/>
@@ -1095,7 +1095,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
           Load a CPE-to-CVE mapping file to enrich scan data with vulnerability information.
         </p>
         <div class="drop-zone" id="vuln-drop-zone">
-          <div style="font-size:2rem;margin-bottom:1rem;">⬡</div>
+          <div style="font-size:2rem;margin-bottom:1rem;">[*]</div>
           <div class="drop-zone-text">Drop vuln-db.json here</div>
           <div class="drop-zone-hint">CPE to CVE mapping file</div>
           <input type="file" id="vuln-input" accept=".json" style="display:none;"/>
@@ -2960,9 +2960,9 @@ function updateEntityCards() {
     const os = host.os && host.os[0] ? host.os[0].name : '';
     const icon = card.querySelector('[data-os-icon]');
     if (icon) {
-      if (OS_PATTERNS.win.test(os)) { icon.classList.add('win'); icon.textContent = '⊞'; }
-      else if (OS_PATTERNS.lin.test(os)) { icon.classList.add('lin'); icon.textContent = '◆'; }
-      else if (OS_PATTERNS.net.test(os)) { icon.classList.add('net'); icon.textContent = '◎'; }
+      if (OS_PATTERNS.win.test(os)) { icon.classList.add('win'); icon.textContent = '[W]'; }
+      else if (OS_PATTERNS.lin.test(os)) { icon.classList.add('lin'); icon.textContent = '[L]'; }
+      else if (OS_PATTERNS.net.test(os)) { icon.classList.add('net'); icon.textContent = '[N]'; }
     }
     
     // Tags
@@ -2973,13 +2973,13 @@ function updateEntityCards() {
 function updateEntityTags() {
   const tagLabels = {
     // Criticality
-    'ckt': '◆ CKT', 'mission-critical': '▲ Mission Critical', 'mission-essential': '△ Mission Essential', 'business-critical': '◇ Business Critical',
+    'ckt': '[!] CKT', 'mission-critical': '[!!] Mission Critical', 'mission-essential': '[!] Mission Essential', 'business-critical': '[*] Business Critical',
     // Tactical
-    'crown': '★ Crown Jewel', 'choke': '◎ Choke Point', 'key': '⬡ Key Terrain', 'pivot': '⇄ Pivot', 'attack-surface': '⚠ Attack Surface', 'egress': '↗ Egress',
+    'crown': '[*] Crown Jewel', 'choke': '[o] Choke Point', 'key': '[K] Key Terrain', 'pivot': '[&lt;&gt;] Pivot', 'attack-surface': '[!] Attack Surface', 'egress': '[-&gt;] Egress',
     // Environment
-    'production': '● Prod', 'staging': '◐ Stage', 'development': '◑ Dev', 'test': '○ Test', 'deprecated': '⊘ Deprecated',
+    'production': '[P] Prod', 'staging': '[S] Stage', 'development': '[D] Dev', 'test': '[T] Test', 'deprecated': '[X] Deprecated',
     // Priority
-    'p1': 'P1', 'p2': 'P2', 'p3': 'P3', 'monitor': '👁 Monitor'
+    'p1': 'P1', 'p2': 'P2', 'p3': 'P3', 'monitor': '[M] Monitor'
   };
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
