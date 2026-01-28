@@ -680,31 +680,65 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 const CLEARTEXT = {21:'FTP',23:'Telnet',25:'SMTP',80:'HTTP',110:'POP3',143:'IMAP',161:'SNMP',389:'LDAP',513:'rlogin',514:'RSH',1433:'MSSQL',3306:'MySQL',5432:'PostgreSQL',8080:'HTTP-Alt'};
 const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143:6,161:7,389:6,443:1,445:8,512:9,513:9,514:9,1433:8,1521:8,3306:7,3389:7,5432:6,5900:7,6379:7,27017:8};
 const OS_PATTERNS = {win:/windows|microsoft/i,lin:/linux|ubuntu|debian|centos|redhat/i,net:/cisco|juniper|fortinet/i};
-const STORAGE_KEY = 'netintel';
+const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10MB max file size
+
+// Generate unique storage key based on scan info
+function getStorageKey() {
+  if (!state.data || !state.data.scanInfo) return 'netintel-default';
+  const info = state.data.scanInfo;
+  const identifier = `${info.start || ''}-${info.args || ''}`;
+  let hash = 0;
+  for (let i = 0; i < identifier.length; i++) {
+    hash = ((hash << 5) - hash) + identifier.charCodeAt(i);
+    hash |= 0;
+  }
+  return 'netintel-' + Math.abs(hash).toString(36);
+}
 
 // === STATE ===
 let state = {data:null, tags:{}, vulnDb:null};
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
-  loadState();
-  state.data = JSON.parse(document.getElementById('scan-data').textContent);
+  loadState(); // Also loads scan data
   initNav();
   initModals();
   initContextMenu();
   initDropZones();
+  initFilters();
   render();
+  console.log('[NetIntel] Initialized with', state.data?.hosts?.length || 0, 'hosts');
 });
 
 function loadState() {
   try {
-    const s = localStorage.getItem(STORAGE_KEY);
-    if (s) { const p = JSON.parse(s); state.tags = p.tags || {}; state.vulnDb = p.vulnDb; }
-  } catch(e) {}
+    // First load scan data to generate storage key
+    const scanDataEl = document.getElementById('scan-data');
+    if (scanDataEl) {
+      state.data = JSON.parse(scanDataEl.textContent);
+    }
+    const key = getStorageKey();
+    const s = localStorage.getItem(key);
+    if (s) {
+      const p = JSON.parse(s);
+      state.tags = p.tags || {};
+      state.vulnDb = p.vulnDb;
+    }
+    console.log('[NetIntel] State loaded from:', key);
+  } catch(e) {
+    console.error('[NetIntel] Error loading state:', e);
+    state.tags = {};
+    state.vulnDb = null;
+  }
 }
 
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({tags:state.tags,vulnDb:state.vulnDb})); } catch(e) {}
+  try {
+    const key = getStorageKey();
+    localStorage.setItem(key, JSON.stringify({tags:state.tags,vulnDb:state.vulnDb}));
+  } catch(e) {
+    console.error('[NetIntel] Error saving state:', e);
+  }
 }
 
 // === NAVIGATION ===
@@ -778,6 +812,7 @@ function initContextMenu() {
 
 // === DROP ZONES ===
 function initDropZones() {
+  // Import drop zone
   const dz = document.getElementById('drop-zone');
   const fi = document.getElementById('file-input');
   if (dz && fi) {
@@ -787,6 +822,88 @@ function initDropZones() {
     dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); importFile(e.dataTransfer.files[0]); });
     fi.addEventListener('change', () => { if (fi.files[0]) importFile(fi.files[0]); });
   }
+
+  // Vulnerability database drop zone
+  const vulnDz = document.getElementById('vuln-drop-zone');
+  const vulnFi = document.getElementById('vuln-input');
+  if (vulnDz && vulnFi) {
+    vulnDz.addEventListener('click', () => vulnFi.click());
+    vulnDz.addEventListener('dragover', e => { e.preventDefault(); vulnDz.classList.add('dragover'); });
+    vulnDz.addEventListener('dragleave', () => vulnDz.classList.remove('dragover'));
+    vulnDz.addEventListener('drop', e => { e.preventDefault(); vulnDz.classList.remove('dragover'); importVulnDb(e.dataTransfer.files[0]); });
+    vulnFi.addEventListener('change', () => { if (vulnFi.files[0]) importVulnDb(vulnFi.files[0]); });
+  }
+}
+
+function importVulnDb(file) {
+  if (!file) return;
+
+  if (file.size > MAX_IMPORT_SIZE) {
+    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = () => {
+    console.error('[NetIntel] Error reading vuln db:', reader.error);
+    alert('Error reading file.');
+  };
+  reader.onload = e => {
+    try {
+      const db = JSON.parse(e.target.result);
+      state.vulnDb = db;
+      saveState();
+
+      const cpeCount = Object.keys(db).length;
+      const cveCount = Object.values(db).reduce((sum, cves) => sum + cves.length, 0);
+
+      document.getElementById('vuln-status').innerHTML =
+        `<p style="color:#3fb950;">✓ Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+
+      console.log('[NetIntel] Loaded vuln db with', cpeCount, 'CPEs');
+    } catch (err) {
+      console.error('[NetIntel] Vuln db parse error:', err);
+      alert('Invalid JSON file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// === FILTERS ===
+function initFilters() {
+  const filterEl = document.getElementById('entity-filter');
+  if (!filterEl) return;
+
+  filterEl.addEventListener('change', () => applyFilter(filterEl.value));
+}
+
+function applyFilter(filter) {
+  document.querySelectorAll('.entity[data-ip]').forEach(card => {
+    const ip = card.dataset.ip;
+    const host = state.data.hosts.find(h => h.ip === ip);
+    if (!host) return;
+
+    let show = true;
+    const open = host.ports.filter(p => p.state === 'open');
+    const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+    let risk = 0;
+    open.forEach(p => {
+      if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
+      if (CLEARTEXT[p.port]) risk += 3;
+    });
+    risk = Math.min(risk, 100);
+    const isTagged = state.tags[ip] && state.tags[ip].length > 0;
+
+    switch (filter) {
+      case 'up': show = host.status === 'up'; break;
+      case 'cleartext': show = hasCleartext; break;
+      case 'risk': show = risk >= 50; break;
+      case 'tagged': show = isTagged; break;
+      default: show = true;
+    }
+
+    card.style.display = show ? '' : 'none';
+  });
 }
 
 // === RENDERING ===
@@ -795,6 +912,19 @@ function render() {
   updateEntityCards();
   updateOsDist();
   updateKeyTerrain();
+  renderSources();
+  renderVulnDbStatus();
+}
+
+function renderVulnDbStatus() {
+  const el = document.getElementById('vuln-status');
+  if (!el) return;
+
+  if (state.vulnDb) {
+    const cpeCount = Object.keys(state.vulnDb).length;
+    const cveCount = Object.values(state.vulnDb).reduce((sum, cves) => sum + cves.length, 0);
+    el.innerHTML = `<p style="color:#3fb950;">✓ Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+  }
 }
 
 function renderStats() {
@@ -836,7 +966,7 @@ function renderStats() {
         items.push({ip: host.ip, port: p.port, name: CLEARTEXT[p.port]});
       });
     });
-    list.innerHTML = items.slice(0,5).map(i => 
+    list.innerHTML = items.slice(0,5).map(i =>
       `<div class="cleartext-item"><span class="mono">${i.ip}</span><span>${i.port} - ${i.name}</span><span class="badge badge-cleartext">cleartext</span></div>`
     ).join('') + (items.length > 5 ? `<div style="color:#8b949e;font-size:.8rem;padding:.5rem;">...and ${items.length-5} more</div>` : '');
   }
@@ -890,12 +1020,13 @@ function updateEntityCards() {
 }
 
 function updateEntityTags() {
+  const tagLabels = {crown: '★ Crown Jewel', choke: '◎ Choke Point', key: '⬡ Key Terrain'};
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
     const tags = state.tags[ip] || [];
     const tagsEl = card.querySelector('.entity-tags');
     if (tagsEl) {
-      tagsEl.innerHTML = tags.map(t => `<span class="tag tag-${t}">${t === 'crown' ? '★ Crown Jewel' : t === 'choke' ? '◎ Choke Point' : '⬡ Key Terrain'}</span>`).join('');
+      tagsEl.innerHTML = tags.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
     }
     card.classList.toggle('tagged', tags.length > 0);
   });
@@ -913,7 +1044,7 @@ function updateOsDist() {
   });
   
   const el = document.getElementById('os-dist');
-  el.innerHTML = Object.entries(dist).map(([k,v]) => 
+  el.innerHTML = Object.entries(dist).map(([k,v]) =>
     `<div class="flex items-center justify-between mb-4"><span style="text-transform:capitalize;">${k}</span><span class="badge badge-info">${v}</span></div>`
   ).join('') || '<p style="color:#8b949e;">No OS data available</p>';
 }
@@ -922,9 +1053,33 @@ function updateKeyTerrain() {
   const tagged = Object.entries(state.tags).filter(([_,t]) => t.length > 0);
   document.getElementById('terrain-count').textContent = tagged.length + ' tagged';
   const el = document.getElementById('terrain-list');
-  el.innerHTML = tagged.length ? tagged.slice(0,5).map(([ip,tags]) => 
+  el.innerHTML = tagged.length ? tagged.slice(0,5).map(([ip,tags]) =>
     `<div class="flex items-center justify-between mb-4"><span class="mono">${ip}</span><div>${tags.map(t => `<span class="tag tag-${t}">${t}</span>`).join('')}</div></div>`
   ).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag as key terrain</p>';
+}
+
+function renderSources() {
+  const el = document.getElementById('additional-sources');
+  if (!el || !state.data.sources || state.data.sources.length === 0) return;
+
+  el.innerHTML = state.data.sources.map(src => `
+    <div class="source-card">
+      <div class="source-head">
+        <span style="font-size:1.25rem;">↑</span>
+        <span class="source-name">${src.name}</span>
+      </div>
+      <div class="source-meta">
+        <div>
+          <div class="source-label">Hosts</div>
+          <div class="source-val">${src.hosts}</div>
+        </div>
+        <div>
+          <div class="source-label">Imported</div>
+          <div class="source-val">${new Date(src.timestamp).toLocaleString()}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderCleartext() {
@@ -962,19 +1117,229 @@ function renderCleartext() {
 // === IMPORT/EXPORT ===
 function importFile(file) {
   if (!file) return;
+
+  // File size check (10MB limit)
+  if (file.size > MAX_IMPORT_SIZE) {
+    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
+    return;
+  }
+
   const reader = new FileReader();
+  reader.onerror = () => {
+    console.error('[NetIntel] Error reading file:', reader.error);
+    alert('Error reading file. Please try again.');
+  };
   reader.onload = e => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(e.target.result, 'text/xml');
-    if (doc.querySelector('nmaprun')) {
-      // Parse and merge (simplified)
-      alert('Import successful! (Full merge logic TODO)');
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'text/xml');
+      const parseError = doc.querySelector('parsererror');
+      if (parseError) {
+        alert('Invalid XML file: ' + parseError.textContent.slice(0, 100));
+        return;
+      }
+      const nmaprun = doc.querySelector('nmaprun');
+      if (!nmaprun) {
+        alert('Not a valid Nmap XML file (missing nmaprun element)');
+        return;
+      }
+
+      // Parse and merge the new scan data
+      const newHosts = parseNmapXml(doc);
+      const sourceName = `Imported: ${file.name}`;
+      mergeHosts(newHosts, sourceName);
+
       document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-    } else {
-      alert('Invalid nmap XML file');
+      console.log('[NetIntel] Imported', newHosts.length, 'hosts from', file.name);
+    } catch (err) {
+      console.error('[NetIntel] Import error:', err);
+      alert('Error parsing file: ' + err.message);
     }
   };
   reader.readAsText(file);
+}
+
+// Parse Nmap XML document into host objects
+function parseNmapXml(doc) {
+  const hosts = [];
+  doc.querySelectorAll('host').forEach(hostEl => {
+    const ipv4 = hostEl.querySelector('address[addrtype="ipv4"]');
+    const ipv6 = hostEl.querySelector('address[addrtype="ipv6"]');
+    const mac = hostEl.querySelector('address[addrtype="mac"]');
+    const hostname = hostEl.querySelector('hostnames hostname');
+    const status = hostEl.querySelector('status');
+    const osMatches = hostEl.querySelectorAll('os osmatch');
+
+    const host = {
+      ip: (ipv4 ? ipv4.getAttribute('addr') : '') || (ipv6 ? ipv6.getAttribute('addr') : ''),
+      mac: mac ? mac.getAttribute('addr') : '',
+      macVendor: mac ? mac.getAttribute('vendor') : '',
+      hostname: hostname ? hostname.getAttribute('name') : '',
+      status: status ? status.getAttribute('state') : 'unknown',
+      os: [],
+      ports: [],
+      trace: []
+    };
+
+    // OS detection
+    osMatches.forEach(om => {
+      host.os.push({
+        name: om.getAttribute('name') || '',
+        accuracy: parseInt(om.getAttribute('accuracy')) || 0
+      });
+    });
+
+    // Ports
+    hostEl.querySelectorAll('ports port').forEach(portEl => {
+      const stateEl = portEl.querySelector('state');
+      const svcEl = portEl.querySelector('service');
+      const cpeEl = portEl.querySelector('cpe');
+      host.ports.push({
+        port: parseInt(portEl.getAttribute('portid')) || 0,
+        proto: portEl.getAttribute('protocol') || 'tcp',
+        state: stateEl ? stateEl.getAttribute('state') : 'unknown',
+        svc: svcEl ? svcEl.getAttribute('name') : '',
+        product: svcEl ? svcEl.getAttribute('product') : '',
+        version: svcEl ? svcEl.getAttribute('version') : '',
+        cpe: cpeEl ? cpeEl.textContent : ''
+      });
+    });
+
+    // Traceroute
+    hostEl.querySelectorAll('trace hop').forEach(hop => {
+      host.trace.push({
+        ttl: parseInt(hop.getAttribute('ttl')) || 0,
+        ip: hop.getAttribute('ipaddr') || ''
+      });
+    });
+
+    if (host.ip) hosts.push(host);
+  });
+  return hosts;
+}
+
+// Merge imported hosts into existing data
+function mergeHosts(newHosts, sourceName) {
+  let added = 0, updated = 0;
+
+  newHosts.forEach(newHost => {
+    const existing = state.data.hosts.find(h => h.ip === newHost.ip);
+    if (existing) {
+      // Merge ports (add new ports, don't duplicate)
+      newHost.ports.forEach(newPort => {
+        const existingPort = existing.ports.find(p => p.port === newPort.port && p.proto === newPort.proto);
+        if (!existingPort) {
+          existing.ports.push(newPort);
+        } else if (newPort.product && !existingPort.product) {
+          // Update if new scan has more detail
+          Object.assign(existingPort, newPort);
+        }
+      });
+
+      // Update OS if new scan has higher confidence
+      if (newHost.os.length > 0) {
+        const newBestOs = newHost.os[0];
+        const existingBestOs = existing.os[0];
+        if (!existingBestOs || newBestOs.accuracy > existingBestOs.accuracy) {
+          existing.os = newHost.os;
+        }
+      }
+
+      // Update status to 'up' if new scan shows it's up
+      if (newHost.status === 'up') existing.status = 'up';
+
+      // Merge traceroute if not present
+      if (newHost.trace.length > 0 && existing.trace.length === 0) {
+        existing.trace = newHost.trace;
+      }
+
+      updated++;
+    } else {
+      // New host - add to collection
+      state.data.hosts.push(newHost);
+      added++;
+    }
+  });
+
+  // Update stats
+  state.data.stats.total = state.data.hosts.length;
+  state.data.stats.up = state.data.hosts.filter(h => h.status === 'up').length;
+  state.data.stats.down = state.data.stats.total - state.data.stats.up;
+
+  // Track source
+  if (!state.data.sources) state.data.sources = [];
+  state.data.sources.push({
+    name: sourceName,
+    hosts: newHosts.length,
+    timestamp: new Date().toISOString()
+  });
+
+  // Re-render UI
+  rebuildEntityGrid();
+  render();
+
+  alert(`Import complete!\nAdded: ${added} new hosts\nUpdated: ${updated} existing hosts`);
+}
+
+// Rebuild entity grid after import (since XSL only runs once)
+function rebuildEntityGrid() {
+  const grid = document.getElementById('entity-grid');
+  if (!grid) return;
+
+  // Clear existing cards
+  grid.innerHTML = '';
+
+  // Rebuild cards for all hosts that are up
+  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+    const card = createEntityCard(host);
+    grid.appendChild(card);
+  });
+}
+
+// Create entity card element dynamically
+function createEntityCard(host) {
+  const open = host.ports.filter(p => p.state === 'open');
+  const filtered = host.ports.filter(p => p.state === 'filtered');
+  const os = host.os && host.os[0] ? host.os[0] : null;
+  const mac = host.mac;
+
+  const card = document.createElement('div');
+  card.className = 'entity';
+  card.dataset.ip = host.ip;
+
+  card.innerHTML = `
+    <div class="entity-head">
+      <div class="entity-icon" data-os-icon="">▣</div>
+      <div class="entity-info">
+        <div class="entity-ip">${host.ip}</div>
+        ${host.hostname ? `<div class="entity-host">${host.hostname}</div>` : ''}
+        <div class="entity-tags"></div>
+      </div>
+    </div>
+    <div class="entity-body">
+      <div class="entity-stats">
+        <div class="entity-stat"><b>${open.length}</b><span>Open</span></div>
+        <div class="entity-stat"><b>${filtered.length}</b><span>Filtered</span></div>
+        <div class="entity-stat"><b data-risk="">--</b><span>Risk</span></div>
+      </div>
+      <div class="ports">
+        ${open.map(p => `<span class="port open" data-port="${p.port}" data-svc="${p.svc}">${p.port}/${p.proto}</span>`).join('')}
+      </div>
+      ${os || mac ? `
+      <div class="signals">
+        <div class="signals-title">Identification Signals</div>
+        ${os ? `<div class="signal"><span class="signal-src">OS</span><span class="signal-val">${os.name}</span><span class="signal-conf">${os.accuracy}%</span></div>` : ''}
+        ${mac ? `<div class="signal"><span class="signal-src">MAC</span><span class="signal-val">${mac}${host.macVendor ? ' (' + host.macVendor + ')' : ''}</span></div>` : ''}
+        ${open.filter(p => p.product).slice(0, 2).map(p => `<div class="signal"><span class="signal-src">:${p.port}</span><span class="signal-val">${p.product}${p.version ? ' ' + p.version : ''}</span></div>`).join('')}
+      </div>` : ''}
+    </div>
+    <div class="entity-foot">
+      <span>${(state.data.sources ? state.data.sources.length : 1)} source${state.data.sources && state.data.sources.length !== 1 ? 's' : ''}</span>
+      <button class="btn btn-ghost btn-sm">Details</button>
+    </div>
+  `;
+
+  return card;
 }
 
 function exportData(format) {
@@ -1023,10 +1388,41 @@ function exportData(format) {
 // === SEARCH ===
 document.getElementById('search')?.addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
+  const filterEl = document.getElementById('entity-filter');
+  const filter = filterEl ? filterEl.value : 'all';
+
   document.querySelectorAll('.entity[data-ip]').forEach(card => {
     const ip = card.dataset.ip;
     const text = card.textContent.toLowerCase();
-    card.style.display = !q || ip.includes(q) || text.includes(q) ? '' : 'none';
+    const matchesSearch = !q || ip.includes(q) || text.includes(q);
+
+    // Also respect current filter
+    if (matchesSearch && filter !== 'all') {
+      const host = state.data.hosts.find(h => h.ip === ip);
+      if (host) {
+        const open = host.ports.filter(p => p.state === 'open');
+        const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+        let risk = 0;
+        open.forEach(p => {
+          if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
+          if (CLEARTEXT[p.port]) risk += 3;
+        });
+        risk = Math.min(risk, 100);
+        const isTagged = state.tags[ip] && state.tags[ip].length > 0;
+
+        let passesFilter = true;
+        switch (filter) {
+          case 'up': passesFilter = host.status === 'up'; break;
+          case 'cleartext': passesFilter = hasCleartext; break;
+          case 'risk': passesFilter = risk >= 50; break;
+          case 'tagged': passesFilter = isTagged; break;
+        }
+        card.style.display = passesFilter ? '' : 'none';
+        return;
+      }
+    }
+
+    card.style.display = matchesSearch ? '' : 'none';
   });
 });
 ]]></xsl:text>
