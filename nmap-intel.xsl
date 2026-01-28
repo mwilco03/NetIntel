@@ -229,6 +229,13 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 .source-label{color:#8b949e;font-size:.7rem;text-transform:uppercase}
 .source-val{color:#c9d1d9;font-family:monospace}
 
+/* === ICONS === */
+.icon{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1em;vertical-align:middle}
+.icon svg{width:100%;height:100%}
+.icon-sm{width:.875em;height:.875em}
+.icon-lg{width:1.25em;height:1.25em}
+.icon-xl{width:1.5em;height:1.5em}
+
 /* === UTILITIES === */
 .hidden{display:none!important}
 .mono{font-family:'Consolas','Monaco',monospace}
@@ -726,6 +733,37 @@ const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143
 const OS_PATTERNS = {win:/windows|microsoft/i,lin:/linux|ubuntu|debian|centos|redhat/i,net:/cisco|juniper|fortinet/i};
 const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10MB max file size
 
+// === HEROICONS (inline SVG) ===
+const ICONS = {
+  server: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 0 0-.12-1.03l-2.268-9.64a3.375 3.375 0 0 0-3.285-2.602H7.923a3.375 3.375 0 0 0-3.285 2.602l-2.268 9.64a4.5 4.5 0 0 0-.12 1.03v.228m19.5 0a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3m19.5 0a3 3 0 0 0-3-3H5.25a3 3 0 0 0-3 3m16.5 0h.008v.008h-.008v-.008Zm-3 0h.008v.008h-.008v-.008Z" /></svg>',
+  computer: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" /></svg>',
+  windows: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5l7.5-1v7H3v-6zm0 13l7.5 1v-7H3v6zm8.5 1.1l9.5 1.4v-8.5h-9.5v7.1zm0-14.2v7.1h9.5V4l-9.5 1.4z"/></svg>',
+  linux: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>',
+  wifi: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" /></svg>',
+  database: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" /></svg>',
+  globe: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" /></svg>',
+  shield: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /></svg>',
+  warning: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>',
+  check: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>',
+  xmark: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>',
+  chart: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>',
+  folder: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>',
+  upload: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>',
+  download: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>',
+  bug: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 0 1 .4-2.253M12 8.25a2.25 2.25 0 0 0-2.248 2.146M12 8.25a2.25 2.25 0 0 1 2.248 2.146M8.683 5a6.032 6.032 0 0 1-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0 1 15.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 0 0-.575-1.752M4.921 6a24.048 24.048 0 0 0-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 0 1-5.223 1.082" /></svg>',
+  star: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>',
+  key: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>',
+  target: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Z" /></svg>',
+  network: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>',
+  chevronDown: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>',
+  magnify: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>'
+};
+
+// Helper to render icon
+function icon(name, cls = '') {
+  return `<span class="icon ${cls}">${ICONS[name] || ''}</span>`;
+}
+
 // Generate unique storage key based on scan info
 function getStorageKey() {
   if (!state.data || !state.data.scanInfo) return 'netintel-default';
@@ -745,6 +783,7 @@ let state = {data:null, tags:{}, vulnDb:null};
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
   loadState(); // Also loads scan data
+  initIcons();
   initNav();
   initModals();
   initContextMenu();
@@ -753,6 +792,35 @@ document.addEventListener('DOMContentLoaded', () => {
   render();
   console.log('[NetIntel] Initialized with', state.data?.hosts?.length || 0, 'hosts');
 });
+
+// Replace Unicode symbols with SVG icons
+function initIcons() {
+  const NAV_ICONS = {
+    'dashboard': 'chart',
+    'entities': 'server',
+    'cleartext': 'warning',
+    'sources': 'folder',
+    'import': 'upload',
+    'export': 'download',
+    'vuln-db': 'bug'
+  };
+
+  // Update nav items
+  document.querySelectorAll('[data-nav], [data-action]').forEach(el => {
+    const key = el.dataset.nav || el.dataset.action;
+    const iconName = NAV_ICONS[key];
+    if (iconName && ICONS[iconName]) {
+      const text = el.textContent.replace(/^[^\w\s]+\s*/, '');
+      el.innerHTML = `${icon(iconName, 'icon-lg')} ${text}`;
+    }
+  });
+
+  // Update sidebar logo
+  const logo = document.querySelector('.sidebar-logo');
+  if (logo) {
+    logo.innerHTML = `${icon('shield', 'icon-xl')} NetIntel`;
+  }
+}
 
 function loadState() {
   try {
@@ -925,7 +993,7 @@ const GROUP_CONFIG = {
       return 'unknown';
     },
     getLabel: key => ({ windows: 'Windows', linux: 'Linux', network: 'Network Devices', unknown: 'Unknown OS' }[key] || key),
-    getIcon: key => ({ windows: ['os-win', '\u229e'], linux: ['os-lin', '\u25c6'], network: ['os-net', '\u25ce'], unknown: ['os-unk', '\u25a3'] }[key] || ['os-unk', '\u25a3'])
+    getIcon: key => ({ windows: ['os-win', 'windows'], linux: ['os-lin', 'linux'], network: ['os-net', 'wifi'], unknown: ['os-unk', 'server'] }[key] || ['os-unk', 'server'])
   },
   subnet: {
     label: 'Subnet',
@@ -934,7 +1002,7 @@ const GROUP_CONFIG = {
       return parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}.0/24` : 'other';
     },
     getLabel: key => key,
-    getIcon: () => ['subnet', '\u2261']
+    getIcon: () => ['subnet', 'network']
   },
   service: {
     label: 'Primary Service',
@@ -943,7 +1011,7 @@ const GROUP_CONFIG = {
       return dominated || 'other';
     },
     getLabel: key => SERVICE_LABELS[key] || key,
-    getIcon: () => ['svc', '\u2736']
+    getIcon: key => ({ web: ['svc', 'globe'], database: ['svc', 'database'], mail: ['svc', 'folder'], file: ['svc', 'folder'], remote: ['svc', 'computer'], directory: ['svc', 'key'], other: ['svc', 'server'] }[key] || ['svc', 'server'])
   },
   risk: {
     label: 'Risk Level',
@@ -955,7 +1023,7 @@ const GROUP_CONFIG = {
       return 'low';
     },
     getLabel: key => ({ critical: 'Critical Risk (70+)', high: 'High Risk (50-69)', medium: 'Medium Risk (25-49)', low: 'Low Risk (0-24)' }[key]),
-    getIcon: key => ({ critical: ['risk-crit', '\u26a0'], high: ['risk-high', '\u26a0'], medium: ['risk-med', '\u25cf'], low: ['risk-low', '\u2713'] }[key])
+    getIcon: key => ({ critical: ['risk-crit', 'warning'], high: ['risk-high', 'warning'], medium: ['risk-med', 'shield'], low: ['risk-low', 'check'] }[key])
   }
 };
 
@@ -1085,19 +1153,19 @@ function renderGroupedView(hosts, groupBy) {
 
   sortedKeys.forEach(key => {
     const groupHosts = groups[key];
-    const [iconClass, iconChar] = config.getIcon(key);
+    const [iconClass, iconName] = config.getIcon(key);
 
     const groupEl = document.createElement('div');
     groupEl.className = 'entity-group';
     groupEl.innerHTML = `
       <div class="group-header" data-group="${key}">
         <div class="group-title">
-          <div class="group-icon ${iconClass}">${iconChar}</div>
+          <div class="group-icon ${iconClass}">${icon(iconName, 'icon-lg')}</div>
           <span>${config.getLabel(key)}</span>
         </div>
         <div class="group-meta">
           <span>${groupHosts.length} host${groupHosts.length !== 1 ? 's' : ''}</span>
-          <span class="group-toggle">\u25bc</span>
+          <span class="group-toggle">${icon('chevronDown')}</span>
         </div>
       </div>
       <div class="group-body" data-group-body="${key}">
