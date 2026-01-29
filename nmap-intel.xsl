@@ -1138,9 +1138,9 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       "hostname": "<xsl:value-of select="hostnames/hostname/@name"/>",
       "status": "<xsl:value-of select="status/@state"/>",
       "os": [<xsl:for-each select="os/osmatch">{"name":"<xsl:value-of select="translate(@name, '&quot;', &quot;'&quot;)"/>","accuracy":<xsl:value-of select="@accuracy"/>}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "osFingerprint": "<xsl:value-of select="os/osfingerprint/@fingerprint"/>",
-      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"<xsl:value-of select="service/@servicefp"/>","scripts":[<xsl:for-each select="script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:value-of select="translate(translate(@output, '&quot;', &quot;'&quot;), '&#10;&#13;', '  ')"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "hostscripts": [<xsl:for-each select="hostscript/script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:value-of select="translate(translate(@output, '&quot;', &quot;'&quot;), '&#10;&#13;', '  ')"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "osFingerprint": "",
+      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"","scripts":[]}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "hostscripts": [],
       "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>","rtt":"<xsl:value-of select="@rtt"/>","host":"<xsl:value-of select="@host"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
     }<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
   ]
