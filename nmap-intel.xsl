@@ -500,17 +500,17 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 <!-- Context Menu -->
 <div class="ctx-menu" id="ctx-menu">
   <div class="ctx-label">Criticality</div>
-  <button class="ctx-item" data-tag="ckt">&amp;#9670; CKT</button>
-  <button class="ctx-item" data-tag="mission-critical">&amp;#9650; Mission Critical</button>
+  <button class="ctx-item" data-tag="ckt"># CKT</button>
+  <button class="ctx-item" data-tag="mission-critical">! Mission Critical</button>
   <div class="ctx-div"></div>
   <div class="ctx-label">Tactical</div>
   <button class="ctx-item" data-tag="crown">* Crown Jewel</button>
   <button class="ctx-item" data-tag="choke">o Choke Point</button>
   <button class="ctx-item" data-tag="pivot">&lt;&gt; Pivot Point</button>
   <div class="ctx-div"></div>
-  <button class="ctx-item" data-action="annotate">&amp;#9998; Full Annotation...</button>
+  <button class="ctx-item" data-action="annotate">... Full Annotation</button>
   <div class="ctx-div"></div>
-  <button class="ctx-item ctx-danger" data-tag="clear">&amp;#10005; Clear All</button>
+  <button class="ctx-item ctx-danger" data-tag="clear">x Clear All</button>
 </div>
 
 <!-- Annotation Modal -->
@@ -518,7 +518,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
   <div class="modal" style="max-width:560px">
     <div class="modal-head">
       <span class="modal-title">Asset Annotation</span>
-      <button class="modal-close" data-close-modal="">&amp;#215;</button>
+      <button class="modal-close" data-close-modal="">x</button>
     </div>
     <div class="modal-body">
       <div id="annotate-info" style="margin-bottom:1rem;padding:.75rem;background:#161b22;border-radius:6px;font-family:monospace;font-size:.85rem"></div>
@@ -837,7 +837,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     
     <div class="source-card">
       <div class="source-head">
-        <span style="font-size:1.25rem;">&amp;#10687;</span>
+        <span style="font-size:1.25rem;">@</span>
         <span class="source-name">Nmap Scan (Primary)</span>
       </div>
       <div class="source-meta">
@@ -1035,11 +1035,11 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <div class="modal">
       <div class="modal-head">
         <span class="modal-title">Import Additional Data</span>
-        <button class="modal-close" data-close-modal="">&amp;#215;</button>
+        <button class="modal-close" data-close-modal="">x</button>
       </div>
       <div class="modal-body">
         <div class="drop-zone" id="drop-zone">
-          <div style="font-size:2rem;margin-bottom:1rem;">&amp;#8593;</div>
+          <div style="font-size:2rem;margin-bottom:1rem;">^</div>
           <div class="drop-zone-text">Drop file here or click to browse</div>
           <div class="drop-zone-hint">Supports: Nmap XML</div>
           <input type="file" id="file-input" accept=".xml" style="display:none;"/>
@@ -1056,7 +1056,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <div class="modal">
       <div class="modal-head">
         <span class="modal-title">Export Data</span>
-        <button class="modal-close" data-close-modal="">&amp;#215;</button>
+        <button class="modal-close" data-close-modal="">x</button>
       </div>
       <div class="modal-body">
         <p style="font-size:.8rem;color:#8b949e;margin-bottom:.75rem">Scan Data</p>
@@ -1088,7 +1088,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <div class="modal">
       <div class="modal-head">
         <span class="modal-title">Vulnerability Database</span>
-        <button class="modal-close" data-close-modal="">&amp;#215;</button>
+        <button class="modal-close" data-close-modal="">x</button>
       </div>
       <div class="modal-body">
         <p style="color:#8b949e;margin-bottom:1rem;font-size:.875rem;">
@@ -2194,7 +2194,7 @@ function importVulnDb(file) {
       const cveCount = Object.values(db).reduce((sum, cves) => sum + cves.length, 0);
 
       document.getElementById('vuln-status').innerHTML =
-        `<p style="color:#3fb950;">&amp;#10003; Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+        `<p style="color:#3fb950;">[OK] Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
 
       console.log('[NetIntel] Loaded vuln db with', cpeCount, 'CPEs');
     } catch (err) {
@@ -2882,7 +2882,7 @@ function renderVulnDbStatus() {
   if (state.vulnDb) {
     const cpeCount = Object.keys(state.vulnDb).length;
     const cveCount = Object.values(state.vulnDb).reduce((sum, cves) => sum + cves.length, 0);
-    el.innerHTML = `<p style="color:#3fb950;">&amp;#10003; Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+    el.innerHTML = `<p style="color:#3fb950;">[OK] Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
   }
 }
 
@@ -3005,8 +3005,8 @@ function updateEntityTags() {
     const tagsEl = card.querySelector('.entity-tags');
     if (tagsEl) {
       let html = labels.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
-      if (owner) html += `<span class="tag tag-owner" title="Owner: ${owner}">&amp;#128100; ${owner}</span>`;
-      if (notes) html += `<span class="tag tag-notes" title="${notes}">&amp;#128221;</span>`;
+      if (owner) html += `<span class="tag tag-owner" title="Owner: ${owner}">@ ${owner}</span>`;
+      if (notes) html += `<span class="tag tag-notes" title="${notes}">[*]</span>`;
       tagsEl.innerHTML = html;
     }
     card.classList.toggle('tagged', labels.length > 0 || hasAnnotation);
@@ -3053,7 +3053,7 @@ function updateKeyTerrain() {
       <span class="mono" style="flex-shrink:0">${t.ip}</span>
       <div style="flex:1;display:flex;flex-wrap:wrap;gap:.25rem;justify-content:flex-end">
         ${t.labels.map(l => `<span class="tag tag-${l}">${l}</span>`).join('')}
-        ${t.owner ? `<span class="tag tag-owner" title="Owner">&amp;#128100;</span>` : ''}
+        ${t.owner ? `<span class="tag tag-owner" title="Owner">@</span>` : ''}
       </div>
     </div>
   `).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag or annotate</p>';
@@ -3066,7 +3066,7 @@ function renderSources() {
   el.innerHTML = state.data.sources.map(src => `
     <div class="source-card">
       <div class="source-head">
-        <span style="font-size:1.25rem;">&amp;#8593;</span>
+        <span style="font-size:1.25rem;">^</span>
         <span class="source-name">${src.name}</span>
       </div>
       <div class="source-meta">
@@ -3093,7 +3093,7 @@ function renderCleartext() {
   
   const el = document.getElementById('cleartext-detail');
   if (items.length === 0) {
-    el.innerHTML = '<p style="color:#3fb950;">&amp;#10003; No cleartext protocols detected</p>';
+    el.innerHTML = '<p style="color:#3fb950;">[OK] No cleartext protocols detected</p>';
     return;
   }
   
@@ -3992,8 +3992,8 @@ function renderTimelineChart() {
     `;
   }).join('') + `
     <div style="position:absolute;right:1rem;top:1rem;font-size:.75rem;">
-      <span style="color:#238636;">&amp;#9632;</span> Hosts
-      <span style="color:#58a6ff;margin-left:.5rem;">&amp;#9632;</span> Ports
+      <span style="color:#238636;">*</span> Hosts
+      <span style="color:#58a6ff;margin-left:.5rem;">*</span> Ports
     </div>
   `;
 }
