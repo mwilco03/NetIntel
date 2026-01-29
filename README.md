@@ -2,25 +2,9 @@
 
 A self-contained XSL stylesheet that transforms Nmap XML output into an interactive, air-gapped HTML intelligence platform for SOC analysts and network managers.
 
-**[Live Demo](https://mwilco03.github.io/NetIntel/examples/report.html)** | [Sample Report](examples/report.html)
+## [>>> Live Demo <<<](https://mwilco03.github.io/NetIntel/examples/report.html)
 
-## Screenshots
-
-### Dashboard
-![Dashboard](docs/screenshots/dashboard.png)
-*Executive summary with risk scores, cleartext warnings, and top risks*
-
-### Entity Cards
-![Entity Cards](docs/screenshots/entities.png)
-*Host cards with ports, services, OS detection, and tagging*
-
-### Topology View
-![Topology](docs/screenshots/topology.png)
-*Interactive traceroute visualization*
-
-### Scan Diff
-![Scan Diff](docs/screenshots/diff.png)
-*Compare two scans to identify changes*
+*Click above to see NetIntel in action - no install required*
 
 ## Test Drive (30 seconds)
 
@@ -231,8 +215,6 @@ NetIntel/
 ├── Test.xml                 # Sample nmap scan for testing
 ├── tools/
 │   └── nvd-to-vulndb.py     # NVD API script for vuln database
-├── docs/
-│   └── screenshots/         # README screenshots
 └── examples/
     ├── README.md            # Examples documentation
     ├── report.html          # Live demo report (GitHub Pages)
