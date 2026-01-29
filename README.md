@@ -2,6 +2,46 @@
 
 A self-contained XSL stylesheet that transforms Nmap XML output into an interactive, air-gapped HTML intelligence platform for SOC analysts and network managers.
 
+## Test Drive (30 seconds)
+
+Try it instantly with the included sample scan:
+
+**Windows (PowerShell)**
+```powershell
+choco install xsltproc -y
+git clone https://github.com/mwilco03/NetIntel.git
+cd NetIntel
+xsltproc nmap-intel.xsl Test.xml > report.html
+start report.html
+```
+
+**Linux (Debian/Ubuntu)**
+```bash
+sudo apt install xsltproc git -y
+git clone https://github.com/mwilco03/NetIntel.git
+cd NetIntel
+xsltproc nmap-intel.xsl Test.xml > report.html
+xdg-open report.html
+```
+
+**Linux (RHEL/Fedora)**
+```bash
+sudo dnf install xsltproc git -y
+git clone https://github.com/mwilco03/NetIntel.git
+cd NetIntel
+xsltproc nmap-intel.xsl Test.xml > report.html
+xdg-open report.html
+```
+
+**macOS**
+```bash
+brew install libxslt
+git clone https://github.com/mwilco03/NetIntel.git
+cd NetIntel
+xsltproc nmap-intel.xsl Test.xml > report.html
+open report.html
+```
+
 ## Quick Start
 
 ```bash
