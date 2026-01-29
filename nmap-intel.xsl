@@ -563,9 +563,10 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       </div>
       <div class="header-right">
         <span style="font-size:.8rem;color:#8b949e;">Scan: <xsl:value-of select="/nmaprun/@startstr"/></span>
+        <button class="btn btn-ghost btn-sm" data-action="help" title="Help &amp; Legend">[?] Help</button>
         <button class="btn btn-ghost btn-sm" data-action="share" title="Copy shareable link">[+] Share</button>
-        <button class="btn btn-secondary btn-sm" data-action="import">Import</button>
-        <button class="btn btn-primary btn-sm" data-action="export">Export</button>
+        <button class="btn btn-secondary btn-sm" data-action="import">^ Import</button>
+        <button class="btn btn-primary btn-sm" data-action="export">v Export</button>
       </div>
     </header>
 
@@ -1211,6 +1212,58 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
         </div>
         <div class="mt-4" id="vuln-status">
           <p style="color:#8b949e;font-size:.8rem;">No vulnerability database loaded</p>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" data-close-modal="">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div class="modal-overlay" id="help-modal">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-head">
+        <span class="modal-title">Quick Reference</span>
+        <button class="modal-close" data-close-modal="">x</button>
+      </div>
+      <div class="modal-body" style="font-size:.85rem;">
+        <div style="margin-bottom:1.5rem;">
+          <h4 style="color:#58a6ff;margin-bottom:.5rem;font-size:.9rem;">Host Icons</h4>
+          <div style="display:grid;grid-template-columns:60px 1fr;gap:.25rem .75rem;">
+            <span style="color:#0078d4;font-family:monospace;">[W]</span><span>Windows</span>
+            <span style="color:#ffa500;font-family:monospace;">[L]</span><span>Linux / Unix</span>
+            <span style="color:#58a6ff;font-family:monospace;">[N]</span><span>Network Device (router, switch)</span>
+            <span style="color:#8b949e;font-family:monospace;">[=]</span><span>Unknown / Unidentified</span>
+          </div>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <h4 style="color:#58a6ff;margin-bottom:.5rem;font-size:.9rem;">Port Colors</h4>
+          <div style="display:grid;grid-template-columns:60px 1fr;gap:.25rem .75rem;">
+            <span style="color:#238636;">green</span><span>Open port</span>
+            <span style="color:#d29922;">yellow</span><span>Cleartext protocol (FTP, Telnet, HTTP)</span>
+            <span style="color:#f85149;">red</span><span>Critical admin port (Docker, K8s)</span>
+          </div>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <h4 style="color:#58a6ff;margin-bottom:.5rem;font-size:.9rem;">Tag Categories</h4>
+          <div style="display:grid;grid-template-columns:100px 1fr;gap:.25rem .75rem;">
+            <span style="color:#d29922;">Criticality</span><span>CKT, Mission Critical, Business Critical</span>
+            <span style="color:#f85149;">Tactical</span><span>Crown Jewel, Choke Point, Pivot Point</span>
+            <span style="color:#58a6ff;">Environment</span><span>Production, Staging, Development</span>
+            <span style="color:#a371f7;">Priority</span><span>P1-Immediate, P2-Urgent, P3-Normal</span>
+          </div>
+        </div>
+        <div style="margin-bottom:1rem;">
+          <h4 style="color:#58a6ff;margin-bottom:.5rem;font-size:.9rem;">Search Syntax</h4>
+          <div style="font-family:monospace;font-size:.8rem;background:#161b22;padding:.75rem;border-radius:6px;">
+            port:22 port:80-443<br/>
+            service:ssh service:http<br/>
+            os:windows os:linux<br/>
+            tag:ckt tag:crown<br/>
+            cve:CVE-2024-*<br/>
+            risk:>50 risk:&lt;25
+          </div>
         </div>
       </div>
       <div class="modal-foot">
@@ -1924,18 +1977,16 @@ store.subscribe('subnetMask', (v) => { subnetMask = v; });
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[NetIntel] Starting initialization...');
-  try { loadState(); console.log('[NetIntel] loadState OK'); } catch(e) { console.error('[NetIntel] loadState FAILED:', e); }
-  try { migrateTags(); console.log('[NetIntel] migrateTags OK'); } catch(e) { console.error('[NetIntel] migrateTags FAILED:', e); }
-  try { initIcons(); console.log('[NetIntel] initIcons OK'); } catch(e) { console.error('[NetIntel] initIcons FAILED:', e); }
-  try { initNav(); console.log('[NetIntel] initNav OK'); } catch(e) { console.error('[NetIntel] initNav FAILED:', e); }
-  try { initModals(); console.log('[NetIntel] initModals OK'); } catch(e) { console.error('[NetIntel] initModals FAILED:', e); }
-  try { initContextMenu(); console.log('[NetIntel] initContextMenu OK'); } catch(e) { console.error('[NetIntel] initContextMenu FAILED:', e); }
-  try { initDropZones(); console.log('[NetIntel] initDropZones OK'); } catch(e) { console.error('[NetIntel] initDropZones FAILED:', e); }
-  try { initFilters(); console.log('[NetIntel] initFilters OK'); } catch(e) { console.error('[NetIntel] initFilters FAILED:', e); }
-  try { initRouter(); console.log('[NetIntel] initRouter OK'); } catch(e) { console.error('[NetIntel] initRouter FAILED:', e); }
-  try { render(); console.log('[NetIntel] render OK'); } catch(e) { console.error('[NetIntel] render FAILED:', e); }
-  console.log('[NetIntel] Initialized with', state.data?.hosts?.length || 0, 'hosts');
+  loadState();
+  migrateTags();
+  initIcons();
+  initNav();
+  initModals();
+  initContextMenu();
+  initDropZones();
+  initFilters();
+  initRouter();
+  render();
 });
 
 // Initialize router with routes
@@ -1974,7 +2025,6 @@ function initRouter() {
 
 // Navigate to section (called by router)
 function navigateToSection(section, param = null) {
-  console.log('[NetIntel] navigateToSection:', section);
   store.set('currentSection', section);
   store.set('selectedHost', param);
 
@@ -1988,9 +2038,16 @@ function navigateToSection(section, param = null) {
     s.classList.toggle('active', s.dataset.section === section);
   });
 
+  // Clear search when leaving entities page (search only applies there)
+  const searchEl = document.getElementById('search');
+  if (section !== 'entities' &amp;&amp; searchEl &amp;&amp; searchEl.value) {
+    searchEl.value = '';
+    searchEl.dispatchEvent(new Event('input'));
+  }
+
   // Section-specific initialization
   if (section === 'cleartext') renderCleartext();
-  if (section === 'topology') { console.log('[NetIntel] calling initTopology and renderTopology'); initTopology(); renderTopology(); }
+  if (section === 'topology') { initTopology(); renderTopology(); }
   if (section === 'timeline') { initTimeline(); renderTimeline(); }
 }
 
@@ -2093,6 +2150,7 @@ function handleAction(action) {
   if (action === 'import') document.getElementById('import-modal').classList.add('active');
   else if (action === 'export') document.getElementById('export-modal').classList.add('active');
   else if (action === 'vuln-db') document.getElementById('vuln-modal').classList.add('active');
+  else if (action === 'help') document.getElementById('help-modal').classList.add('active');
   else if (action === 'share') {
     const url = getShareableUrl();
     navigator.clipboard.writeText(url).then(() => {
@@ -2651,10 +2709,8 @@ function initFilters() {
 
   // View toggle (Cards / Ports / Services)
   document.querySelectorAll('[data-view]').forEach(btn => {
-    console.log('[NetIntel] Setting up view button:', btn.dataset.view);
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
-      console.log('[NetIntel] View button clicked:', view);
       document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       switchEntityView(view);
@@ -2665,11 +2721,9 @@ function initFilters() {
 
 // Switch between Cards, Ports, and Services views
 function switchEntityView(view) {
-  console.log('[NetIntel] switchEntityView called with:', view);
   const cardView = document.getElementById('entity-grid');
   const portView = document.getElementById('port-agg-view');
   const serviceView = document.getElementById('service-agg-view');
-  console.log('[NetIntel] Views found:', !!cardView, !!portView, !!serviceView);
 
   cardView.style.display = view === 'cards' ? '' : 'none';
   portView.style.display = view === 'ports' ? '' : 'none';
@@ -2736,21 +2790,15 @@ function renderPortAggregation() {
 
 // Render service aggregation view
 function renderServiceAggregation() {
-  console.log('[NetIntel] renderServiceAggregation called');
   const grid = document.getElementById('service-agg-grid');
-  if (!grid) { console.log('[NetIntel] service-agg-grid not found'); return; }
-  if (!state.data?.hosts) { console.log('[NetIntel] no hosts data'); return; }
+  if (!grid || !state.data?.hosts) return;
 
-  console.log('[NetIntel] hosts count:', state.data.hosts.length);
   const upHosts = state.data.hosts.filter(h => h.status === 'up');
-  console.log('[NetIntel] up hosts:', upHosts.length);
 
   // Aggregate services across all hosts
   const svcMap = {};
   upHosts.forEach(host => {
-    const openPorts = (host.ports || []).filter(p => p.state === 'open' && p.svc);
-    console.log('[NetIntel] host', host.ip, 'open ports with svc:', openPorts.length, openPorts.map(p => p.svc));
-    openPorts.forEach(p => {
+    (host.ports || []).filter(p => p.state === 'open' && p.svc).forEach(p => {
       const key = p.svc.toLowerCase();
       if (!svcMap[key]) {
         svcMap[key] = {
@@ -2767,7 +2815,6 @@ function renderServiceAggregation() {
   });
 
   // Convert Sets and sort by host count
-  console.log('[NetIntel] svcMap keys:', Object.keys(svcMap));
   const sorted = Object.values(svcMap)
     .map(s => ({
       ...s,
@@ -2776,8 +2823,6 @@ function renderServiceAggregation() {
       products: Array.from(s.products)
     }))
     .sort((a, b) => b.hosts.length - a.hosts.length);
-
-  console.log('[NetIntel] sorted services:', sorted.length, sorted.map(s => s.service));
   grid.innerHTML = sorted.map(s => {
     const hostPreview = s.hosts.slice(0, 3).join(', ') + (s.hosts.length > 3 ? ` +${s.hosts.length - 3} more` : '');
     const portList = s.ports.slice(0, 5).join(', ') + (s.ports.length > 5 ? '...' : '');
@@ -3689,13 +3734,11 @@ function initTopology() {
 }
 
 function renderTopology() {
-  console.log('[NetIntel] renderTopology called');
   const container = document.getElementById('topo-canvas');
-  if (!container) { console.log('[NetIntel] topo-canvas not found'); return; }
+  if (!container) return;
 
   const layoutSelect = document.getElementById('topo-layout');
   const layout = layoutSelect ? layoutSelect.value : 'hierarchical';
-  console.log('[NetIntel] layout:', layout);
 
   // Collect all unique nodes and edges from traceroute data
   const nodes = new Map();
@@ -3705,7 +3748,6 @@ function renderTopology() {
   nodes.set('scanner', { id: 'scanner', type: 'scanner', label: 'Scanner' });
 
   const upHosts = state.data.hosts.filter(h => h.status === 'up');
-  console.log('[NetIntel] topology up hosts:', upHosts.length);
   upHosts.forEach(host => {
     // Add target node
     nodes.set(host.ip, {
@@ -3747,10 +3789,7 @@ function renderTopology() {
   });
 
   // Calculate positions based on layout
-  console.log('[NetIntel] topology nodes:', nodes.size, Array.from(nodes.keys()));
-  console.log('[NetIntel] topology edges:', edges.length);
   const positions = calculateLayout(nodes, edges, layout, container);
-  console.log('[NetIntel] calculated positions:', positions);
 
   // Clear and render
   container.innerHTML = '';
