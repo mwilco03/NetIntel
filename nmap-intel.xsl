@@ -15,6 +15,115 @@ Usage:
 <xsl:param name="classification" select="'UNCLASSIFIED'"/>
 <xsl:param name="classification-color" select="'#007a33'"/>
 
+<!-- JSON String Escaping Templates -->
+<xsl:template name="escape-json">
+  <xsl:param name="text"/>
+  <xsl:call-template name="escape-bs">
+    <xsl:with-param name="text" select="$text"/>
+  </xsl:call-template>
+</xsl:template>
+
+<!-- Escape backslashes first (\ → \\) -->
+<xsl:template name="escape-bs">
+  <xsl:param name="text"/>
+  <xsl:choose>
+    <xsl:when test="contains($text, '\')">
+      <xsl:call-template name="escape-quot">
+        <xsl:with-param name="text" select="substring-before($text, '\')"/>
+      </xsl:call-template>
+      <xsl:text>\\</xsl:text>
+      <xsl:call-template name="escape-bs">
+        <xsl:with-param name="text" select="substring-after($text, '\')"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="escape-quot">
+        <xsl:with-param name="text" select="$text"/>
+      </xsl:call-template>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<!-- Escape double quotes (" → \") -->
+<xsl:template name="escape-quot">
+  <xsl:param name="text"/>
+  <xsl:choose>
+    <xsl:when test="contains($text, '&quot;')">
+      <xsl:call-template name="escape-nl">
+        <xsl:with-param name="text" select="substring-before($text, '&quot;')"/>
+      </xsl:call-template>
+      <xsl:text>\"</xsl:text>
+      <xsl:call-template name="escape-quot">
+        <xsl:with-param name="text" select="substring-after($text, '&quot;')"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="escape-nl">
+        <xsl:with-param name="text" select="$text"/>
+      </xsl:call-template>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<!-- Escape newlines (LF → \n) -->
+<xsl:template name="escape-nl">
+  <xsl:param name="text"/>
+  <xsl:choose>
+    <xsl:when test="contains($text, '&#10;')">
+      <xsl:call-template name="escape-cr">
+        <xsl:with-param name="text" select="substring-before($text, '&#10;')"/>
+      </xsl:call-template>
+      <xsl:text>\n</xsl:text>
+      <xsl:call-template name="escape-nl">
+        <xsl:with-param name="text" select="substring-after($text, '&#10;')"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="escape-cr">
+        <xsl:with-param name="text" select="$text"/>
+      </xsl:call-template>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<!-- Escape carriage returns (CR → \r) -->
+<xsl:template name="escape-cr">
+  <xsl:param name="text"/>
+  <xsl:choose>
+    <xsl:when test="contains($text, '&#13;')">
+      <xsl:call-template name="escape-tab">
+        <xsl:with-param name="text" select="substring-before($text, '&#13;')"/>
+      </xsl:call-template>
+      <xsl:text>\r</xsl:text>
+      <xsl:call-template name="escape-cr">
+        <xsl:with-param name="text" select="substring-after($text, '&#13;')"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:call-template name="escape-tab">
+        <xsl:with-param name="text" select="$text"/>
+      </xsl:call-template>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<!-- Escape tabs (TAB → \t) -->
+<xsl:template name="escape-tab">
+  <xsl:param name="text"/>
+  <xsl:choose>
+    <xsl:when test="contains($text, '&#9;')">
+      <xsl:value-of select="substring-before($text, '&#9;')"/>
+      <xsl:text>\t</xsl:text>
+      <xsl:call-template name="escape-tab">
+        <xsl:with-param name="text" select="substring-after($text, '&#9;')"/>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:value-of select="$text"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 <!-- Main Template -->
 <xsl:template match="/">
 <html lang="en">
@@ -1120,7 +1229,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
   "scanInfo": {
     "scanner": "<xsl:value-of select="/nmaprun/@scanner"/>",
     "version": "<xsl:value-of select="/nmaprun/@version"/>",
-    "args": "<xsl:value-of select="translate(/nmaprun/@args, '&quot;', &quot;'&quot;)"/>",
+    "args": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="/nmaprun/@args"/></xsl:call-template>",
     "start": "<xsl:value-of select="/nmaprun/@start"/>",
     "startstr": "<xsl:value-of select="/nmaprun/@startstr"/>",
     "endstr": "<xsl:value-of select="/nmaprun/runstats/finished/@timestr"/>"
@@ -1134,14 +1243,14 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     {
       "ip": "<xsl:value-of select="address[@addrtype='ipv4']/@addr"/><xsl:value-of select="address[@addrtype='ipv6']/@addr"/>",
       "mac": "<xsl:value-of select="address[@addrtype='mac']/@addr"/>",
-      "macVendor": "<xsl:value-of select="address[@addrtype='mac']/@vendor"/>",
-      "hostname": "<xsl:value-of select="hostnames/hostname/@name"/>",
+      "macVendor": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="address[@addrtype='mac']/@vendor"/></xsl:call-template>",
+      "hostname": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="hostnames/hostname/@name"/></xsl:call-template>",
       "status": "<xsl:value-of select="status/@state"/>",
-      "os": [<xsl:for-each select="os/osmatch">{"name":"<xsl:value-of select="translate(@name, '&quot;', &quot;'&quot;)"/>","accuracy":<xsl:value-of select="@accuracy"/>}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "osFingerprint": "<xsl:value-of select="os/osfingerprint/@fingerprint"/>",
-      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:value-of select="service/@name"/>","product":"<xsl:value-of select="translate(service/@product, '&quot;', &quot;'&quot;)"/>","version":"<xsl:value-of select="service/@version"/>","cpe":"<xsl:value-of select="service/cpe"/>","fp":"<xsl:value-of select="service/@servicefp"/>","scripts":[<xsl:for-each select="script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:value-of select="translate(translate(@output, '&quot;', &quot;'&quot;), '&#10;&#13;', '  ')"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "hostscripts": [<xsl:for-each select="hostscript/script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:value-of select="translate(translate(@output, '&quot;', &quot;'&quot;), '&#10;&#13;', '  ')"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
-      "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>","rtt":"<xsl:value-of select="@rtt"/>","host":"<xsl:value-of select="@host"/>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
+      "os": [<xsl:for-each select="os/osmatch">{"name":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="@name"/></xsl:call-template>","accuracy":<xsl:value-of select="@accuracy"/>}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "osFingerprint": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="os/osfingerprint/@fingerprint"/></xsl:call-template>",
+      "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/@name"/></xsl:call-template>","product":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/@product"/></xsl:call-template>","version":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/@version"/></xsl:call-template>","cpe":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/cpe"/></xsl:call-template>","fp":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/@servicefp"/></xsl:call-template>","scripts":[<xsl:for-each select="script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="@output"/></xsl:call-template>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "hostscripts": [<xsl:for-each select="hostscript/script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="@output"/></xsl:call-template>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
+      "trace": [<xsl:for-each select="trace/hop">{"ttl":<xsl:value-of select="@ttl"/>,"ip":"<xsl:value-of select="@ipaddr"/>","rtt":"<xsl:value-of select="@rtt"/>","host":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="@host"/></xsl:call-template>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]
     }<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
   ]
 }
