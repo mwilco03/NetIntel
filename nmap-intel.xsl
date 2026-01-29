@@ -536,43 +536,43 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       <div class="form-group" style="margin-bottom:.75rem">
         <label style="display:block;font-size:.75rem;color:#d29922;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Criticality</label>
         <div id="annotate-labels-crit" class="label-group">
-          <label class="label-check"><input type="checkbox" value="ckt"/> CKT (Cyber Key Terrain)</label>
-          <label class="label-check"><input type="checkbox" value="mission-critical"/> Mission Critical</label>
-          <label class="label-check"><input type="checkbox" value="mission-essential"/> Mission Essential</label>
-          <label class="label-check"><input type="checkbox" value="business-critical"/> Business Critical</label>
+          <label class="label-check"><input type="checkbox" id="label-ckt" name="labels-crit" value="ckt"/> CKT (Cyber Key Terrain)</label>
+          <label class="label-check"><input type="checkbox" id="label-mission-critical" name="labels-crit" value="mission-critical"/> Mission Critical</label>
+          <label class="label-check"><input type="checkbox" id="label-mission-essential" name="labels-crit" value="mission-essential"/> Mission Essential</label>
+          <label class="label-check"><input type="checkbox" id="label-business-critical" name="labels-crit" value="business-critical"/> Business Critical</label>
         </div>
       </div>
 
       <div class="form-group" style="margin-bottom:.75rem">
         <label style="display:block;font-size:.75rem;color:#f85149;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Tactical</label>
         <div id="annotate-labels-tact" class="label-group">
-          <label class="label-check"><input type="checkbox" value="crown"/> Crown Jewel</label>
-          <label class="label-check"><input type="checkbox" value="choke"/> Choke Point</label>
-          <label class="label-check"><input type="checkbox" value="key"/> Key Terrain</label>
-          <label class="label-check"><input type="checkbox" value="pivot"/> Pivot Point</label>
-          <label class="label-check"><input type="checkbox" value="attack-surface"/> Attack Surface</label>
-          <label class="label-check"><input type="checkbox" value="egress"/> Egress Point</label>
+          <label class="label-check"><input type="checkbox" id="label-crown" name="labels-tact" value="crown"/> Crown Jewel</label>
+          <label class="label-check"><input type="checkbox" id="label-choke" name="labels-tact" value="choke"/> Choke Point</label>
+          <label class="label-check"><input type="checkbox" id="label-key" name="labels-tact" value="key"/> Key Terrain</label>
+          <label class="label-check"><input type="checkbox" id="label-pivot" name="labels-tact" value="pivot"/> Pivot Point</label>
+          <label class="label-check"><input type="checkbox" id="label-attack-surface" name="labels-tact" value="attack-surface"/> Attack Surface</label>
+          <label class="label-check"><input type="checkbox" id="label-egress" name="labels-tact" value="egress"/> Egress Point</label>
         </div>
       </div>
 
       <div class="form-group" style="margin-bottom:.75rem">
         <label style="display:block;font-size:.75rem;color:#58a6ff;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Environment</label>
         <div id="annotate-labels-env" class="label-group">
-          <label class="label-check"><input type="checkbox" value="production"/> Production</label>
-          <label class="label-check"><input type="checkbox" value="staging"/> Staging</label>
-          <label class="label-check"><input type="checkbox" value="development"/> Development</label>
-          <label class="label-check"><input type="checkbox" value="test"/> Test</label>
-          <label class="label-check"><input type="checkbox" value="deprecated"/> Deprecated</label>
+          <label class="label-check"><input type="checkbox" id="label-production" name="labels-env" value="production"/> Production</label>
+          <label class="label-check"><input type="checkbox" id="label-staging" name="labels-env" value="staging"/> Staging</label>
+          <label class="label-check"><input type="checkbox" id="label-development" name="labels-env" value="development"/> Development</label>
+          <label class="label-check"><input type="checkbox" id="label-test" name="labels-env" value="test"/> Test</label>
+          <label class="label-check"><input type="checkbox" id="label-deprecated" name="labels-env" value="deprecated"/> Deprecated</label>
         </div>
       </div>
 
       <div class="form-group">
         <label style="display:block;font-size:.75rem;color:#a371f7;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Priority</label>
         <div id="annotate-labels-pri" class="label-group">
-          <label class="label-check"><input type="checkbox" value="p1"/> P1 - Immediate</label>
-          <label class="label-check"><input type="checkbox" value="p2"/> P2 - Urgent</label>
-          <label class="label-check"><input type="checkbox" value="p3"/> P3 - Normal</label>
-          <label class="label-check"><input type="checkbox" value="monitor"/> Monitor</label>
+          <label class="label-check"><input type="checkbox" id="label-p1" name="labels-pri" value="p1"/> P1 - Immediate</label>
+          <label class="label-check"><input type="checkbox" id="label-p2" name="labels-pri" value="p2"/> P2 - Urgent</label>
+          <label class="label-check"><input type="checkbox" id="label-p3" name="labels-pri" value="p3"/> P3 - Normal</label>
+          <label class="label-check"><input type="checkbox" id="label-monitor" name="labels-pri" value="monitor"/> Monitor</label>
         </div>
       </div>
     </div>
