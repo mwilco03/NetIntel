@@ -3005,8 +3005,8 @@ function updateEntityTags() {
     const tagsEl = card.querySelector('.entity-tags');
     if (tagsEl) {
       let html = labels.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
-      if (owner) html += `<span class="tag tag-owner" title="Owner: ${owner}">👤 ${owner}</span>`;
-      if (notes) html += `<span class="tag tag-notes" title="${notes}">📝</span>`;
+      if (owner) html += `<span class="tag tag-owner" title="Owner: ${owner}">&amp;#128100; ${owner}</span>`;
+      if (notes) html += `<span class="tag tag-notes" title="${notes}">&amp;#128221;</span>`;
       tagsEl.innerHTML = html;
     }
     card.classList.toggle('tagged', labels.length > 0 || hasAnnotation);
@@ -3053,7 +3053,7 @@ function updateKeyTerrain() {
       <span class="mono" style="flex-shrink:0">${t.ip}</span>
       <div style="flex:1;display:flex;flex-wrap:wrap;gap:.25rem;justify-content:flex-end">
         ${t.labels.map(l => `<span class="tag tag-${l}">${l}</span>`).join('')}
-        ${t.owner ? `<span class="tag tag-owner" title="Owner">👤</span>` : ''}
+        ${t.owner ? `<span class="tag tag-owner" title="Owner">&amp;#128100;</span>` : ''}
       </div>
     </div>
   `).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag or annotate</p>';
@@ -3992,8 +3992,8 @@ function renderTimelineChart() {
     `;
   }).join('') + `
     <div style="position:absolute;right:1rem;top:1rem;font-size:.75rem;">
-      <span style="color:#238636;">■</span> Hosts
-      <span style="color:#58a6ff;margin-left:.5rem;">■</span> Ports
+      <span style="color:#238636;">&amp;#9632;</span> Hosts
+      <span style="color:#58a6ff;margin-left:.5rem;">&amp;#9632;</span> Ports
     </div>
   `;
 }
