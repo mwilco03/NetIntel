@@ -1317,8 +1317,50 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 <script>
 <xsl:text disable-output-escaping="yes"><![CDATA[
 // === CONSTANTS ===
+// Port-based lookups (fallback when service detection unavailable)
 const CLEARTEXT = {21:'FTP',23:'Telnet',25:'SMTP',80:'HTTP',110:'POP3',143:'IMAP',161:'SNMP',389:'LDAP',513:'rlogin',514:'RSH',1433:'MSSQL',3306:'MySQL',5432:'PostgreSQL',8080:'HTTP-Alt'};
 const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143:6,161:7,389:6,443:1,445:8,512:9,513:9,514:9,1433:8,1521:8,3306:7,3389:7,5432:6,5900:7,6379:9,27017:8,2375:10,2376:8,4243:10,6443:10,10250:10,10255:6,2379:10,8500:8,9200:8,5985:8,5986:8,623:10,1099:8,10000:7,9000:8,8291:8,50000:8,11211:8};
+
+// Service-name-based lookups (from nmap -sV service detection, matches nmap-services)
+// These detect services on non-standard ports (e.g., HTTP on 9999, SSH on 2222)
+const CLEARTEXT_SVC = {
+  'http':'HTTP','http-alt':'HTTP','http-proxy':'HTTP','http-mgmt':'HTTP',
+  'ftp':'FTP','ftp-data':'FTP',
+  'telnet':'Telnet',
+  'smtp':'SMTP','submission':'SMTP',
+  'pop3':'POP3','pop2':'POP2',
+  'imap':'IMAP','imap3':'IMAP',
+  'snmp':'SNMP','snmptrap':'SNMP',
+  'ldap':'LDAP',
+  'rlogin':'rlogin','rsh':'RSH','rexec':'rexec',
+  'mysql':'MySQL','ms-sql-s':'MSSQL','oracle-tns':'Oracle','postgresql':'PostgreSQL',
+  'redis':'Redis','memcache':'Memcached','mongodb':'MongoDB',
+  'vnc':'VNC','vnc-http':'VNC',
+  'tftp':'TFTP','finger':'Finger','nntp':'NNTP','gopher':'Gopher'
+};
+
+const RISK_SVC = {
+  // Critical (10) - immediate compromise vectors
+  'telnet':10,'rexec':10,'rsh':10,'rlogin':10,
+  'docker':10,'kubernetes':10,'etcd':10,'ipmi':10,
+  // Very High (9) - often no auth, RCE possible
+  'redis':9,'memcache':9,'mongod':9,'mongodb':9,
+  // High (8) - database/admin exposure
+  'ms-sql-s':8,'oracle-tns':8,'mysql':7,'postgresql':6,
+  'smb':8,'microsoft-ds':8,'netbios-ssn':7,
+  'winrm':8,'wsman':8,'msrpc':6,
+  'vnc':7,'vnc-http':7,'x11':7,
+  'rdp':7,'ms-wbt-server':7,
+  // Medium (5-6) - cleartext credentials
+  'ftp':7,'ftp-data':5,
+  'smtp':4,'submission':4,'pop3':6,'pop2':6,'imap':6,'imap3':6,
+  'ldap':6,'snmp':7,'snmptrap':5,
+  'finger':5,'nntp':4,'gopher':4,'tftp':5,
+  // Low (1-3) - encrypted or low risk
+  'ssh':3,'domain':3,'dns':3,
+  'http':2,'http-alt':2,'http-proxy':2,
+  'https':1,'ssl':1,'tls':1
+};
 
 // Admin/Management ports by category - high risk if exposed
 const ADMIN_PORTS = {
@@ -2680,14 +2722,41 @@ function findDominantService(host) {
   return dominant;
 }
 
+// Helper: get risk weight for a port (checks both port number and service name)
+function getPortRisk(p) {
+  const portWeight = RISK_WEIGHTS[p.port] || 0;
+  const svcWeight = p.svc ? (RISK_SVC[p.svc] || 0) : 0;
+  return Math.max(portWeight, svcWeight); // Use higher of the two
+}
+
+// Helper: check if port uses cleartext protocol
+function isCleartext(p) {
+  return !!(CLEARTEXT[p.port] || (p.svc && CLEARTEXT_SVC[p.svc]));
+}
+
+// Helper: get cleartext protocol name
+function getCleartextName(p) {
+  return CLEARTEXT[p.port] || (p.svc && CLEARTEXT_SVC[p.svc]) || null;
+}
+
 function calculateRisk(host) {
   const open = (host.ports || []).filter(p => p.state === 'open');
-  let risk = 0;
-  open.forEach(p => {
-    if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
-    if (CLEARTEXT[p.port]) risk += 3;
-  });
-  return Math.min(risk, 100);
+  // Calculate per-port risk using both port number and service name detection
+  const weights = open.map(p => {
+    const baseRisk = getPortRisk(p);
+    const cleartextBonus = isCleartext(p) ? 3 : 0;
+    return baseRisk + cleartextBonus;
+  }).filter(w => w > 0).sort((a, b) => b - a);
+
+  if (!weights.length) return 0;
+
+  // Logarithmic diminishing returns: highest risk at full value, rest diminish
+  // This ensures 1 critical port > many low-risk ports
+  let risk = weights[0];
+  for (let i = 1; i < weights.length; i++) {
+    risk += weights[i] / Math.log2(i + 2);
+  }
+  return Math.min(Math.round(risk), 100);
 }
 
 function initFilters() {
@@ -2749,7 +2818,8 @@ function renderPortAggregation() {
           product: p.product || '',
           hosts: [],
           isAdmin: !!ADMIN_PORTS[p.port],
-          isCleartext: !!CLEARTEXT[p.port]
+          isCleartext: isCleartext(p),
+          cleartextName: getCleartextName(p)
         };
       }
       portMap[p.port].hosts.push(host.ip);
@@ -2761,7 +2831,7 @@ function renderPortAggregation() {
 
   grid.innerHTML = sorted.map(p => {
     const adminInfo = ADMIN_PORTS[p.port];
-    const cleartextInfo = CLEARTEXT[p.port];
+    const cleartextInfo = p.cleartextName;
     const severity = adminInfo?.sev === 'critical' ? 'critical' : (adminInfo ? 'warning' : (cleartextInfo ? 'cleartext' : ''));
     const hostPreview = p.hosts.slice(0, 3).join(', ') + (p.hosts.length > 3 ? ` +${p.hosts.length - 3} more` : '');
 
@@ -2828,7 +2898,8 @@ function renderServiceAggregation() {
     const portList = s.ports.slice(0, 5).join(', ') + (s.ports.length > 5 ? '...' : '');
     const isCritical = s.ports.some(p => ADMIN_PORTS[p]?.sev === 'critical');
     const hasAdmin = s.ports.some(p => ADMIN_PORTS[p]);
-    const hasCleartext = s.ports.some(p => CLEARTEXT[p]);
+    // Check both port-based and service-name-based cleartext detection
+    const hasCleartext = s.ports.some(p => CLEARTEXT[p]) || CLEARTEXT_SVC[s.service];
     const severity = isCritical ? 'critical' : (hasAdmin ? 'warning' : (hasCleartext ? 'cleartext' : ''));
 
     return `
@@ -2923,7 +2994,7 @@ function applyFilterAndGroup() {
     if (host.status !== 'up') return false;
 
     const open = (host.ports || []).filter(p => p.state === 'open');
-    const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+    const hasCleartext = open.some(p => isCleartext(p));
     const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
     const risk = calculateRisk(host);
     const tagData = getAssetTags(host);
@@ -3063,22 +3134,26 @@ function renderStats() {
 
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
     const open = (host.ports || []).filter(p => p.state === 'open');
-    open.forEach(p => { if (CLEARTEXT[p.port]) clearCount++; });
-    
-    let risk = 0;
+    open.forEach(p => { if (isCleartext(p)) clearCount++; });
+
+    // Collect weights with reasons for display (using service-aware detection)
     const reasons = [];
     open.forEach(p => {
-      if (RISK_WEIGHTS[p.port]) {
-        risk += RISK_WEIGHTS[p.port];
-        reasons.push({port:p.port, w:RISK_WEIGHTS[p.port]});
-      }
-      if (CLEARTEXT[p.port]) risk += 3;
+      const w = getPortRisk(p) + (isCleartext(p) ? 3 : 0);
+      if (w > 0) reasons.push({port: p.port, svc: p.svc, w});
     });
-    risk = Math.min(risk, 100);
+    reasons.sort((a, b) => b.w - a.w);
+
+    // Logarithmic diminishing returns
+    let risk = 0;
+    reasons.forEach((r, i) => {
+      risk += i === 0 ? r.w : r.w / Math.log2(i + 2);
+    });
+    risk = Math.min(Math.round(risk), 100);
     if (risk > 0) {
       totalRisk += risk;
       riskCount++;
-      risks.push({host, risk, reasons: reasons.sort((a,b) => b.w - a.w)});
+      risks.push({host, risk, reasons});
     }
   });
   
@@ -3092,8 +3167,8 @@ function renderStats() {
     const list = document.getElementById('cleartext-list');
     const items = [];
     state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-      (host.ports || []).filter(p => p.state === 'open' && CLEARTEXT[p.port]).forEach(p => {
-        items.push({ip: host.ip, port: p.port, name: CLEARTEXT[p.port]});
+      (host.ports || []).filter(p => p.state === 'open' && isCleartext(p)).forEach(p => {
+        items.push({ip: host.ip, port: p.port, name: getCleartextName(p), svc: p.svc});
       });
     });
     list.innerHTML = items.slice(0,5).map(i =>
@@ -3115,23 +3190,20 @@ function updateEntityCards() {
     const ip = card.dataset.ip;
     const host = state.data.hosts.find(h => h.ip === ip);
     if (!host) return;
-    
-    // Risk score
-    const open = (host.ports || []).filter(p => p.state === 'open');
-    let risk = 0;
-    open.forEach(p => {
-      if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
-      if (CLEARTEXT[p.port]) risk += 3;
-    });
-    risk = Math.min(risk, 100);
+
+    // Risk score (use central function)
+    const risk = calculateRisk(host);
     const riskEl = card.querySelector('[data-risk]');
     if (riskEl) riskEl.textContent = risk;
+    const open = (host.ports || []).filter(p => p.state === 'open');
     
-    // Cleartext ports
-    card.querySelectorAll('.port[data-port]').forEach(p => {
-      if (CLEARTEXT[parseInt(p.dataset.port)]) {
-        p.classList.remove('open');
-        p.classList.add('clear');
+    // Cleartext ports (check both port number and service name)
+    card.querySelectorAll('.port[data-port]').forEach(el => {
+      const portNum = parseInt(el.dataset.port);
+      const svcName = el.dataset.svc;
+      if (CLEARTEXT[portNum] || (svcName && CLEARTEXT_SVC[svcName])) {
+        el.classList.remove('open');
+        el.classList.add('clear');
       }
     });
     
@@ -3255,8 +3327,8 @@ function renderSources() {
 function renderCleartext() {
   const items = [];
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-    (host.ports || []).filter(p => p.state === 'open' && CLEARTEXT[p.port]).forEach(p => {
-      items.push({ip: host.ip, hostname: host.hostname, port: p.port, proto: p.proto, name: CLEARTEXT[p.port], svc: p.svc});
+    (host.ports || []).filter(p => p.state === 'open' && isCleartext(p)).forEach(p => {
+      items.push({ip: host.ip, hostname: host.hostname, port: p.port, proto: p.proto, name: getCleartextName(p), svc: p.svc});
     });
   });
   
@@ -3672,10 +3744,9 @@ function exportData(format) {
       const os = h.os && h.os[0] ? h.os[0].name : '';
       const hPorts = h.ports || [];
       const ports = hPorts.filter(p => p.state === 'open').map(p => p.port).join(';');
-      let risk = 0;
-      hPorts.filter(p => p.state === 'open').forEach(p => { if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port]; });
+      const risk = calculateRisk(h);
       const tags = includeTags ? getExportTags(h) : { labels: '', owner: '', notes: '' };
-      rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, Math.min(risk,100), tags.labels, tags.owner, tags.notes]);
+      rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, risk, tags.labels, tags.owner, tags.notes]);
     });
     content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     filename = 'netintel-export.csv';
@@ -4226,7 +4297,7 @@ document.getElementById('search')?.addEventListener('input', e => {
     let passesFilter = true;
     if (filter !== 'all') {
       const open = (host.ports || []).filter(p => p.state === 'open');
-      const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+      const hasCleartext = open.some(p => isCleartext(p));
       const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
       const risk = calculateRisk(host);
       const tagData = getAssetTags(host);
