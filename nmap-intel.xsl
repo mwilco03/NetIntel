@@ -2622,13 +2622,21 @@ function renderPortAggregation() {
 
 // Render service aggregation view
 function renderServiceAggregation() {
+  console.log('[NetIntel] renderServiceAggregation called');
   const grid = document.getElementById('service-agg-grid');
-  if (!grid || !state.data?.hosts) return;
+  if (!grid) { console.log('[NetIntel] service-agg-grid not found'); return; }
+  if (!state.data?.hosts) { console.log('[NetIntel] no hosts data'); return; }
+
+  console.log('[NetIntel] hosts count:', state.data.hosts.length);
+  const upHosts = state.data.hosts.filter(h => h.status === 'up');
+  console.log('[NetIntel] up hosts:', upHosts.length);
 
   // Aggregate services across all hosts
   const svcMap = {};
-  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-    (host.ports || []).filter(p => p.state === 'open' && p.svc).forEach(p => {
+  upHosts.forEach(host => {
+    const openPorts = (host.ports || []).filter(p => p.state === 'open' && p.svc);
+    console.log('[NetIntel] host', host.ip, 'open ports with svc:', openPorts.length, openPorts.map(p => p.svc));
+    openPorts.forEach(p => {
       const key = p.svc.toLowerCase();
       if (!svcMap[key]) {
         svcMap[key] = {
@@ -2645,6 +2653,7 @@ function renderServiceAggregation() {
   });
 
   // Convert Sets and sort by host count
+  console.log('[NetIntel] svcMap keys:', Object.keys(svcMap));
   const sorted = Object.values(svcMap)
     .map(s => ({
       ...s,
@@ -2654,6 +2663,7 @@ function renderServiceAggregation() {
     }))
     .sort((a, b) => b.hosts.length - a.hosts.length);
 
+  console.log('[NetIntel] sorted services:', sorted.length, sorted.map(s => s.service));
   grid.innerHTML = sorted.map(s => {
     const hostPreview = s.hosts.slice(0, 3).join(', ') + (s.hosts.length > 3 ? ` +${s.hosts.length - 3} more` : '');
     const portList = s.ports.slice(0, 5).join(', ') + (s.ports.length > 5 ? '...' : '');
@@ -3565,11 +3575,13 @@ function initTopology() {
 }
 
 function renderTopology() {
+  console.log('[NetIntel] renderTopology called');
   const container = document.getElementById('topo-canvas');
-  if (!container) return;
+  if (!container) { console.log('[NetIntel] topo-canvas not found'); return; }
 
   const layoutSelect = document.getElementById('topo-layout');
   const layout = layoutSelect ? layoutSelect.value : 'hierarchical';
+  console.log('[NetIntel] layout:', layout);
 
   // Collect all unique nodes and edges from traceroute data
   const nodes = new Map();
@@ -3578,7 +3590,9 @@ function renderTopology() {
   // Add scanner node (assumed to be at hop 0)
   nodes.set('scanner', { id: 'scanner', type: 'scanner', label: 'Scanner' });
 
-  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+  const upHosts = state.data.hosts.filter(h => h.status === 'up');
+  console.log('[NetIntel] topology up hosts:', upHosts.length);
+  upHosts.forEach(host => {
     // Add target node
     nodes.set(host.ip, {
       id: host.ip,
@@ -3619,7 +3633,10 @@ function renderTopology() {
   });
 
   // Calculate positions based on layout
+  console.log('[NetIntel] topology nodes:', nodes.size, Array.from(nodes.keys()));
+  console.log('[NetIntel] topology edges:', edges.length);
   const positions = calculateLayout(nodes, edges, layout, container);
+  console.log('[NetIntel] calculated positions:', positions);
 
   // Clear and render
   container.innerHTML = '';
