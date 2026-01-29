@@ -536,43 +536,43 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       <div class="form-group" style="margin-bottom:.75rem">
         <label style="display:block;font-size:.75rem;color:#d29922;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Criticality</label>
         <div id="annotate-labels-crit" class="label-group">
-          <label class="label-check"><input type="checkbox" value="ckt"/> CKT (Cyber Key Terrain)</label>
-          <label class="label-check"><input type="checkbox" value="mission-critical"/> Mission Critical</label>
-          <label class="label-check"><input type="checkbox" value="mission-essential"/> Mission Essential</label>
-          <label class="label-check"><input type="checkbox" value="business-critical"/> Business Critical</label>
+          <label class="label-check"><input type="checkbox" id="label-ckt" name="labels-crit" value="ckt"/> CKT (Cyber Key Terrain)</label>
+          <label class="label-check"><input type="checkbox" id="label-mission-critical" name="labels-crit" value="mission-critical"/> Mission Critical</label>
+          <label class="label-check"><input type="checkbox" id="label-mission-essential" name="labels-crit" value="mission-essential"/> Mission Essential</label>
+          <label class="label-check"><input type="checkbox" id="label-business-critical" name="labels-crit" value="business-critical"/> Business Critical</label>
         </div>
       </div>
 
       <div class="form-group" style="margin-bottom:.75rem">
         <label style="display:block;font-size:.75rem;color:#f85149;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Tactical</label>
         <div id="annotate-labels-tact" class="label-group">
-          <label class="label-check"><input type="checkbox" value="crown"/> Crown Jewel</label>
-          <label class="label-check"><input type="checkbox" value="choke"/> Choke Point</label>
-          <label class="label-check"><input type="checkbox" value="key"/> Key Terrain</label>
-          <label class="label-check"><input type="checkbox" value="pivot"/> Pivot Point</label>
-          <label class="label-check"><input type="checkbox" value="attack-surface"/> Attack Surface</label>
-          <label class="label-check"><input type="checkbox" value="egress"/> Egress Point</label>
+          <label class="label-check"><input type="checkbox" id="label-crown" name="labels-tact" value="crown"/> Crown Jewel</label>
+          <label class="label-check"><input type="checkbox" id="label-choke" name="labels-tact" value="choke"/> Choke Point</label>
+          <label class="label-check"><input type="checkbox" id="label-key" name="labels-tact" value="key"/> Key Terrain</label>
+          <label class="label-check"><input type="checkbox" id="label-pivot" name="labels-tact" value="pivot"/> Pivot Point</label>
+          <label class="label-check"><input type="checkbox" id="label-attack-surface" name="labels-tact" value="attack-surface"/> Attack Surface</label>
+          <label class="label-check"><input type="checkbox" id="label-egress" name="labels-tact" value="egress"/> Egress Point</label>
         </div>
       </div>
 
       <div class="form-group" style="margin-bottom:.75rem">
         <label style="display:block;font-size:.75rem;color:#58a6ff;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Environment</label>
         <div id="annotate-labels-env" class="label-group">
-          <label class="label-check"><input type="checkbox" value="production"/> Production</label>
-          <label class="label-check"><input type="checkbox" value="staging"/> Staging</label>
-          <label class="label-check"><input type="checkbox" value="development"/> Development</label>
-          <label class="label-check"><input type="checkbox" value="test"/> Test</label>
-          <label class="label-check"><input type="checkbox" value="deprecated"/> Deprecated</label>
+          <label class="label-check"><input type="checkbox" id="label-production" name="labels-env" value="production"/> Production</label>
+          <label class="label-check"><input type="checkbox" id="label-staging" name="labels-env" value="staging"/> Staging</label>
+          <label class="label-check"><input type="checkbox" id="label-development" name="labels-env" value="development"/> Development</label>
+          <label class="label-check"><input type="checkbox" id="label-test" name="labels-env" value="test"/> Test</label>
+          <label class="label-check"><input type="checkbox" id="label-deprecated" name="labels-env" value="deprecated"/> Deprecated</label>
         </div>
       </div>
 
       <div class="form-group">
         <label style="display:block;font-size:.75rem;color:#a371f7;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Priority</label>
         <div id="annotate-labels-pri" class="label-group">
-          <label class="label-check"><input type="checkbox" value="p1"/> P1 - Immediate</label>
-          <label class="label-check"><input type="checkbox" value="p2"/> P2 - Urgent</label>
-          <label class="label-check"><input type="checkbox" value="p3"/> P3 - Normal</label>
-          <label class="label-check"><input type="checkbox" value="monitor"/> Monitor</label>
+          <label class="label-check"><input type="checkbox" id="label-p1" name="labels-pri" value="p1"/> P1 - Immediate</label>
+          <label class="label-check"><input type="checkbox" id="label-p2" name="labels-pri" value="p2"/> P2 - Urgent</label>
+          <label class="label-check"><input type="checkbox" id="label-p3" name="labels-pri" value="p3"/> P3 - Normal</label>
+          <label class="label-check"><input type="checkbox" id="label-monitor" name="labels-pri" value="monitor"/> Monitor</label>
         </div>
       </div>
     </div>
@@ -1865,6 +1865,7 @@ function initRouter() {
 
 // Navigate to section (called by router)
 function navigateToSection(section, param = null) {
+  console.log('[NetIntel] navigateToSection:', section);
   store.set('currentSection', section);
   store.set('selectedHost', param);
 
@@ -1880,7 +1881,7 @@ function navigateToSection(section, param = null) {
 
   // Section-specific initialization
   if (section === 'cleartext') renderCleartext();
-  if (section === 'topology') { initTopology(); renderTopology(); }
+  if (section === 'topology') { console.log('[NetIntel] calling initTopology and renderTopology'); initTopology(); renderTopology(); }
   if (section === 'timeline') { initTimeline(); renderTimeline(); }
 }
 
@@ -2541,8 +2542,10 @@ function initFilters() {
 
   // View toggle (Cards / Ports / Services)
   document.querySelectorAll('[data-view]').forEach(btn => {
+    console.log('[NetIntel] Setting up view button:', btn.dataset.view);
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
+      console.log('[NetIntel] View button clicked:', view);
       document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       switchEntityView(view);
@@ -2553,9 +2556,11 @@ function initFilters() {
 
 // Switch between Cards, Ports, and Services views
 function switchEntityView(view) {
+  console.log('[NetIntel] switchEntityView called with:', view);
   const cardView = document.getElementById('entity-grid');
   const portView = document.getElementById('port-agg-view');
   const serviceView = document.getElementById('service-agg-view');
+  console.log('[NetIntel] Views found:', !!cardView, !!portView, !!serviceView);
 
   cardView.style.display = view === 'cards' ? '' : 'none';
   portView.style.display = view === 'ports' ? '' : 'none';
@@ -2622,13 +2627,21 @@ function renderPortAggregation() {
 
 // Render service aggregation view
 function renderServiceAggregation() {
+  console.log('[NetIntel] renderServiceAggregation called');
   const grid = document.getElementById('service-agg-grid');
-  if (!grid || !state.data?.hosts) return;
+  if (!grid) { console.log('[NetIntel] service-agg-grid not found'); return; }
+  if (!state.data?.hosts) { console.log('[NetIntel] no hosts data'); return; }
+
+  console.log('[NetIntel] hosts count:', state.data.hosts.length);
+  const upHosts = state.data.hosts.filter(h => h.status === 'up');
+  console.log('[NetIntel] up hosts:', upHosts.length);
 
   // Aggregate services across all hosts
   const svcMap = {};
-  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-    (host.ports || []).filter(p => p.state === 'open' && p.svc).forEach(p => {
+  upHosts.forEach(host => {
+    const openPorts = (host.ports || []).filter(p => p.state === 'open' && p.svc);
+    console.log('[NetIntel] host', host.ip, 'open ports with svc:', openPorts.length, openPorts.map(p => p.svc));
+    openPorts.forEach(p => {
       const key = p.svc.toLowerCase();
       if (!svcMap[key]) {
         svcMap[key] = {
@@ -2645,6 +2658,7 @@ function renderServiceAggregation() {
   });
 
   // Convert Sets and sort by host count
+  console.log('[NetIntel] svcMap keys:', Object.keys(svcMap));
   const sorted = Object.values(svcMap)
     .map(s => ({
       ...s,
@@ -2654,6 +2668,7 @@ function renderServiceAggregation() {
     }))
     .sort((a, b) => b.hosts.length - a.hosts.length);
 
+  console.log('[NetIntel] sorted services:', sorted.length, sorted.map(s => s.service));
   grid.innerHTML = sorted.map(s => {
     const hostPreview = s.hosts.slice(0, 3).join(', ') + (s.hosts.length > 3 ? ` +${s.hosts.length - 3} more` : '');
     const portList = s.ports.slice(0, 5).join(', ') + (s.ports.length > 5 ? '...' : '');
@@ -3565,11 +3580,13 @@ function initTopology() {
 }
 
 function renderTopology() {
+  console.log('[NetIntel] renderTopology called');
   const container = document.getElementById('topo-canvas');
-  if (!container) return;
+  if (!container) { console.log('[NetIntel] topo-canvas not found'); return; }
 
   const layoutSelect = document.getElementById('topo-layout');
   const layout = layoutSelect ? layoutSelect.value : 'hierarchical';
+  console.log('[NetIntel] layout:', layout);
 
   // Collect all unique nodes and edges from traceroute data
   const nodes = new Map();
@@ -3578,7 +3595,9 @@ function renderTopology() {
   // Add scanner node (assumed to be at hop 0)
   nodes.set('scanner', { id: 'scanner', type: 'scanner', label: 'Scanner' });
 
-  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+  const upHosts = state.data.hosts.filter(h => h.status === 'up');
+  console.log('[NetIntel] topology up hosts:', upHosts.length);
+  upHosts.forEach(host => {
     // Add target node
     nodes.set(host.ip, {
       id: host.ip,
@@ -3619,7 +3638,10 @@ function renderTopology() {
   });
 
   // Calculate positions based on layout
+  console.log('[NetIntel] topology nodes:', nodes.size, Array.from(nodes.keys()));
+  console.log('[NetIntel] topology edges:', edges.length);
   const positions = calculateLayout(nodes, edges, layout, container);
+  console.log('[NetIntel] calculated positions:', positions);
 
   // Clear and render
   container.innerHTML = '';
