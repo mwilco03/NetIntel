@@ -172,27 +172,48 @@ Then load `vuln-db.json` in the NetIntel UI via Tools > Vuln Database.
 
 ## Risk Scoring
 
-Ports are weighted based on security impact:
+Risk is calculated using **logarithmic diminishing returns** - the highest-risk port contributes full weight, additional ports contribute progressively less. This ensures one critical exposure scores higher than many minor ones.
 
-| Weight | Ports |
-|--------|-------|
-| 10 | 23 (Telnet) |
-| 9 | 512, 513, 514 (r-services) |
-| 8 | 445 (SMB), 1433 (MSSQL), 1521 (Oracle), 27017 (MongoDB) |
-| 7 | 21 (FTP), 139 (NetBIOS), 161 (SNMP), 3306 (MySQL), 3389 (RDP), 5900 (VNC), 6379 (Redis) |
-| 6 | 110 (POP3), 135 (MSRPC), 143 (IMAP), 389 (LDAP), 5432 (PostgreSQL) |
+**Formula:** `risk = highest_weight + Σ(weight[i] / log₂(i + 2))` for i > 0
 
-Additional +3 for cleartext protocols. Score capped at 100.
+### Port Weights
+
+| Weight | Category | Ports |
+|--------|----------|-------|
+| **10** | Critical RCE | 23 (Telnet), 2375/4243 (Docker API), 6443 (K8s API), 10250 (Kubelet), 2379 (etcd), 623 (IPMI) |
+| **9** | Legacy/NoAuth | 512-514 (r-services), 6379 (Redis) |
+| **8** | Database/Admin | 445 (SMB), 1433 (MSSQL), 1521 (Oracle), 27017 (MongoDB), 2376 (Docker TLS), 5985/5986 (WinRM), 9200 (Elasticsearch), 1099 (Java RMI) |
+| **7** | Common Targets | 21 (FTP), 139 (NetBIOS), 161 (SNMP), 3306 (MySQL), 3389 (RDP), 5900 (VNC), 10000 (Webmin) |
+| **6** | Sensitive | 110 (POP3), 135 (MSRPC), 143 (IMAP), 389 (LDAP), 5432 (PostgreSQL) |
+| **3** | Encrypted | 22 (SSH), 53 (DNS) |
+| **1-2** | Web | 80 (HTTP), 443 (HTTPS) |
+
+### Service-Name Detection
+
+Risk scoring uses **both port number AND service name** from nmap `-sV` detection. This catches services on non-standard ports:
+
+| Scenario | Detection |
+|----------|-----------|
+| HTTP on port 9999 | Detected via `service/@name="http"` → Cleartext flagged |
+| SSH on port 2222 | Detected via `service/@name="ssh"` → Risk weight 3 |
+| Redis on port 7777 | Detected via `service/@name="redis"` → Risk weight 9 |
+
+**Cleartext bonus:** +3 for unencrypted protocols (FTP, Telnet, HTTP, POP3, IMAP, SNMP, LDAP, etc.)
+
+**Score capped at 100.**
 
 ## File Structure
 
 ```
 NetIntel/
-├── nmap-intel.xsl      # Main stylesheet (single file, all features)
-├── README.md           # This file
+├── nmap-intel.xsl           # Main stylesheet (single file, all features)
+├── README.md                # This file
+├── Test.xml                 # Sample nmap scan for testing
 ├── tools/
-│   └── nvd-to-vulndb.py  # NVD API script for vuln database
-└── examples/           # Sample scans and reports (optional)
+│   └── nvd-to-vulndb.py     # NVD API script for vuln database
+└── examples/
+    ├── README.md            # Examples documentation
+    └── sample-vuln-db.json  # Sample CPE-to-CVE database for testing
 ```
 
 ## Browser Support

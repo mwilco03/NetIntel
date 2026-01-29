@@ -1,0 +1,35 @@
+{
+  "cpe:2.3:a:openbsd:openssh:7.4:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2017-15906", "severity": "MEDIUM", "description": "OpenSSH before 7.6 allows remote attackers to cause a denial of service"},
+    {"cve": "CVE-2018-15473", "severity": "MEDIUM", "description": "OpenSSH through 7.7 is prone to a user enumeration vulnerability"}
+  ],
+  "cpe:2.3:a:openbsd:openssh:8.0:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2019-16905", "severity": "HIGH", "description": "OpenSSH 7.7 through 8.3 has an integer overflow in XMSS key parsing"}
+  ],
+  "cpe:2.3:a:apache:http_server:2.4.29:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2018-1312", "severity": "CRITICAL", "description": "Apache HTTP Server 2.4.x allows remote attackers to execute arbitrary code"},
+    {"cve": "CVE-2019-0211", "severity": "HIGH", "description": "Apache HTTP Server 2.4.17 to 2.4.38 privilege escalation"}
+  ],
+  "cpe:2.3:a:microsoft:iis:10.0:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2021-31166", "severity": "CRITICAL", "description": "HTTP Protocol Stack Remote Code Execution Vulnerability"}
+  ],
+  "cpe:2.3:a:nginx:nginx:1.14.0:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2019-20372", "severity": "MEDIUM", "description": "NGINX before 1.17.7 allows HTTP request smuggling"}
+  ],
+  "cpe:2.3:a:mysql:mysql:5.7:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2020-2574", "severity": "MEDIUM", "description": "MySQL Server vulnerability allows unauthenticated attacker network access"},
+    {"cve": "CVE-2020-14812", "severity": "MEDIUM", "description": "MySQL Server Optimizer vulnerability"}
+  ],
+  "cpe:2.3:a:postgresql:postgresql:11:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2019-10164", "severity": "HIGH", "description": "PostgreSQL versions before 11.4 stack-based buffer overflow"}
+  ],
+  "cpe:2.3:a:redis:redis:5.0:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2020-14147", "severity": "HIGH", "description": "Redis before 6.0.3 allows remote code execution via crafted string"}
+  ],
+  "cpe:2.3:a:samba:samba:4.10:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2020-1472", "severity": "CRITICAL", "description": "Zerologon - Netlogon elevation of privilege vulnerability"}
+  ],
+  "cpe:2.3:a:vsftpd:vsftpd:3.0.3:*:*:*:*:*:*:*": [
+    {"cve": "CVE-2021-3618", "severity": "HIGH", "description": "ALPACA attack allows cross-protocol attacks on servers with compatible certificates"}
+  ]
+}
