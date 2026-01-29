@@ -2,6 +2,10 @@
 
 A self-contained XSL stylesheet that transforms Nmap XML output into an interactive, air-gapped HTML intelligence platform for SOC analysts and network managers.
 
+## [>>> Live Demo <<<](https://mwilco03.github.io/NetIntel/examples/report.html)
+
+*Click above to see NetIntel in action - no install required*
+
 ## Test Drive (30 seconds)
 
 Try it instantly with the included sample scan:
@@ -213,7 +217,29 @@ NetIntel/
 │   └── nvd-to-vulndb.py     # NVD API script for vuln database
 └── examples/
     ├── README.md            # Examples documentation
+    ├── report.html          # Live demo report (GitHub Pages)
     └── sample-vuln-db.json  # Sample CPE-to-CVE database for testing
+```
+
+## GitHub Pages Demo
+
+The [live demo](https://mwilco03.github.io/NetIntel/examples/report.html) is hosted via GitHub Pages from the `examples/report.html` file.
+
+**To deploy your own:**
+
+1. Fork this repository
+2. Go to Settings > Pages
+3. Set Source to "Deploy from a branch"
+4. Select `main` branch and `/ (root)` folder
+5. Your demo will be at `https://YOUR_USERNAME.github.io/NetIntel/examples/report.html`
+
+**To update the demo report:**
+
+```bash
+xsltproc nmap-intel.xsl your-scan.xml > examples/report.html
+git add examples/report.html
+git commit -m "Update demo report"
+git push
 ```
 
 ## Browser Support

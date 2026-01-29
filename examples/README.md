@@ -4,6 +4,16 @@ Sample files for testing and demonstration.
 
 ## Files
 
+### report.html
+
+Pre-generated report from Test.xml for the **[Live Demo](https://mwilco03.github.io/NetIntel/examples/report.html)**.
+
+This file is deployed via GitHub Pages. To regenerate:
+
+```bash
+xsltproc ../nmap-intel.xsl ../Test.xml > report.html
+```
+
 ### sample-vuln-db.json
 
 A sample CPE-to-CVE vulnerability database for testing the CVE matching feature.
