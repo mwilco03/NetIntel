@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -412,7 +412,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 <li><a href="#" data-action="vuln-db">* Vuln Database</a></li>
 </ul></nav><main class="main"><header class="header"><div class="header-left"><div class="search"><input type="text" id="search" placeholder="Search: port:22 service:ssh os:windows tag:ckt cve:CVE-* risk:&gt;50"></div></div>
 <div class="header-right">
-<span style="font-size:.8rem;color:#8b949e;">Scan: Wed Jan 28 16:39:09 2026</span><button class="btn btn-ghost btn-sm" data-action="share" title="Copy shareable link">[+] Share</button><button class="btn btn-secondary btn-sm" data-action="import">Import</button><button class="btn btn-primary btn-sm" data-action="export">Export</button>
+<span style="font-size:.8rem;color:#8b949e;">Scan: Wed Jan 28 16:39:09 2026</span><button class="btn btn-ghost btn-sm" data-action="help" title="Help &amp; Legend">[?] Help</button><button class="btn btn-ghost btn-sm" data-action="share" title="Copy shareable link">[+] Share</button><button class="btn btn-secondary btn-sm" data-action="import">^ Import</button><button class="btn btn-primary btn-sm" data-action="export">v Export</button>
 </div></header><div class="content">
 <section class="section active" data-section="dashboard"><div class="section-header"><h2 class="section-title">Executive Summary</h2></div>
 <div class="stats">
@@ -757,7 +757,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div>
 <div class="source-card">
 <div class="source-head">
-<span style="font-size:1.25rem;">⦿</span><span class="source-name">Nmap Scan (Primary)</span>
+<span style="font-size:1.25rem;">@</span><span class="source-name">Nmap Scan (Primary)</span>
 </div>
 <div class="source-meta">
 <div>
@@ -788,10 +788,10 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 <div class="class-banner" id="class-bottom" style="background-color:#007a33">UNCLASSIFIED</div>
 <div class="modal-overlay" id="import-modal"><div class="modal">
 <div class="modal-head">
-<span class="modal-title">Import Additional Data</span><button class="modal-close" data-close-modal="">×</button>
+<span class="modal-title">Import Additional Data</span><button class="modal-close" data-close-modal="">x</button>
 </div>
 <div class="modal-body"><div class="drop-zone" id="drop-zone">
-<div style="font-size:2rem;margin-bottom:1rem;">↑</div>
+<div style="font-size:2rem;margin-bottom:1rem;">^</div>
 <div class="drop-zone-text">Drop file here or click to browse</div>
 <div class="drop-zone-hint">Supports: Nmap XML</div>
 <input type="file" id="file-input" accept=".xml" style="display:none;">
@@ -800,7 +800,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div></div>
 <div class="modal-overlay" id="export-modal"><div class="modal">
 <div class="modal-head">
-<span class="modal-title">Export Data</span><button class="modal-close" data-close-modal="">×</button>
+<span class="modal-title">Export Data</span><button class="modal-close" data-close-modal="">x</button>
 </div>
 <div class="modal-body">
 <p style="font-size:.8rem;color:#8b949e;margin-bottom:.75rem">Scan Data</p>
@@ -817,7 +817,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div></div>
 <div class="modal-overlay" id="vuln-modal"><div class="modal">
 <div class="modal-head">
-<span class="modal-title">Vulnerability Database</span><button class="modal-close" data-close-modal="">×</button>
+<span class="modal-title">Vulnerability Database</span><button class="modal-close" data-close-modal="">x</button>
 </div>
 <div class="modal-body">
 <p style="color:#8b949e;margin-bottom:1rem;font-size:.875rem;">
@@ -833,18 +833,54 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div>
 <div class="modal-foot"><button class="btn btn-secondary" data-close-modal="">Close</button></div>
 </div></div>
+<div class="modal-overlay" id="help-modal"><div class="modal" style="max-width:600px">
+<div class="modal-head">
+<span class="modal-title">Quick Reference</span><button class="modal-close" data-close-modal="">x</button>
+</div>
+<div class="modal-body" style="font-size:.85rem;">
+<div style="margin-bottom:1.5rem;">
+<h4 style="color:#58a6ff;margin-bottom:.5rem;font-size:.9rem;">Host Icons</h4>
+<div style="display:grid;grid-template-columns:60px 1fr;gap:.25rem .75rem;">
+<span style="color:#0078d4;font-family:monospace;">[W]</span><span>Windows</span><span style="color:#ffa500;font-family:monospace;">[L]</span><span>Linux / Unix</span><span style="color:#58a6ff;font-family:monospace;">[N]</span><span>Network Device (router, switch)</span><span style="color:#8b949e;font-family:monospace;">[=]</span><span>Unknown / Unidentified</span>
+</div>
+</div>
+<div style="margin-bottom:1.5rem;">
+<h4 style="color:#58a6ff;margin-bottom:.5rem;font-size:.9rem;">Port Colors</h4>
+<div style="display:grid;grid-template-columns:60px 1fr;gap:.25rem .75rem;">
+<span style="color:#238636;">green</span><span>Open port</span><span style="color:#d29922;">yellow</span><span>Cleartext protocol (FTP, Telnet, HTTP)</span><span style="color:#f85149;">red</span><span>Critical admin port (Docker, K8s)</span>
+</div>
+</div>
+<div style="margin-bottom:1.5rem;">
+<h4 style="color:#58a6ff;margin-bottom:.5rem;font-size:.9rem;">Tag Categories</h4>
+<div style="display:grid;grid-template-columns:100px 1fr;gap:.25rem .75rem;">
+<span style="color:#d29922;">Criticality</span><span>CKT, Mission Critical, Business Critical</span><span style="color:#f85149;">Tactical</span><span>Crown Jewel, Choke Point, Pivot Point</span><span style="color:#58a6ff;">Environment</span><span>Production, Staging, Development</span><span style="color:#a371f7;">Priority</span><span>P1-Immediate, P2-Urgent, P3-Normal</span>
+</div>
+</div>
+<div style="margin-bottom:1rem;">
+<h4 style="color:#58a6ff;margin-bottom:.5rem;font-size:.9rem;">Search Syntax</h4>
+<div style="font-family:monospace;font-size:.8rem;background:#161b22;padding:.75rem;border-radius:6px;">
+            port:22 port:80-443<br>
+            service:ssh service:http<br>
+            os:windows os:linux<br>
+            tag:ckt tag:crown<br>
+            cve:CVE-2024-*<br>
+            risk:&gt;50 risk:&lt;25
+          </div>
+</div>
+</div>
+<div class="modal-foot"><button class="btn btn-secondary" data-close-modal="">Close</button></div>
+</div></div>
 <div class="ctx-menu" id="ctx-menu">
 <div class="ctx-label">Criticality</div>
-<button class="ctx-item" data-tag="ckt">◆ CKT</button><button class="ctx-item" data-tag="mission-critical">▲ Mission Critical</button><div class="ctx-div"></div>
+<button class="ctx-item" data-tag="ckt"># CKT</button><button class="ctx-item" data-tag="mission-critical">! Mission Critical</button><div class="ctx-div"></div>
 <div class="ctx-label">Tactical</div>
 <button class="ctx-item" data-tag="crown">* Crown Jewel</button><button class="ctx-item" data-tag="choke">o Choke Point</button><button class="ctx-item" data-tag="pivot">&lt;&gt; Pivot Point</button><div class="ctx-div"></div>
-<button class="ctx-item" data-action="annotate">✎ Full Annotation...</button><div class="ctx-div"></div>
-<button class="ctx-item ctx-danger" data-tag="clear">✕ Clear All</button>
+<button class="ctx-item" data-action="annotate">... Full Annotation</button><div class="ctx-div"></div>
+<button class="ctx-item ctx-danger" data-tag="clear">x Clear All</button>
 </div>
 <div class="modal-overlay" id="annotate-modal"><div class="modal" style="max-width:560px">
 <div class="modal-head">
-<span class="modal-title">Asset Annotation</span>
-<button class="modal-close" data-close-modal="">×</button>
+<span class="modal-title">Asset Annotation</span><button class="modal-close" data-close-modal="">x</button>
 </div>
 <div class="modal-body">
 <div id="annotate-info" style="margin-bottom:1rem;padding:.75rem;background:#161b22;border-radius:6px;font-family:monospace;font-size:.85rem"></div>
@@ -856,22 +892,22 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div>
 <div class="form-group" style="margin-bottom:.75rem">
 <label style="display:block;font-size:.75rem;color:#d29922;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Criticality</label><div id="annotate-labels-crit" class="label-group">
-<label class="label-check"><input type="checkbox" value="ckt"> CKT (Cyber Key Terrain)</label><label class="label-check"><input type="checkbox" value="mission-critical"> Mission Critical</label><label class="label-check"><input type="checkbox" value="mission-essential"> Mission Essential</label><label class="label-check"><input type="checkbox" value="business-critical"> Business Critical</label>
+<label class="label-check"><input type="checkbox" id="label-ckt" name="labels-crit" value="ckt"> CKT (Cyber Key Terrain)</label><label class="label-check"><input type="checkbox" id="label-mission-critical" name="labels-crit" value="mission-critical"> Mission Critical</label><label class="label-check"><input type="checkbox" id="label-mission-essential" name="labels-crit" value="mission-essential"> Mission Essential</label><label class="label-check"><input type="checkbox" id="label-business-critical" name="labels-crit" value="business-critical"> Business Critical</label>
 </div>
 </div>
 <div class="form-group" style="margin-bottom:.75rem">
 <label style="display:block;font-size:.75rem;color:#f85149;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Tactical</label><div id="annotate-labels-tact" class="label-group">
-<label class="label-check"><input type="checkbox" value="crown"> Crown Jewel</label><label class="label-check"><input type="checkbox" value="choke"> Choke Point</label><label class="label-check"><input type="checkbox" value="key"> Key Terrain</label><label class="label-check"><input type="checkbox" value="pivot"> Pivot Point</label><label class="label-check"><input type="checkbox" value="attack-surface"> Attack Surface</label><label class="label-check"><input type="checkbox" value="egress"> Egress Point</label>
+<label class="label-check"><input type="checkbox" id="label-crown" name="labels-tact" value="crown"> Crown Jewel</label><label class="label-check"><input type="checkbox" id="label-choke" name="labels-tact" value="choke"> Choke Point</label><label class="label-check"><input type="checkbox" id="label-key" name="labels-tact" value="key"> Key Terrain</label><label class="label-check"><input type="checkbox" id="label-pivot" name="labels-tact" value="pivot"> Pivot Point</label><label class="label-check"><input type="checkbox" id="label-attack-surface" name="labels-tact" value="attack-surface"> Attack Surface</label><label class="label-check"><input type="checkbox" id="label-egress" name="labels-tact" value="egress"> Egress Point</label>
 </div>
 </div>
 <div class="form-group" style="margin-bottom:.75rem">
 <label style="display:block;font-size:.75rem;color:#58a6ff;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Environment</label><div id="annotate-labels-env" class="label-group">
-<label class="label-check"><input type="checkbox" value="production"> Production</label><label class="label-check"><input type="checkbox" value="staging"> Staging</label><label class="label-check"><input type="checkbox" value="development"> Development</label><label class="label-check"><input type="checkbox" value="test"> Test</label><label class="label-check"><input type="checkbox" value="deprecated"> Deprecated</label>
+<label class="label-check"><input type="checkbox" id="label-production" name="labels-env" value="production"> Production</label><label class="label-check"><input type="checkbox" id="label-staging" name="labels-env" value="staging"> Staging</label><label class="label-check"><input type="checkbox" id="label-development" name="labels-env" value="development"> Development</label><label class="label-check"><input type="checkbox" id="label-test" name="labels-env" value="test"> Test</label><label class="label-check"><input type="checkbox" id="label-deprecated" name="labels-env" value="deprecated"> Deprecated</label>
 </div>
 </div>
 <div class="form-group">
 <label style="display:block;font-size:.75rem;color:#a371f7;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Priority</label><div id="annotate-labels-pri" class="label-group">
-<label class="label-check"><input type="checkbox" value="p1"> P1 - Immediate</label><label class="label-check"><input type="checkbox" value="p2"> P2 - Urgent</label><label class="label-check"><input type="checkbox" value="p3"> P3 - Normal</label><label class="label-check"><input type="checkbox" value="monitor"> Monitor</label>
+<label class="label-check"><input type="checkbox" id="label-p1" name="labels-pri" value="p1"> P1 - Immediate</label><label class="label-check"><input type="checkbox" id="label-p2" name="labels-pri" value="p2"> P2 - Urgent</label><label class="label-check"><input type="checkbox" id="label-p3" name="labels-pri" value="p3"> P3 - Normal</label><label class="label-check"><input type="checkbox" id="label-monitor" name="labels-pri" value="monitor"> Monitor</label>
 </div>
 </div>
 </div>
@@ -884,7 +920,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
   "scanInfo": {
     "scanner": "nmap",
     "version": "7.95",
-    "args": "'C:\\Program Files (x86)\\Nmap\\nmap.exe' -T5 -p- -A -oX Test.xml 192.168.6.0/24",
+    "args": "\"C:\\\\Program Files (x86)\\\\Nmap\\\\nmap.exe\" -T5 -p- -A -oX Test.xml 192.168.6.0/24",
     "start": "1769636349",
     "startstr": "Wed Jan 28 16:39:09 2026",
     "endstr": "Wed Jan 28 16:57:26 2026"
@@ -903,7 +939,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       "status": "up",
       "os": [{"name":"Linux 4.15 - 5.19","accuracy":100},{"name":"OpenWrt 21.02 (Linux 5.4)","accuracy":100},{"name":"MikroTik RouterOS 7.2 - 7.5 (Linux 5.6.3)","accuracy":100}],
       "osFingerprint": "",
-      "ports": [{"port":22,"proto":"tcp","state":"open","svc":"ssh","product":"OpenSSH","version":"10.0p2 Debian 7","cpe":"cpe:/a:openbsd:openssh:10.0p2","fp":"","scripts":[]},{"port":9081,"proto":"tcp","state":"open","svc":"cisco-aqos","product":"","version":"","cpe":"","fp":"","scripts":[{"id":"fingerprint-strings","output":"   GetRequest, HTTPOptions:      HTTP/1.1 200 OK     Content-Type: application/json     Content-Length: 652     Connection: close     Access-Control-Allow-Origin: *     'status': 'degraded',     'timestamp': 1769637253,     'uptime_seconds': 199285,     'subsystems': {     'profinet': {'status': 'degraded', 'message': 'Waiting for controller connection'},     'sensors': {'status': 'ok', 'message': 'All sensors operational'},     'actuators': {'status': 'ok', 'message': 'All actuators operational'},     'database': {'status': 'ok', 'message': 'Database connected'},     'alarms': {'status': 'ok', 'message': 'No active alarms'}     'metrics': {     'active_sensors': 1,     'failed_sensors': 0,     'active_alarms': 0,     'active_actuators': 0,     'cpu_usage_percent': 1.7,     'memory_usage_percent': 15.7"}]}],
+      "ports": [{"port":22,"proto":"tcp","state":"open","svc":"ssh","product":"OpenSSH","version":"10.0p2 Debian 7","cpe":"cpe:/a:openbsd:openssh:10.0p2","fp":"","scripts":[]},{"port":9081,"proto":"tcp","state":"open","svc":"cisco-aqos","product":"","version":"","cpe":"","fp":"SF-Port9081-TCP:V=7.95%I=7%D=1/28%Time=697A858E%P=i686-pc-windows-windows%r(GetRequest,307,\"HTTP/1\\.1\\x20200\\x20OK\\r\\nContent-Type:\\x20application/json\\r\\nContent-Length:\\x20652\\r\\nConnection:\\x20close\\r\\nAccess-Control-Allow-Origin:\\x20\\*\\r\\n\\r\\n{\\n\\x20\\x20\\\"status\\\":\\x20\\\"degraded\\\",\\n\\x20\\x20\\\"timestamp\\\":\\x201769637253,\\n\\x20\\x20\\\"uptime_seconds\\\":\\x20199285,\\n\\x20\\x20\\\"subsystems\\\":\\x20{\\n\\x20\\x20\\x20\\x20\\\"profinet\\\":\\x20{\\\"status\\\":\\x20\\\"degraded\\\",\\x20\\\"message\\\":\\x20\\\"Waiting\\x20for\\x20controller\\x20connection\\\"},\\n\\x20\\x20\\x20\\x20\\\"sensors\\\":\\x20{\\\"status\\\":\\x20\\\"ok\\\",\\x20\\\"message\\\":\\x20\\\"All\\x20sensors\\x20operational\\\"},\\n\\x20\\x20\\x20\\x20\\\"actuators\\\":\\x20{\\\"status\\\":\\x20\\\"ok\\\",\\x20\\\"message\\\":\\x20\\\"All\\x20actuators\\x20operational\\\"},\\n\\x20\\x20\\x20\\x20\\\"database\\\":\\x20{\\\"status\\\":\\x20\\\"ok\\\",\\x20\\\"message\\\":\\x20\\\"Database\\x20connected\\\"},\\n\\x20\\x20\\x20\\x20\\\"alarms\\\":\\x20{\\\"status\\\":\\x20\\\"ok\\\",\\x20\\\"message\\\":\\x20\\\"No\\x20active\\x20alarms\\\"}\\n\\x20\\x20},\\n\\x20\\x20\\\"metrics\\\":\\x20{\\n\\x20\\x20\\x20\\x20\\\"active_sensors\\\":\\x201,\\n\\x20\\x20\\x20\\x20\\\"failed_sensors\\\":\\x200,\\n\\x20\\x20\\x20\\x20\\\"active_alarms\\\":\\x200,\\n\\x20\\x20\\x20\\x20\\\"active_actuators\\\":\\x200,\\n\\x20\\x20\\x20\\x20\\\"cpu_usage_percent\\\":\\x201\\.7,\\n\\x20\\x20\\x20\\x20\\\"memory_usage_percent\\\":\\x2015\\.7\\n\\x20\\x20}\\n}\\n\")%r(HTTPOptions,307,\"HTTP/1\\.1\\x20200\\x20OK\\r\\nContent-Type:\\x20application/json\\r\\nContent-Length:\\x20652\\r\\nConnection:\\x20close\\r\\nAccess-Control-Allow-Origin:\\x20\\*\\r\\n\\r\\n{\\n\\x20\\x20\\\"status\\\":\\x20\\\"degraded\\\",\\n\\x20\\x20\\\"timestamp\\\":\\x201769637253,\\n\\x20\\x20\\\"uptime_seconds\\\":\\x20199285,\\n\\x20\\x20\\\"subsystems\\\":\\x20{\\n\\x20\\x20\\x20\\x20\\\"profinet\\\":\\x20{\\\"status\\\":\\x20\\\"degraded\\\",\\x20\\\"message\\\":\\x20\\\"Waiting\\x20for\\x20controller\\x20connection\\\"},\\n\\x20\\x20\\x20\\x20\\\"sensors\\\":\\x20{\\\"status\\\":\\x20\\\"ok\\\",\\x20\\\"message\\\":\\x20\\\"All\\x20sensors\\x20operational\\\"},\\n\\x20\\x20\\x20\\x20\\\"actuators\\\":\\x20{\\\"status\\\":\\x20\\\"ok\\\",\\x20\\\"message\\\":\\x20\\\"All\\x20actuators\\x20operational\\\"},\\n\\x20\\x20\\x20\\x20\\\"database\\\":\\x20{\\\"status\\\":\\x20\\\"ok\\\",\\x20\\\"message\\\":\\x20\\\"Database\\x20connected\\\"},\\n\\x20\\x20\\x20\\x20\\\"alarms\\\":\\x20{\\\"status\\\":\\x20\\\"ok\\\",\\x20\\\"message\\\":\\x20\\\"No\\x20active\\x20alarms\\\"}\\n\\x20\\x20},\\n\\x20\\x20\\\"metrics\\\":\\x20{\\n\\x20\\x20\\x20\\x20\\\"active_sensors\\\":\\x201,\\n\\x20\\x20\\x20\\x20\\\"failed_sensors\\\":\\x200,\\n\\x20\\x20\\x20\\x20\\\"active_alarms\\\":\\x200,\\n\\x20\\x20\\x20\\x20\\\"active_actuators\\\":\\x200,\\n\\x20\\x20\\x20\\x20\\\"cpu_usage_percent\\\":\\x201\\.7,\\n\\x20\\x20\\x20\\x20\\\"memory_usage_percent\\\":\\x2015\\.7\\n\\x20\\x20}\\n}\\n\");","scripts":[{"id":"fingerprint-strings","output":"\n  GetRequest, HTTPOptions: \n    HTTP/1.1 200 OK\n    Content-Type: application/json\n    Content-Length: 652\n    Connection: close\n    Access-Control-Allow-Origin: *\n    \"status\": \"degraded\",\n    \"timestamp\": 1769637253,\n    \"uptime_seconds\": 199285,\n    \"subsystems\": {\n    \"profinet\": {\"status\": \"degraded\", \"message\": \"Waiting for controller connection\"},\n    \"sensors\": {\"status\": \"ok\", \"message\": \"All sensors operational\"},\n    \"actuators\": {\"status\": \"ok\", \"message\": \"All actuators operational\"},\n    \"database\": {\"status\": \"ok\", \"message\": \"Database connected\"},\n    \"alarms\": {\"status\": \"ok\", \"message\": \"No active alarms\"}\n    \"metrics\": {\n    \"active_sensors\": 1,\n    \"failed_sensors\": 0,\n    \"active_alarms\": 0,\n    \"active_actuators\": 0,\n    \"cpu_usage_percent\": 1.7,\n    \"memory_usage_percent\": 15.7"}]}],
       "hostscripts": [],
       "trace": [{"ttl":1,"ip":"192.168.6.7","rtt":"0.30","host":""}]
     },
@@ -956,10 +992,53 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       "trace": []
     }
   ]
-}</script><script>
+}
+  </script><script>
 // === CONSTANTS ===
+// Port-based lookups (fallback when service detection unavailable)
 const CLEARTEXT = {21:'FTP',23:'Telnet',25:'SMTP',80:'HTTP',110:'POP3',143:'IMAP',161:'SNMP',389:'LDAP',513:'rlogin',514:'RSH',1433:'MSSQL',3306:'MySQL',5432:'PostgreSQL',8080:'HTTP-Alt'};
 const RISK_WEIGHTS = {21:7,22:3,23:10,25:4,53:3,80:2,110:6,111:5,135:6,139:7,143:6,161:7,389:6,443:1,445:8,512:9,513:9,514:9,1433:8,1521:8,3306:7,3389:7,5432:6,5900:7,6379:9,27017:8,2375:10,2376:8,4243:10,6443:10,10250:10,10255:6,2379:10,8500:8,9200:8,5985:8,5986:8,623:10,1099:8,10000:7,9000:8,8291:8,50000:8,11211:8};
+
+// Service-name-based lookups (from nmap -sV service detection, matches nmap-services)
+// These detect services on non-standard ports (e.g., HTTP on 9999, SSH on 2222)
+const CLEARTEXT_SVC = {
+  'http':'HTTP','http-alt':'HTTP','http-proxy':'HTTP','http-mgmt':'HTTP',
+  'ftp':'FTP','ftp-data':'FTP',
+  'telnet':'Telnet',
+  'smtp':'SMTP','submission':'SMTP',
+  'pop3':'POP3','pop2':'POP2',
+  'imap':'IMAP','imap3':'IMAP',
+  'snmp':'SNMP','snmptrap':'SNMP',
+  'ldap':'LDAP',
+  'rlogin':'rlogin','rsh':'RSH','rexec':'rexec',
+  'mysql':'MySQL','ms-sql-s':'MSSQL','oracle-tns':'Oracle','postgresql':'PostgreSQL',
+  'redis':'Redis','memcache':'Memcached','mongodb':'MongoDB',
+  'vnc':'VNC','vnc-http':'VNC',
+  'tftp':'TFTP','finger':'Finger','nntp':'NNTP','gopher':'Gopher'
+};
+
+const RISK_SVC = {
+  // Critical (10) - immediate compromise vectors
+  'telnet':10,'rexec':10,'rsh':10,'rlogin':10,
+  'docker':10,'kubernetes':10,'etcd':10,'ipmi':10,
+  // Very High (9) - often no auth, RCE possible
+  'redis':9,'memcache':9,'mongod':9,'mongodb':9,
+  // High (8) - database/admin exposure
+  'ms-sql-s':8,'oracle-tns':8,'mysql':7,'postgresql':6,
+  'smb':8,'microsoft-ds':8,'netbios-ssn':7,
+  'winrm':8,'wsman':8,'msrpc':6,
+  'vnc':7,'vnc-http':7,'x11':7,
+  'rdp':7,'ms-wbt-server':7,
+  // Medium (5-6) - cleartext credentials
+  'ftp':7,'ftp-data':5,
+  'smtp':4,'submission':4,'pop3':6,'pop2':6,'imap':6,'imap3':6,
+  'ldap':6,'snmp':7,'snmptrap':5,
+  'finger':5,'nntp':4,'gopher':4,'tftp':5,
+  // Low (1-3) - encrypted or low risk
+  'ssh':3,'domain':3,'dns':3,
+  'http':2,'http-alt':2,'http-proxy':2,
+  'https':1,'ssl':1,'tls':1
+};
 
 // Admin/Management ports by category - high risk if exposed
 const ADMIN_PORTS = {
@@ -1618,18 +1697,16 @@ store.subscribe('subnetMask', (v) => { subnetMask = v; });
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[NetIntel] Starting initialization...');
-  try { loadState(); console.log('[NetIntel] loadState OK'); } catch(e) { console.error('[NetIntel] loadState FAILED:', e); }
-  try { migrateTags(); console.log('[NetIntel] migrateTags OK'); } catch(e) { console.error('[NetIntel] migrateTags FAILED:', e); }
-  try { initIcons(); console.log('[NetIntel] initIcons OK'); } catch(e) { console.error('[NetIntel] initIcons FAILED:', e); }
-  try { initNav(); console.log('[NetIntel] initNav OK'); } catch(e) { console.error('[NetIntel] initNav FAILED:', e); }
-  try { initModals(); console.log('[NetIntel] initModals OK'); } catch(e) { console.error('[NetIntel] initModals FAILED:', e); }
-  try { initContextMenu(); console.log('[NetIntel] initContextMenu OK'); } catch(e) { console.error('[NetIntel] initContextMenu FAILED:', e); }
-  try { initDropZones(); console.log('[NetIntel] initDropZones OK'); } catch(e) { console.error('[NetIntel] initDropZones FAILED:', e); }
-  try { initFilters(); console.log('[NetIntel] initFilters OK'); } catch(e) { console.error('[NetIntel] initFilters FAILED:', e); }
-  try { initRouter(); console.log('[NetIntel] initRouter OK'); } catch(e) { console.error('[NetIntel] initRouter FAILED:', e); }
-  try { render(); console.log('[NetIntel] render OK'); } catch(e) { console.error('[NetIntel] render FAILED:', e); }
-  console.log('[NetIntel] Initialized with', state.data?.hosts?.length || 0, 'hosts');
+  loadState();
+  migrateTags();
+  initIcons();
+  initNav();
+  initModals();
+  initContextMenu();
+  initDropZones();
+  initFilters();
+  initRouter();
+  render();
 });
 
 // Initialize router with routes
@@ -1680,6 +1757,13 @@ function navigateToSection(section, param = null) {
   document.querySelectorAll('[data-section]').forEach(s => {
     s.classList.toggle('active', s.dataset.section === section);
   });
+
+  // Clear search when leaving entities page (search only applies there)
+  const searchEl = document.getElementById('search');
+  if (section !== 'entities' &amp;&amp; searchEl &amp;&amp; searchEl.value) {
+    searchEl.value = '';
+    searchEl.dispatchEvent(new Event('input'));
+  }
 
   // Section-specific initialization
   if (section === 'cleartext') renderCleartext();
@@ -1786,6 +1870,7 @@ function handleAction(action) {
   if (action === 'import') document.getElementById('import-modal').classList.add('active');
   else if (action === 'export') document.getElementById('export-modal').classList.add('active');
   else if (action === 'vuln-db') document.getElementById('vuln-modal').classList.add('active');
+  else if (action === 'help') document.getElementById('help-modal').classList.add('active');
   else if (action === 'share') {
     const url = getShareableUrl();
     navigator.clipboard.writeText(url).then(() => {
@@ -1997,7 +2082,7 @@ function importVulnDb(file) {
       const cveCount = Object.values(db).reduce((sum, cves) => sum + cves.length, 0);
 
       document.getElementById('vuln-status').innerHTML =
-        `<p style="color:#3fb950;">✔ Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+        `<p style="color:#3fb950;">[OK] Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
 
       console.log('[NetIntel] Loaded vuln db with', cpeCount, 'CPEs');
     } catch (err) {
@@ -2315,14 +2400,41 @@ function findDominantService(host) {
   return dominant;
 }
 
+// Helper: get risk weight for a port (checks both port number and service name)
+function getPortRisk(p) {
+  const portWeight = RISK_WEIGHTS[p.port] || 0;
+  const svcWeight = p.svc ? (RISK_SVC[p.svc] || 0) : 0;
+  return Math.max(portWeight, svcWeight); // Use higher of the two
+}
+
+// Helper: check if port uses cleartext protocol
+function isCleartext(p) {
+  return !!(CLEARTEXT[p.port] || (p.svc && CLEARTEXT_SVC[p.svc]));
+}
+
+// Helper: get cleartext protocol name
+function getCleartextName(p) {
+  return CLEARTEXT[p.port] || (p.svc && CLEARTEXT_SVC[p.svc]) || null;
+}
+
 function calculateRisk(host) {
   const open = (host.ports || []).filter(p => p.state === 'open');
-  let risk = 0;
-  open.forEach(p => {
-    if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
-    if (CLEARTEXT[p.port]) risk += 3;
-  });
-  return Math.min(risk, 100);
+  // Calculate per-port risk using both port number and service name detection
+  const weights = open.map(p => {
+    const baseRisk = getPortRisk(p);
+    const cleartextBonus = isCleartext(p) ? 3 : 0;
+    return baseRisk + cleartextBonus;
+  }).filter(w => w > 0).sort((a, b) => b - a);
+
+  if (!weights.length) return 0;
+
+  // Logarithmic diminishing returns: highest risk at full value, rest diminish
+  // This ensures 1 critical port > many low-risk ports
+  let risk = weights[0];
+  for (let i = 1; i < weights.length; i++) {
+    risk += weights[i] / Math.log2(i + 2);
+  }
+  return Math.min(Math.round(risk), 100);
 }
 
 function initFilters() {
@@ -2384,7 +2496,8 @@ function renderPortAggregation() {
           product: p.product || '',
           hosts: [],
           isAdmin: !!ADMIN_PORTS[p.port],
-          isCleartext: !!CLEARTEXT[p.port]
+          isCleartext: isCleartext(p),
+          cleartextName: getCleartextName(p)
         };
       }
       portMap[p.port].hosts.push(host.ip);
@@ -2396,7 +2509,7 @@ function renderPortAggregation() {
 
   grid.innerHTML = sorted.map(p => {
     const adminInfo = ADMIN_PORTS[p.port];
-    const cleartextInfo = CLEARTEXT[p.port];
+    const cleartextInfo = p.cleartextName;
     const severity = adminInfo?.sev === 'critical' ? 'critical' : (adminInfo ? 'warning' : (cleartextInfo ? 'cleartext' : ''));
     const hostPreview = p.hosts.slice(0, 3).join(', ') + (p.hosts.length > 3 ? ` +${p.hosts.length - 3} more` : '');
 
@@ -2428,9 +2541,11 @@ function renderServiceAggregation() {
   const grid = document.getElementById('service-agg-grid');
   if (!grid || !state.data?.hosts) return;
 
+  const upHosts = state.data.hosts.filter(h => h.status === 'up');
+
   // Aggregate services across all hosts
   const svcMap = {};
-  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+  upHosts.forEach(host => {
     (host.ports || []).filter(p => p.state === 'open' && p.svc).forEach(p => {
       const key = p.svc.toLowerCase();
       if (!svcMap[key]) {
@@ -2456,13 +2571,13 @@ function renderServiceAggregation() {
       products: Array.from(s.products)
     }))
     .sort((a, b) => b.hosts.length - a.hosts.length);
-
   grid.innerHTML = sorted.map(s => {
     const hostPreview = s.hosts.slice(0, 3).join(', ') + (s.hosts.length > 3 ? ` +${s.hosts.length - 3} more` : '');
     const portList = s.ports.slice(0, 5).join(', ') + (s.ports.length > 5 ? '...' : '');
     const isCritical = s.ports.some(p => ADMIN_PORTS[p]?.sev === 'critical');
     const hasAdmin = s.ports.some(p => ADMIN_PORTS[p]);
-    const hasCleartext = s.ports.some(p => CLEARTEXT[p]);
+    // Check both port-based and service-name-based cleartext detection
+    const hasCleartext = s.ports.some(p => CLEARTEXT[p]) || CLEARTEXT_SVC[s.service];
     const severity = isCritical ? 'critical' : (hasAdmin ? 'warning' : (hasCleartext ? 'cleartext' : ''));
 
     return `
@@ -2557,7 +2672,7 @@ function applyFilterAndGroup() {
     if (host.status !== 'up') return false;
 
     const open = (host.ports || []).filter(p => p.state === 'open');
-    const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+    const hasCleartext = open.some(p => isCleartext(p));
     const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
     const risk = calculateRisk(host);
     const tagData = getAssetTags(host);
@@ -2685,7 +2800,7 @@ function renderVulnDbStatus() {
   if (state.vulnDb) {
     const cpeCount = Object.keys(state.vulnDb).length;
     const cveCount = Object.values(state.vulnDb).reduce((sum, cves) => sum + cves.length, 0);
-    el.innerHTML = `<p style="color:#3fb950;">✔ Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+    el.innerHTML = `<p style="color:#3fb950;">[OK] Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
   }
 }
 
@@ -2697,22 +2812,26 @@ function renderStats() {
 
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
     const open = (host.ports || []).filter(p => p.state === 'open');
-    open.forEach(p => { if (CLEARTEXT[p.port]) clearCount++; });
-    
-    let risk = 0;
+    open.forEach(p => { if (isCleartext(p)) clearCount++; });
+
+    // Collect weights with reasons for display (using service-aware detection)
     const reasons = [];
     open.forEach(p => {
-      if (RISK_WEIGHTS[p.port]) {
-        risk += RISK_WEIGHTS[p.port];
-        reasons.push({port:p.port, w:RISK_WEIGHTS[p.port]});
-      }
-      if (CLEARTEXT[p.port]) risk += 3;
+      const w = getPortRisk(p) + (isCleartext(p) ? 3 : 0);
+      if (w > 0) reasons.push({port: p.port, svc: p.svc, w});
     });
-    risk = Math.min(risk, 100);
+    reasons.sort((a, b) => b.w - a.w);
+
+    // Logarithmic diminishing returns
+    let risk = 0;
+    reasons.forEach((r, i) => {
+      risk += i === 0 ? r.w : r.w / Math.log2(i + 2);
+    });
+    risk = Math.min(Math.round(risk), 100);
     if (risk > 0) {
       totalRisk += risk;
       riskCount++;
-      risks.push({host, risk, reasons: reasons.sort((a,b) => b.w - a.w)});
+      risks.push({host, risk, reasons});
     }
   });
   
@@ -2726,8 +2845,8 @@ function renderStats() {
     const list = document.getElementById('cleartext-list');
     const items = [];
     state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-      (host.ports || []).filter(p => p.state === 'open' && CLEARTEXT[p.port]).forEach(p => {
-        items.push({ip: host.ip, port: p.port, name: CLEARTEXT[p.port]});
+      (host.ports || []).filter(p => p.state === 'open' && isCleartext(p)).forEach(p => {
+        items.push({ip: host.ip, port: p.port, name: getCleartextName(p), svc: p.svc});
       });
     });
     list.innerHTML = items.slice(0,5).map(i =>
@@ -2749,23 +2868,20 @@ function updateEntityCards() {
     const ip = card.dataset.ip;
     const host = state.data.hosts.find(h => h.ip === ip);
     if (!host) return;
-    
-    // Risk score
-    const open = (host.ports || []).filter(p => p.state === 'open');
-    let risk = 0;
-    open.forEach(p => {
-      if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
-      if (CLEARTEXT[p.port]) risk += 3;
-    });
-    risk = Math.min(risk, 100);
+
+    // Risk score (use central function)
+    const risk = calculateRisk(host);
     const riskEl = card.querySelector('[data-risk]');
     if (riskEl) riskEl.textContent = risk;
+    const open = (host.ports || []).filter(p => p.state === 'open');
     
-    // Cleartext ports
-    card.querySelectorAll('.port[data-port]').forEach(p => {
-      if (CLEARTEXT[parseInt(p.dataset.port)]) {
-        p.classList.remove('open');
-        p.classList.add('clear');
+    // Cleartext ports (check both port number and service name)
+    card.querySelectorAll('.port[data-port]').forEach(el => {
+      const portNum = parseInt(el.dataset.port);
+      const svcName = el.dataset.svc;
+      if (CLEARTEXT[portNum] || (svcName && CLEARTEXT_SVC[svcName])) {
+        el.classList.remove('open');
+        el.classList.add('clear');
       }
     });
     
@@ -2808,8 +2924,8 @@ function updateEntityTags() {
     const tagsEl = card.querySelector('.entity-tags');
     if (tagsEl) {
       let html = labels.map(t => `<span class="tag tag-${t}">${tagLabels[t] || t}</span>`).join('');
-      if (owner) html += `<span class="tag tag-owner" title="Owner: ${owner}">≡ƒæñ ${owner}</span>`;
-      if (notes) html += `<span class="tag tag-notes" title="${notes}">≡ƒô¥</span>`;
+      if (owner) html += `<span class="tag tag-owner" title="Owner: ${owner}">@ ${owner}</span>`;
+      if (notes) html += `<span class="tag tag-notes" title="${notes}">[*]</span>`;
       tagsEl.innerHTML = html;
     }
     card.classList.toggle('tagged', labels.length > 0 || hasAnnotation);
@@ -2856,7 +2972,7 @@ function updateKeyTerrain() {
       <span class="mono" style="flex-shrink:0">${t.ip}</span>
       <div style="flex:1;display:flex;flex-wrap:wrap;gap:.25rem;justify-content:flex-end">
         ${t.labels.map(l => `<span class="tag tag-${l}">${l}</span>`).join('')}
-        ${t.owner ? `<span class="tag tag-owner" title="Owner">≡ƒæñ</span>` : ''}
+        ${t.owner ? `<span class="tag tag-owner" title="Owner">@</span>` : ''}
       </div>
     </div>
   `).join('') : '<p style="color:#8b949e;font-size:.85rem;">Right-click hosts to tag or annotate</p>';
@@ -2869,7 +2985,7 @@ function renderSources() {
   el.innerHTML = state.data.sources.map(src => `
     <div class="source-card">
       <div class="source-head">
-        <span style="font-size:1.25rem;">↑</span>
+        <span style="font-size:1.25rem;">^</span>
         <span class="source-name">${src.name}</span>
       </div>
       <div class="source-meta">
@@ -2889,14 +3005,14 @@ function renderSources() {
 function renderCleartext() {
   const items = [];
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
-    (host.ports || []).filter(p => p.state === 'open' && CLEARTEXT[p.port]).forEach(p => {
-      items.push({ip: host.ip, hostname: host.hostname, port: p.port, proto: p.proto, name: CLEARTEXT[p.port], svc: p.svc});
+    (host.ports || []).filter(p => p.state === 'open' && isCleartext(p)).forEach(p => {
+      items.push({ip: host.ip, hostname: host.hostname, port: p.port, proto: p.proto, name: getCleartextName(p), svc: p.svc});
     });
   });
   
   const el = document.getElementById('cleartext-detail');
   if (items.length === 0) {
-    el.innerHTML = '<p style="color:#3fb950;">✔ No cleartext protocols detected</p>';
+    el.innerHTML = '<p style="color:#3fb950;">[OK] No cleartext protocols detected</p>';
     return;
   }
   
@@ -3306,10 +3422,9 @@ function exportData(format) {
       const os = h.os && h.os[0] ? h.os[0].name : '';
       const hPorts = h.ports || [];
       const ports = hPorts.filter(p => p.state === 'open').map(p => p.port).join(';');
-      let risk = 0;
-      hPorts.filter(p => p.state === 'open').forEach(p => { if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port]; });
+      const risk = calculateRisk(h);
       const tags = includeTags ? getExportTags(h) : { labels: '', owner: '', notes: '' };
-      rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, Math.min(risk,100), tags.labels, tags.owner, tags.notes]);
+      rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, risk, tags.labels, tags.owner, tags.notes]);
     });
     content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     filename = 'netintel-export.csv';
@@ -3381,7 +3496,8 @@ function renderTopology() {
   // Add scanner node (assumed to be at hop 0)
   nodes.set('scanner', { id: 'scanner', type: 'scanner', label: 'Scanner' });
 
-  state.data.hosts.filter(h => h.status === 'up').forEach(host => {
+  const upHosts = state.data.hosts.filter(h => h.status === 'up');
+  upHosts.forEach(host => {
     // Add target node
     nodes.set(host.ip, {
       id: host.ip,
@@ -3795,8 +3911,8 @@ function renderTimelineChart() {
     `;
   }).join('') + `
     <div style="position:absolute;right:1rem;top:1rem;font-size:.75rem;">
-      <span style="color:#238636;">█</span> Hosts
-      <span style="color:#58a6ff;margin-left:.5rem;">█</span> Ports
+      <span style="color:#238636;">*</span> Hosts
+      <span style="color:#58a6ff;margin-left:.5rem;">*</span> Ports
     </div>
   `;
 }
@@ -3859,7 +3975,7 @@ document.getElementById('search')?.addEventListener('input', e => {
     let passesFilter = true;
     if (filter !== 'all') {
       const open = (host.ports || []).filter(p => p.state === 'open');
-      const hasCleartext = open.some(p => CLEARTEXT[p.port]);
+      const hasCleartext = open.some(p => isCleartext(p));
       const hasAdmin = open.some(p => ADMIN_PORTS[p.port]);
       const risk = calculateRisk(host);
       const tagData = getAssetTags(host);
