@@ -1865,6 +1865,7 @@ function initRouter() {
 
 // Navigate to section (called by router)
 function navigateToSection(section, param = null) {
+  console.log('[NetIntel] navigateToSection:', section);
   store.set('currentSection', section);
   store.set('selectedHost', param);
 
@@ -1880,7 +1881,7 @@ function navigateToSection(section, param = null) {
 
   // Section-specific initialization
   if (section === 'cleartext') renderCleartext();
-  if (section === 'topology') { initTopology(); renderTopology(); }
+  if (section === 'topology') { console.log('[NetIntel] calling initTopology and renderTopology'); initTopology(); renderTopology(); }
   if (section === 'timeline') { initTimeline(); renderTimeline(); }
 }
 
@@ -2541,8 +2542,10 @@ function initFilters() {
 
   // View toggle (Cards / Ports / Services)
   document.querySelectorAll('[data-view]').forEach(btn => {
+    console.log('[NetIntel] Setting up view button:', btn.dataset.view);
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
+      console.log('[NetIntel] View button clicked:', view);
       document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       switchEntityView(view);
@@ -2553,9 +2556,11 @@ function initFilters() {
 
 // Switch between Cards, Ports, and Services views
 function switchEntityView(view) {
+  console.log('[NetIntel] switchEntityView called with:', view);
   const cardView = document.getElementById('entity-grid');
   const portView = document.getElementById('port-agg-view');
   const serviceView = document.getElementById('service-agg-view');
+  console.log('[NetIntel] Views found:', !!cardView, !!portView, !!serviceView);
 
   cardView.style.display = view === 'cards' ? '' : 'none';
   portView.style.display = view === 'ports' ? '' : 'none';
