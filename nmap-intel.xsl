@@ -2682,12 +2682,19 @@ function findDominantService(host) {
 
 function calculateRisk(host) {
   const open = (host.ports || []).filter(p => p.state === 'open');
-  let risk = 0;
-  open.forEach(p => {
-    if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
-    if (CLEARTEXT[p.port]) risk += 3;
-  });
-  return Math.min(risk, 100);
+  // Calculate per-port risk (weight + cleartext bonus)
+  const weights = open.map(p => (RISK_WEIGHTS[p.port] || 0) + (CLEARTEXT[p.port] ? 3 : 0))
+                      .filter(w => w > 0)
+                      .sort((a, b) => b - a);
+  if (!weights.length) return 0;
+
+  // Logarithmic diminishing returns: highest risk at full value, rest diminish
+  // This ensures 1 critical port > many low-risk ports
+  let risk = weights[0];
+  for (let i = 1; i < weights.length; i++) {
+    risk += weights[i] / Math.log2(i + 2);
+  }
+  return Math.min(Math.round(risk), 100);
 }
 
 function initFilters() {
@@ -3064,21 +3071,25 @@ function renderStats() {
   state.data.hosts.filter(h => h.status === 'up').forEach(host => {
     const open = (host.ports || []).filter(p => p.state === 'open');
     open.forEach(p => { if (CLEARTEXT[p.port]) clearCount++; });
-    
-    let risk = 0;
+
+    // Collect weights with reasons for display
     const reasons = [];
     open.forEach(p => {
-      if (RISK_WEIGHTS[p.port]) {
-        risk += RISK_WEIGHTS[p.port];
-        reasons.push({port:p.port, w:RISK_WEIGHTS[p.port]});
-      }
-      if (CLEARTEXT[p.port]) risk += 3;
+      const w = (RISK_WEIGHTS[p.port] || 0) + (CLEARTEXT[p.port] ? 3 : 0);
+      if (w > 0) reasons.push({port: p.port, w});
     });
-    risk = Math.min(risk, 100);
+    reasons.sort((a, b) => b.w - a.w);
+
+    // Logarithmic diminishing returns
+    let risk = 0;
+    reasons.forEach((r, i) => {
+      risk += i === 0 ? r.w : r.w / Math.log2(i + 2);
+    });
+    risk = Math.min(Math.round(risk), 100);
     if (risk > 0) {
       totalRisk += risk;
       riskCount++;
-      risks.push({host, risk, reasons: reasons.sort((a,b) => b.w - a.w)});
+      risks.push({host, risk, reasons});
     }
   });
   
@@ -3115,17 +3126,12 @@ function updateEntityCards() {
     const ip = card.dataset.ip;
     const host = state.data.hosts.find(h => h.ip === ip);
     if (!host) return;
-    
-    // Risk score
-    const open = (host.ports || []).filter(p => p.state === 'open');
-    let risk = 0;
-    open.forEach(p => {
-      if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port];
-      if (CLEARTEXT[p.port]) risk += 3;
-    });
-    risk = Math.min(risk, 100);
+
+    // Risk score (use central function)
+    const risk = calculateRisk(host);
     const riskEl = card.querySelector('[data-risk]');
     if (riskEl) riskEl.textContent = risk;
+    const open = (host.ports || []).filter(p => p.state === 'open');
     
     // Cleartext ports
     card.querySelectorAll('.port[data-port]').forEach(p => {
@@ -3672,10 +3678,9 @@ function exportData(format) {
       const os = h.os && h.os[0] ? h.os[0].name : '';
       const hPorts = h.ports || [];
       const ports = hPorts.filter(p => p.state === 'open').map(p => p.port).join(';');
-      let risk = 0;
-      hPorts.filter(p => p.state === 'open').forEach(p => { if (RISK_WEIGHTS[p.port]) risk += RISK_WEIGHTS[p.port]; });
+      const risk = calculateRisk(h);
       const tags = includeTags ? getExportTags(h) : { labels: '', owner: '', notes: '' };
-      rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, Math.min(risk,100), tags.labels, tags.owner, tags.notes]);
+      rows.push([h.ip, h.hostname || '', h.mac || '', os, ports, risk, tags.labels, tags.owner, tags.notes]);
     });
     content = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     filename = 'netintel-export.csv';
