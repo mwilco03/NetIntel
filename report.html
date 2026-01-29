@@ -757,7 +757,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div>
 <div class="source-card">
 <div class="source-head">
-<span style="font-size:1.25rem;">Γª┐</span><span class="source-name">Nmap Scan (Primary)</span>
+<span style="font-size:1.25rem;">⦿</span><span class="source-name">Nmap Scan (Primary)</span>
 </div>
 <div class="source-meta">
 <div>
@@ -788,10 +788,10 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 <div class="class-banner" id="class-bottom" style="background-color:#007a33">UNCLASSIFIED</div>
 <div class="modal-overlay" id="import-modal"><div class="modal">
 <div class="modal-head">
-<span class="modal-title">Import Additional Data</span><button class="modal-close" data-close-modal="">├ù</button>
+<span class="modal-title">Import Additional Data</span><button class="modal-close" data-close-modal="">×</button>
 </div>
 <div class="modal-body"><div class="drop-zone" id="drop-zone">
-<div style="font-size:2rem;margin-bottom:1rem;">Γåæ</div>
+<div style="font-size:2rem;margin-bottom:1rem;">↑</div>
 <div class="drop-zone-text">Drop file here or click to browse</div>
 <div class="drop-zone-hint">Supports: Nmap XML</div>
 <input type="file" id="file-input" accept=".xml" style="display:none;">
@@ -800,7 +800,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div></div>
 <div class="modal-overlay" id="export-modal"><div class="modal">
 <div class="modal-head">
-<span class="modal-title">Export Data</span><button class="modal-close" data-close-modal="">├ù</button>
+<span class="modal-title">Export Data</span><button class="modal-close" data-close-modal="">×</button>
 </div>
 <div class="modal-body">
 <p style="font-size:.8rem;color:#8b949e;margin-bottom:.75rem">Scan Data</p>
@@ -817,7 +817,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div></div>
 <div class="modal-overlay" id="vuln-modal"><div class="modal">
 <div class="modal-head">
-<span class="modal-title">Vulnerability Database</span><button class="modal-close" data-close-modal="">├ù</button>
+<span class="modal-title">Vulnerability Database</span><button class="modal-close" data-close-modal="">×</button>
 </div>
 <div class="modal-body">
 <p style="color:#8b949e;margin-bottom:1rem;font-size:.875rem;">
@@ -835,11 +835,11 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 </div></div>
 <div class="ctx-menu" id="ctx-menu">
 <div class="ctx-label">Criticality</div>
-<button class="ctx-item" data-tag="ckt">Γùå CKT</button><button class="ctx-item" data-tag="mission-critical">Γû▓ Mission Critical</button><div class="ctx-div"></div>
+<button class="ctx-item" data-tag="ckt">◆ CKT</button><button class="ctx-item" data-tag="mission-critical">▲ Mission Critical</button><div class="ctx-div"></div>
 <div class="ctx-label">Tactical</div>
 <button class="ctx-item" data-tag="crown">* Crown Jewel</button><button class="ctx-item" data-tag="choke">o Choke Point</button><button class="ctx-item" data-tag="pivot">&lt;&gt; Pivot Point</button><div class="ctx-div"></div>
-<button class="ctx-item" data-action="annotate">Γ£Ä Full Annotation...</button><div class="ctx-div"></div>
-<button class="ctx-item ctx-danger" data-tag="clear">Γ£ò Clear All</button>
+<button class="ctx-item" data-action="annotate">✎ Full Annotation...</button><div class="ctx-div"></div>
+<button class="ctx-item ctx-danger" data-tag="clear">✕ Clear All</button>
 </div>
 <div class="modal-overlay" id="annotate-modal"><div class="modal" style="max-width:560px">
 <div class="modal-head">
@@ -1997,7 +1997,7 @@ function importVulnDb(file) {
       const cveCount = Object.values(db).reduce((sum, cves) => sum + cves.length, 0);
 
       document.getElementById('vuln-status').innerHTML =
-        `<p style="color:#3fb950;">Γ£ô Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+        `<p style="color:#3fb950;">✔ Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
 
       console.log('[NetIntel] Loaded vuln db with', cpeCount, 'CPEs');
     } catch (err) {
@@ -2686,7 +2686,7 @@ function renderVulnDbStatus() {
   if (state.vulnDb) {
     const cpeCount = Object.keys(state.vulnDb).length;
     const cveCount = Object.values(state.vulnDb).reduce((sum, cves) => sum + cves.length, 0);
-    el.innerHTML = `<p style="color:#3fb950;">Γ£ô Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
+    el.innerHTML = `<p style="color:#3fb950;">✔ Database loaded: ${cpeCount} CPEs, ${cveCount} CVEs</p>`;
   }
 }
 
@@ -2870,7 +2870,7 @@ function renderSources() {
   el.innerHTML = state.data.sources.map(src => `
     <div class="source-card">
       <div class="source-head">
-        <span style="font-size:1.25rem;">Γåæ</span>
+        <span style="font-size:1.25rem;">↑</span>
         <span class="source-name">${src.name}</span>
       </div>
       <div class="source-meta">
@@ -2897,7 +2897,7 @@ function renderCleartext() {
   
   const el = document.getElementById('cleartext-detail');
   if (items.length === 0) {
-    el.innerHTML = '<p style="color:#3fb950;">Γ£ô No cleartext protocols detected</p>';
+    el.innerHTML = '<p style="color:#3fb950;">✔ No cleartext protocols detected</p>';
     return;
   }
   
@@ -3796,8 +3796,8 @@ function renderTimelineChart() {
     `;
   }).join('') + `
     <div style="position:absolute;right:1rem;top:1rem;font-size:.75rem;">
-      <span style="color:#238636;">Γûá</span> Hosts
-      <span style="color:#58a6ff;margin-left:.5rem;">Γûá</span> Ports
+      <span style="color:#238636;">█</span> Hosts
+      <span style="color:#58a6ff;margin-left:.5rem;">█</span> Ports
     </div>
   `;
 }
