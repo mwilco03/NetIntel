@@ -2398,8 +2398,7 @@ function renderDiff(diff, filename) {
 }
 
 // === SUBNET UTILITIES ===
-// Configurable subnet mask (default /24)
-let subnetMask = 24;
+// Configurable subnet mask (default /24) - declared above with store subscription
 
 // Calculate subnet info for a given mask
 function getSubnetInfo(mask) {
