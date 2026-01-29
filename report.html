@@ -1618,16 +1618,17 @@ store.subscribe('subnetMask', (v) => { subnetMask = v; });
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
-  loadState(); // Also loads scan data
-  migrateTags(); // Convert old IP-based tags to MAC-based
-  initIcons();
-  initNav();
-  initModals();
-  initContextMenu();
-  initDropZones();
-  initFilters();
-  initRouter();
-  render();
+  console.log('[NetIntel] Starting initialization...');
+  try { loadState(); console.log('[NetIntel] loadState OK'); } catch(e) { console.error('[NetIntel] loadState FAILED:', e); }
+  try { migrateTags(); console.log('[NetIntel] migrateTags OK'); } catch(e) { console.error('[NetIntel] migrateTags FAILED:', e); }
+  try { initIcons(); console.log('[NetIntel] initIcons OK'); } catch(e) { console.error('[NetIntel] initIcons FAILED:', e); }
+  try { initNav(); console.log('[NetIntel] initNav OK'); } catch(e) { console.error('[NetIntel] initNav FAILED:', e); }
+  try { initModals(); console.log('[NetIntel] initModals OK'); } catch(e) { console.error('[NetIntel] initModals FAILED:', e); }
+  try { initContextMenu(); console.log('[NetIntel] initContextMenu OK'); } catch(e) { console.error('[NetIntel] initContextMenu FAILED:', e); }
+  try { initDropZones(); console.log('[NetIntel] initDropZones OK'); } catch(e) { console.error('[NetIntel] initDropZones FAILED:', e); }
+  try { initFilters(); console.log('[NetIntel] initFilters OK'); } catch(e) { console.error('[NetIntel] initFilters FAILED:', e); }
+  try { initRouter(); console.log('[NetIntel] initRouter OK'); } catch(e) { console.error('[NetIntel] initRouter FAILED:', e); }
+  try { render(); console.log('[NetIntel] render OK'); } catch(e) { console.error('[NetIntel] render FAILED:', e); }
   console.log('[NetIntel] Initialized with', state.data?.hosts?.length || 0, 'hosts');
 });
 
