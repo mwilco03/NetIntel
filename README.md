@@ -2,7 +2,7 @@
 
 A self-contained XSL stylesheet that transforms Nmap XML output into an interactive, air-gapped HTML intelligence platform for SOC analysts and network managers.
 
-## [>>> Live Demo <<<](https://mwilco03.github.io/NetIntel/examples/report.html)
+## [>>> Live Demo <<<](https://mwilco03.github.io/NetIntel/examples/report.html#/dashboard)
 
 *Click above to see NetIntel in action - no install required*
 
