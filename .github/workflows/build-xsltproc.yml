@@ -30,7 +30,13 @@ jobs:
       - name: Build xsltproc
         run: |
           cd zig-libxml2
-          zig build -Dxslt -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe
+          EXTRA_FLAGS=""
+          # Disable HTTP on Windows: upstream zig-libxml2 config hardcodes
+          # HAVE_SYS_SOCKET_H=true which breaks nanohttp.c on Windows targets.
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            EXTRA_FLAGS="-Dhttp=false"
+          fi
+          zig build -Dxslt -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe $EXTRA_FLAGS
 
       - name: Package
         run: |
