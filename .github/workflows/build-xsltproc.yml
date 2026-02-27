@@ -1,0 +1,42 @@
+# .github/workflows/build-xsltproc.yml
+name: Build static xsltproc
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-linux-musl        # Linux amd64, fully static
+          - aarch64-linux-musl       # Linux arm64 (Raspberry Pi, etc.)
+          - x86_64-windows-gnu       # Windows amd64
+          - aarch64-macos-none       # macOS Apple Silicon
+          - x86_64-macos-none        # macOS Intel
+    steps:
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.0
+
+      - name: Fetch zig-libxml2
+        run: |
+          git clone https://github.com/ianprime0509/zig-libxml2.git
+          cd zig-libxml2
+
+      - name: Build xsltproc
+        run: |
+          cd zig-libxml2
+          zig build -Dxslt -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe
+
+      - name: Package
+        run: |
+          cd zig-libxml2/zig-out/bin
+          tar czf xsltproc-${{ matrix.target }}.tar.gz xsltproc*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xsltproc-${{ matrix.target }}
+          path: zig-libxml2/zig-out/bin/xsltproc-${{ matrix.target }}.tar.gz
