@@ -27,6 +27,43 @@ jobs:
           git clone https://github.com/ianprime0509/zig-libxml2.git
           cd zig-libxml2
 
+      - name: Patch zig-libxml2 for Windows cross-compilation
+        run: |
+          cd zig-libxml2
+          # Upstream build.zig hardcodes POSIX-only config values as true for
+          # all targets. Patch them to be conditional so Windows builds use
+          # wsockcompat.h / winsock2.h instead of missing POSIX headers.
+          # Reference: doccaico/libxml2-zig-windows, mitchellh/zig-libxml2
+
+          # Add target OS detection
+          sed -i '/const libxml2_upstream/i\    const is_windows = target.result.os.tag == .windows;' build.zig
+
+          # POSIX-only headers/functions → false on Windows (12 flags)
+          sed -i 's/\.HAVE_ARPA_INET_H = true/.HAVE_ARPA_INET_H = !is_windows/' build.zig
+          sed -i 's/\.HAVE_DLFCN_H = true/.HAVE_DLFCN_H = !is_windows/' build.zig
+          sed -i 's/\.HAVE_DLOPEN = true/.HAVE_DLOPEN = !is_windows/' build.zig
+          sed -i 's/\.HAVE_MMAP = true/.HAVE_MMAP = !is_windows/' build.zig
+          sed -i 's/\.HAVE_MUNMAP = true/.HAVE_MUNMAP = !is_windows/' build.zig
+          sed -i 's/\.HAVE_NETDB_H = true/.HAVE_NETDB_H = !is_windows/' build.zig
+          sed -i 's/\.HAVE_NETINET_IN_H = true/.HAVE_NETINET_IN_H = !is_windows/' build.zig
+          sed -i 's/\.HAVE_POLL_H = true/.HAVE_POLL_H = !is_windows/' build.zig
+          sed -i 's/\.HAVE_PTHREAD_H = true/.HAVE_PTHREAD_H = !is_windows/' build.zig
+          sed -i 's/\.HAVE_SYS_MMAN_H = true/.HAVE_SYS_MMAN_H = !is_windows/' build.zig
+          sed -i 's/\.HAVE_SYS_SELECT_H = true/.HAVE_SYS_SELECT_H = !is_windows/' build.zig
+          sed -i 's/\.HAVE_SYS_SOCKET_H = true/.HAVE_SYS_SOCKET_H = !is_windows/' build.zig
+
+          # Windows socket type: int (via wsockcompat.h), not socklen_t
+          sed -i 's/\.XML_SOCKLEN_T = "socklen_t"/.XML_SOCKLEN_T = if (is_windows) "int" else "socklen_t"/' build.zig
+
+          # libxslt POSIX-only functions → false on Windows
+          sed -i 's/\.HAVE_CLOCK_GETTIME = true/.HAVE_CLOCK_GETTIME = !is_windows/' build.zig
+          sed -i 's/\.HAVE_GMTIME_R = true/.HAVE_GMTIME_R = !is_windows/' build.zig
+          sed -i 's/\.HAVE_LOCALTIME_R = true/.HAVE_LOCALTIME_R = !is_windows/' build.zig
+          sed -i 's/\.HAVE_STRXFRM_L = true/.HAVE_STRXFRM_L = !is_windows/' build.zig
+
+          # Link winsock2 for Windows socket support
+          sed -i '/const libxml2_lib = b.addLibrary/i\    if (is_windows) libxml2_mod.linkSystemLibrary("ws2_32", .{});' build.zig
+
       - name: Build xsltproc
         run: |
           cd zig-libxml2
