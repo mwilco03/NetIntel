@@ -1,6 +1,6 @@
 # .github/workflows/build-xsltproc.yml
 #
-# Builds the tiniest possible static xsltproc for Linux and Windows.
+# Builds the tiniest possible static xsltproc for Linux, Windows, and macOS.
 #
 # Size-reduction stack:
 #   1. ReleaseSmall  – Zig's -Os, optimize for binary size
@@ -27,6 +27,12 @@ jobs:
           - target: x86_64-windows-gnu
             artifact: xsltproc-windows-amd64
             ext: ".exe"
+          - target: x86_64-macos-none
+            artifact: xsltproc-macos-amd64
+            ext: ""
+          - target: aarch64-macos-none
+            artifact: xsltproc-macos-arm64
+            ext: ""
 
     steps:
       - uses: actions/checkout@v4
@@ -41,12 +47,12 @@ jobs:
         run: git clone --depth 1 https://github.com/ianprime0509/zig-libxml2.git
 
       # ── patch for Windows cross-compilation ────────────────────────
-      - name: Patch zig-libxml2 for Windows
+      - name: Patch zig-libxml2 for cross-compilation
         run: |
           cd zig-libxml2
 
-          # Detect Windows target
-          sed -i '/const libxml2_upstream/i\    const is_windows = target.result.os.tag == .windows;' build.zig
+          # Detect target OS
+          sed -i '/const libxml2_upstream/i\    const is_windows = target.result.os.tag == .windows;\n    const is_macos = target.result.os.tag == .macos;\n    const is_linux = !is_windows and !is_macos;' build.zig
 
           # POSIX headers/funcs → false on Windows
           for flag in \
@@ -59,10 +65,15 @@ jobs:
           # Socket type
           sed -i 's/\.XML_SOCKLEN_T = "socklen_t"/.XML_SOCKLEN_T = if (is_windows) "int" else "socklen_t"/' build.zig
 
-          # libxslt POSIX funcs
-          for flag in HAVE_CLOCK_GETTIME HAVE_GMTIME_R HAVE_LOCALTIME_R HAVE_STRXFRM_L; do
+          # libxslt POSIX funcs – clock_gettime, gmtime_r, localtime_r
+          # available on Linux and macOS, but not Windows
+          for flag in HAVE_CLOCK_GETTIME HAVE_GMTIME_R HAVE_LOCALTIME_R; do
             sed -i "s/\.${flag} = true/.${flag} = !is_windows/" build.zig
           done
+
+          # strxfrm_l – only reliably available via glibc on Linux;
+          # Zig's cross-compilation headers for macOS don't expose it
+          sed -i 's/\.HAVE_STRXFRM_L = true/.HAVE_STRXFRM_L = is_linux/' build.zig
 
           # Link winsock2 on Windows
           sed -i '/const libxml2_lib = b.addLibrary/i\    if (is_windows) libxml2_mod.linkSystemLibrary("ws2_32", .{});' build.zig
@@ -103,8 +114,9 @@ jobs:
             || echo "strip unavailable, skipping"
           echo "After strip:  $(stat --printf='%s' "$BIN") bytes"
 
-      # ── UPX compress ───────────────────────────────────────────────
+      # ── UPX compress (ELF and PE only – UPX does not support Mach-O) ──
       - name: Install UPX
+        if: ${{ !contains(matrix.target, 'macos') }}
         run: |
           UPX_VER=4.2.4
           curl -fsSL "https://github.com/upx/upx/releases/download/v${UPX_VER}/upx-${UPX_VER}-amd64_linux.tar.xz" \
@@ -112,6 +124,7 @@ jobs:
           upx --version | head -1
 
       - name: UPX compress
+        if: ${{ !contains(matrix.target, 'macos') }}
         run: |
           BIN=zig-libxml2/zig-out/bin/xsltproc${{ matrix.ext }}
           echo "Before UPX: $(stat --printf='%s' "$BIN") bytes"
