@@ -130,13 +130,18 @@ jobs:
       # ── package & upload ───────────────────────────────────────────
       - name: Package
         run: |
-          cd zig-libxml2/zig-out/bin
-          tar czf ${{ matrix.artifact }}.tar.gz xsltproc${{ matrix.ext }}
+          mkdir -p dist/${{ matrix.artifact }}
+          cp zig-libxml2/zig-out/bin/xsltproc${{ matrix.ext }} dist/${{ matrix.artifact }}/
+          cp nmap-intel.xsl dist/${{ matrix.artifact }}/
+          cp examples/sample-vuln-db.json dist/${{ matrix.artifact }}/
+          cp README.md dist/${{ matrix.artifact }}/
+          cd dist
+          zip -r ${{ matrix.artifact }}.zip ${{ matrix.artifact }}/
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: zig-libxml2/zig-out/bin/${{ matrix.artifact }}.tar.gz
+          path: dist/${{ matrix.artifact }}.zip
 
       # ── attach to release (if triggered by release) ────────────────
       - name: Upload release asset
@@ -145,5 +150,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
-            "zig-libxml2/zig-out/bin/${{ matrix.artifact }}.tar.gz" \
+            "dist/${{ matrix.artifact }}.zip" \
             --clobber
