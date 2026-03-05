@@ -133,8 +133,6 @@ jobs:
           mkdir -p dist/${{ matrix.artifact }}
           cp zig-libxml2/zig-out/bin/xsltproc${{ matrix.ext }} dist/${{ matrix.artifact }}/
           cp nmap-intel.xsl dist/${{ matrix.artifact }}/
-          cp examples/sample-vuln-db.json dist/${{ matrix.artifact }}/
-          cp README.md dist/${{ matrix.artifact }}/
           cd dist
           zip -r ${{ matrix.artifact }}.zip ${{ matrix.artifact }}/
 
