@@ -1175,9 +1175,17 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       <div class="modal-body">
         <div class="drop-zone" id="drop-zone">
           <div style="font-size:2rem;margin-bottom:1rem;">^</div>
-          <div class="drop-zone-text">Drop file here or click to browse</div>
-          <div class="drop-zone-hint">Supports: Nmap XML</div>
-          <input type="file" id="file-input" accept=".xml" style="display:none;"/>
+          <div class="drop-zone-text">Drop files or folders here</div>
+          <div class="drop-zone-hint">Supports: Nmap XML (.xml) — multiple files and directories</div>
+          <input type="file" id="file-input" accept=".xml" multiple="" style="display:none;"/>
+        </div>
+        <div class="flex gap-2" style="margin-top:1rem;">
+          <button class="btn btn-secondary btn-sm" id="browse-files">Browse Files</button>
+          <button class="btn btn-secondary btn-sm" id="browse-dir">Browse Folder</button>
+          <input type="file" id="dir-input" accept=".xml" webkitdirectory="" style="display:none;"/>
+        </div>
+        <div id="import-status" style="margin-top:1rem;font-size:.85rem;color:#8b949e;display:none;">
+          <div id="import-progress"></div>
         </div>
       </div>
       <div class="modal-foot">
@@ -2393,15 +2401,39 @@ function openAnnotationModal(host) {
 
 // === DROP ZONES ===
 function initDropZones() {
-  // Import drop zone
+  // Import drop zone — supports multi-file and directory drops
   const dz = document.getElementById('drop-zone');
   const fi = document.getElementById('file-input');
+  const dirFi = document.getElementById('dir-input');
+  const browseFiles = document.getElementById('browse-files');
+  const browseDir = document.getElementById('browse-dir');
   if (dz && fi) {
     dz.addEventListener('click', () => fi.click());
     dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
     dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); importFile(e.dataTransfer.files[0]); });
-    fi.addEventListener('change', () => { if (fi.files[0]) importFile(fi.files[0]); });
+    dz.addEventListener('drop', e => {
+      e.preventDefault(); dz.classList.remove('dragover');
+      // Try directory entry API for dropped folders
+      if (e.dataTransfer.items && e.dataTransfer.items.length) {
+        const entries = [];
+        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+          const entry = e.dataTransfer.items[i].webkitGetAsEntry && e.dataTransfer.items[i].webkitGetAsEntry();
+          if (entry) entries.push(entry);
+        }
+        if (entries.some(en => en.isDirectory)) {
+          importEntries(entries);
+          return;
+        }
+      }
+      // Plain file drop — process all files
+      importFiles(e.dataTransfer.files);
+    });
+    fi.addEventListener('change', () => { if (fi.files.length) importFiles(fi.files); fi.value = ''; });
+  }
+  if (browseFiles) browseFiles.addEventListener('click', () => fi.click());
+  if (browseDir && dirFi) {
+    browseDir.addEventListener('click', () => dirFi.click());
+    dirFi.addEventListener('change', () => { if (dirFi.files.length) importFiles(dirFi.files); dirFi.value = ''; });
   }
 
   // Vulnerability database drop zone
@@ -3354,17 +3386,17 @@ function renderSources() {
     <div class="source-card">
       <div class="source-head">
         <span style="font-size:1.25rem;">^</span>
-        <span class="source-name">${src.name}</span>
+        <span class="source-name">${src.name || 'Imported Scan'}</span>
       </div>
       <div class="source-meta">
+        ${src.scanner ? `<div><div class="source-label">Tool</div><div class="source-val">nmap ${src.version || ''}</div></div>` : ''}
+        ${src.startstr ? `<div><div class="source-label">Scan Date</div><div class="source-val">${src.startstr}</div></div>` : ''}
         <div>
           <div class="source-label">Hosts</div>
-          <div class="source-val">${src.hosts}</div>
+          <div class="source-val">${src.up || src.total || 0} up / ${src.total || 0} total</div>
         </div>
-        <div>
-          <div class="source-label">Imported</div>
-          <div class="source-val">${new Date(src.timestamp).toLocaleString()}</div>
-        </div>
+        ${src.timestamp ? `<div><div class="source-label">Imported</div><div class="source-val">${new Date(src.timestamp).toLocaleString()}</div></div>` : ''}
+        ${src.args ? `<div style="grid-column: 1 / -1;"><div class="source-label">Arguments</div><div class="source-val" style="word-break:break-all;">${src.args}</div></div>` : ''}
       </div>
     </div>
   `).join('');
@@ -3403,48 +3435,118 @@ function renderCleartext() {
 }
 
 // === IMPORT/EXPORT ===
-function importFile(file) {
-  if (!file) return;
+// Read and import a single file, returns a Promise with {added, updated, skipped, name}
+function importSingleFile(file) {
+  return new Promise((resolve) => {
+    if (!file || !file.name.toLowerCase().endsWith('.xml')) {
+      resolve({ skipped: true, name: file ? file.name : '?' });
+      return;
+    }
+    if (file.size > MAX_IMPORT_SIZE) {
+      console.warn('[NetIntel] Skipping', file.name, '- too large');
+      resolve({ skipped: true, name: file.name, reason: 'too large' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => resolve({ skipped: true, name: file.name, reason: 'read error' });
+    reader.onload = e => {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(e.target.result, 'text/xml');
+        if (doc.querySelector('parsererror') || !doc.querySelector('nmaprun')) {
+          resolve({ skipped: true, name: file.name, reason: 'not nmap XML' });
+          return;
+        }
+        const nmaprun = doc.querySelector('nmaprun');
+        const newHosts = parseNmapXml(doc);
+        const sourceInfo = {
+          name: file.name,
+          scanner: nmaprun.getAttribute('scanner') || 'nmap',
+          version: nmaprun.getAttribute('version') || '',
+          args: nmaprun.getAttribute('args') || '',
+          startstr: nmaprun.getAttribute('startstr') || '',
+          start: nmaprun.getAttribute('start') || ''
+        };
+        const result = mergeHosts(newHosts, sourceInfo);
+        resolve({ ...result, name: file.name });
+      } catch (err) {
+        resolve({ skipped: true, name: file.name, reason: err.message });
+      }
+    };
+    reader.readAsText(file);
+  });
+}
 
-  // File size check (10MB limit)
-  if (file.size > MAX_IMPORT_SIZE) {
-    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
+// Import multiple files (from file input or drop)
+async function importFiles(fileList) {
+  const files = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.xml'));
+  if (files.length === 0) {
+    alert('No .xml files found.');
     return;
   }
 
-  const reader = new FileReader();
-  reader.onerror = () => {
-    console.error('[NetIntel] Error reading file:', reader.error);
-    alert('Error reading file. Please try again.');
-  };
-  reader.onload = e => {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(e.target.result, 'text/xml');
-      const parseError = doc.querySelector('parsererror');
-      if (parseError) {
-        alert('Invalid XML file: ' + parseError.textContent.slice(0, 100));
-        return;
-      }
-      const nmaprun = doc.querySelector('nmaprun');
-      if (!nmaprun) {
-        alert('Not a valid Nmap XML file (missing nmaprun element)');
-        return;
-      }
+  const statusEl = document.getElementById('import-status');
+  const progressEl = document.getElementById('import-progress');
+  if (statusEl) statusEl.style.display = 'block';
 
-      // Parse and merge the new scan data
-      const newHosts = parseNmapXml(doc);
-      const sourceName = `Imported: ${file.name}`;
-      mergeHosts(newHosts, sourceName);
+  let totalAdded = 0, totalUpdated = 0, totalSkipped = 0, processed = 0;
 
-      document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-      console.log('[NetIntel] Imported', newHosts.length, 'hosts from', file.name);
-    } catch (err) {
-      console.error('[NetIntel] Import error:', err);
-      alert('Error parsing file: ' + err.message);
+  for (const file of files) {
+    processed++;
+    if (progressEl) progressEl.textContent = `Processing ${processed}/${files.length}: ${file.name}`;
+    const result = await importSingleFile(file);
+    if (result.skipped) { totalSkipped++; }
+    else { totalAdded += result.added || 0; totalUpdated += result.updated || 0; }
+  }
+
+  // Final re-render once after all files
+  rebuildEntityGrid();
+  render();
+
+  if (progressEl) progressEl.textContent = `Done: ${totalAdded} hosts added, ${totalUpdated} updated` +
+    (totalSkipped ? `, ${totalSkipped} files skipped` : '') +
+    ` from ${files.length} file${files.length !== 1 ? 's' : ''}`;
+
+  console.log('[NetIntel] Batch import:', totalAdded, 'added,', totalUpdated, 'updated from', files.length, 'files');
+
+  // Auto-close modal after a short delay on success
+  setTimeout(() => {
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+    if (statusEl) statusEl.style.display = 'none';
+  }, 1500);
+}
+
+// Walk directory entries from drag/drop and collect all .xml files
+function importEntries(entries) {
+  const files = [];
+
+  function walkEntry(entry) {
+    return new Promise((resolve) => {
+      if (entry.isFile) {
+        entry.file(f => { if (f.name.toLowerCase().endsWith('.xml')) files.push(f); resolve(); },
+                   () => resolve());
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const readAll = [];
+        const readBatch = () => {
+          reader.readEntries(entries => {
+            if (entries.length === 0) { Promise.all(readAll).then(resolve); return; }
+            entries.forEach(e => readAll.push(walkEntry(e)));
+            readBatch(); // readEntries returns batches, must call until empty
+          }, () => resolve());
+        };
+        readBatch();
+      } else { resolve(); }
+    });
+  }
+
+  Promise.all(entries.map(e => walkEntry(e))).then(() => {
+    if (files.length === 0) {
+      alert('No .xml files found in dropped folder(s).');
+      return;
     }
-  };
-  reader.readAsText(file);
+    importFiles(files);
+  });
 }
 
 // Parse Nmap XML document into host objects
@@ -3477,11 +3579,15 @@ function parseNmapXml(doc) {
       });
     });
 
-    // Ports
+    // Ports (with scripts)
     hostEl.querySelectorAll('ports port').forEach(portEl => {
       const stateEl = portEl.querySelector('state');
       const svcEl = portEl.querySelector('service');
       const cpeEl = portEl.querySelector('cpe');
+      const scripts = [];
+      portEl.querySelectorAll('script').forEach(s => {
+        scripts.push({ id: s.getAttribute('id') || '', output: s.getAttribute('output') || '' });
+      });
       host.ports.push({
         port: parseInt(portEl.getAttribute('portid')) || 0,
         proto: portEl.getAttribute('protocol') || 'tcp',
@@ -3489,15 +3595,29 @@ function parseNmapXml(doc) {
         svc: svcEl ? svcEl.getAttribute('name') : '',
         product: svcEl ? svcEl.getAttribute('product') : '',
         version: svcEl ? svcEl.getAttribute('version') : '',
-        cpe: cpeEl ? cpeEl.textContent : ''
+        cpe: cpeEl ? cpeEl.textContent : '',
+        fp: svcEl ? (svcEl.getAttribute('servicefp') || '') : '',
+        scripts
       });
     });
+
+    // Host-level scripts
+    host.hostscripts = [];
+    hostEl.querySelectorAll('hostscript script').forEach(s => {
+      host.hostscripts.push({ id: s.getAttribute('id') || '', output: s.getAttribute('output') || '' });
+    });
+
+    // OS fingerprint
+    const osFp = hostEl.querySelector('os osfingerprint');
+    host.osFingerprint = osFp ? osFp.getAttribute('fingerprint') || '' : '';
 
     // Traceroute
     hostEl.querySelectorAll('trace hop').forEach(hop => {
       host.trace.push({
         ttl: parseInt(hop.getAttribute('ttl')) || 0,
-        ip: hop.getAttribute('ipaddr') || ''
+        ip: hop.getAttribute('ipaddr') || '',
+        rtt: hop.getAttribute('rtt') || '',
+        host: hop.getAttribute('host') || ''
       });
     });
 
@@ -3507,10 +3627,16 @@ function parseNmapXml(doc) {
 }
 
 // Merge imported hosts into existing data
-function mergeHosts(newHosts, sourceName) {
+// sourceInfo: { name, scanner, version, args, startstr, start }
+function mergeHosts(newHosts, sourceInfo) {
   let added = 0, updated = 0;
+  const sourceName = typeof sourceInfo === 'string' ? sourceInfo : sourceInfo.name;
 
   newHosts.forEach(newHost => {
+    // Tag each host with its source
+    newHost.source = typeof sourceInfo === 'object' ? sourceInfo.startstr : sourceName;
+    newHost.sourceArgs = typeof sourceInfo === 'object' ? sourceInfo.args : '';
+
     const existing = state.data.hosts.find(h => h.ip === newHost.ip);
     if (existing) {
       // Merge ports (add new ports, don't duplicate)
@@ -3520,7 +3646,6 @@ function mergeHosts(newHosts, sourceName) {
         if (!existingPort) {
           existing.ports.push(newPort);
         } else if (newPort.product && !existingPort.product) {
-          // Update if new scan has more detail
           Object.assign(existingPort, newPort);
         }
       });
@@ -3534,17 +3659,22 @@ function mergeHosts(newHosts, sourceName) {
         }
       }
 
-      // Update status to 'up' if new scan shows it's up
       if (newHost.status === 'up') existing.status = 'up';
 
-      // Merge traceroute if not present
       if (newHost.trace.length > 0 && existing.trace.length === 0) {
         existing.trace = newHost.trace;
       }
 
+      // Merge host scripts
+      if (newHost.hostscripts && newHost.hostscripts.length > 0) {
+        if (!existing.hostscripts) existing.hostscripts = [];
+        newHost.hostscripts.forEach(ns => {
+          if (!existing.hostscripts.find(s => s.id === ns.id)) existing.hostscripts.push(ns);
+        });
+      }
+
       updated++;
     } else {
-      // New host - add to collection
       state.data.hosts.push(newHost);
       added++;
     }
@@ -3555,19 +3685,26 @@ function mergeHosts(newHosts, sourceName) {
   state.data.stats.up = state.data.hosts.filter(h => h.status === 'up').length;
   state.data.stats.down = state.data.stats.total - state.data.stats.up;
 
-  // Track source
+  // Track source with full metadata
   if (!state.data.sources) state.data.sources = [];
-  state.data.sources.push({
-    name: sourceName,
-    hosts: newHosts.length,
-    timestamp: new Date().toISOString()
-  });
+  if (typeof sourceInfo === 'object') {
+    state.data.sources.push({
+      name: sourceInfo.name,
+      scanner: sourceInfo.scanner,
+      version: sourceInfo.version,
+      args: sourceInfo.args,
+      startstr: sourceInfo.startstr,
+      start: sourceInfo.start,
+      total: newHosts.length,
+      up: newHosts.filter(h => h.status === 'up').length,
+      down: newHosts.filter(h => h.status !== 'up').length,
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    state.data.sources.push({ name: sourceName, total: newHosts.length, timestamp: new Date().toISOString() });
+  }
 
-  // Re-render UI
-  rebuildEntityGrid();
-  render();
-
-  alert(`Import complete!\nAdded: ${added} new hosts\nUpdated: ${updated} existing hosts`);
+  return { added, updated };
 }
 
 // Rebuild entity grid after import (since XSL only runs once)
