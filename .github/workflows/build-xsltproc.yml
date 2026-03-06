@@ -10,8 +10,16 @@
 #
 name: Build static xsltproc (tiny)
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to upload assets to (e.g. v1.0.0). Leave empty to skip release upload."
+        required: false
+        default: ""
   release:
     types: [created]
 
@@ -150,12 +158,13 @@ jobs:
           name: ${{ matrix.artifact }}
           path: zig-libxml2/zig-out/bin/${{ matrix.artifact }}.tar.gz
 
-      # ── attach to release (if triggered by release) ────────────────
+      # ── attach to release ─────────────────────────────────────────
       - name: Upload release asset
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || inputs.release_tag != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "$TAG" \
             "zig-libxml2/zig-out/bin/${{ matrix.artifact }}.tar.gz" \
             --clobber
