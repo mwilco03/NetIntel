@@ -158,6 +158,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -171,8 +173,10 @@ jobs:
             TAG="${{ github.event.release.tag_name }}"
           else
             TAG="v$(date -u +%Y%m%d%H%M%S)"
-            gh release create "$TAG" --title "xsltproc $TAG" --notes "Static xsltproc binaries (Linux amd64 + Windows amd64)" --latest
+            gh release create "$TAG" --title "NetIntel $TAG" --notes "Static xsltproc binaries (Linux amd64 + Windows amd64) and XML/XSL templates" --latest
           fi
           for f in artifacts/*/*.tar.gz; do
             gh release upload "$TAG" "$f" --clobber
           done
+          gh release upload "$TAG" nmap-intel.xsl --clobber
+          gh release upload "$TAG" Test.xml --clobber
