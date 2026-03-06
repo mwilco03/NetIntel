@@ -67,6 +67,11 @@ jobs:
           # Link winsock2 on Windows
           sed -i '/const libxml2_lib = b.addLibrary/i\    if (is_windows) libxml2_mod.linkSystemLibrary("ws2_32", .{});' build.zig
 
+          # Remove xmllint and xmlcatalog executables (we only need xsltproc)
+          # These tools fail to cross-compile for Windows due to POSIX dependencies
+          sed -i '/const xmllint_mod/,/b\.installArtifact(xmllint_exe);/d' build.zig
+          sed -i '/const xmlcatalog_mod/,/b\.installArtifact(xmlcatalog_exe);/d' build.zig
+
       # ── build: size-optimised ──────────────────────────────────────
       - name: Build xsltproc (ReleaseSmall, features stripped)
         run: |
