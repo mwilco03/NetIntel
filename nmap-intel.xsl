@@ -4,18 +4,17 @@ Network Intelligence Report Generator v1.0
 MIT License - No use restrictions
 Air-gapped, self-contained HTML output
 
-Usage (single scan):
+Single scan:
   xsltproc nmap-intel.xsl scan.xml > report.html
 
-Usage (multiple scans - manifest file):
-  nmap-merge.sh scan1.xml scan2.xml scan3.xml > scans.xml
-  xsltproc nmap-intel.xsl scans.xml > report.html
-
-Manifest format:
+Multiple scans — create a manifest XML (scans.xml):
   <netintel-scans>
-    <scan file="scan1.xml"/>
-    <scan file="scan2.xml"/>
+    <scan file="/full/path/to/scan1.xml"/>
+    <scan file="/full/path/to/scan2.xml"/>
+    <scan file="/full/path/to/scan3.xml"/>
   </netintel-scans>
+
+  xsltproc nmap-intel.xsl scans.xml > report.html
 
 Classification:
   xsltproc - -stringparam classification "SECRET" - -stringparam classification-color "#c8102e" nmap-intel.xsl scan.xml > report.html
