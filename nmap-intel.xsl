@@ -4,8 +4,20 @@ Network Intelligence Report Generator v1.0
 MIT License - No use restrictions
 Air-gapped, self-contained HTML output
 
-Usage:
+Usage (single scan):
   xsltproc nmap-intel.xsl scan.xml > report.html
+
+Usage (multiple scans - manifest file):
+  nmap-merge.sh scan1.xml scan2.xml scan3.xml > scans.xml
+  xsltproc nmap-intel.xsl scans.xml > report.html
+
+Manifest format:
+  <netintel-scans>
+    <scan file="scan1.xml"/>
+    <scan file="scan2.xml"/>
+  </netintel-scans>
+
+Classification:
   xsltproc - -stringparam classification "SECRET" - -stringparam classification-color "#c8102e" nmap-intel.xsl scan.xml > report.html
 -->
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -14,6 +26,16 @@ Usage:
 <!-- Configurable Parameters -->
 <xsl:param name="classification" select="'UNCLASSIFIED'"/>
 <xsl:param name="classification-color" select="'#007a33'"/>
+
+<!-- Multi-scan detection: true when input is a manifest -->
+<xsl:variable name="is-multi" select="boolean(/netintel-scans)"/>
+
+<!-- Unified host node-sets: works for both single and multi-scan -->
+<xsl:variable name="all-hosts" select="/nmaprun/host | document(/netintel-scans/scan/@file)/nmaprun/host"/>
+<xsl:variable name="all-runs"  select="/nmaprun      | document(/netintel-scans/scan/@file)/nmaprun"/>
+
+<!-- For single scan, use the nmaprun directly; for multi, use the first scan for fallback metadata -->
+<xsl:variable name="first-run" select="$all-runs[1]"/>
 
 <!-- JSON String Escaping Templates -->
 <xsl:template name="escape-json">
@@ -131,7 +153,7 @@ Usage:
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="referrer" content="no-referrer"/>
-<title>Network Intelligence Report - <xsl:value-of select="/nmaprun/@startstr"/></title>
+<title>Network Intelligence Report - <xsl:choose><xsl:when test="$is-multi"><xsl:value-of select="count($all-runs)"/> scans merged</xsl:when><xsl:otherwise><xsl:value-of select="/nmaprun/@startstr"/></xsl:otherwise></xsl:choose></title>
 <style>
 <xsl:text disable-output-escaping="yes"><![CDATA[
 /* === RESET & BASE === */
@@ -558,11 +580,11 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <header class="header">
       <div class="header-left">
         <div class="search">
-          <input type="text" id="search" placeholder="Search: port:22 service:ssh os:windows tag:ckt cve:CVE-* risk:>50"/>
+          <input type="text" id="search" placeholder="Search: port:22 service:ssh os:windows tag:ckt source:* risk:>50"/>
         </div>
       </div>
       <div class="header-right">
-        <span style="font-size:.8rem;color:#8b949e;">Scan: <xsl:value-of select="/nmaprun/@startstr"/></span>
+        <span style="font-size:.8rem;color:#8b949e;"><xsl:choose><xsl:when test="$is-multi"><xsl:value-of select="count($all-runs)"/> scans merged</xsl:when><xsl:otherwise>Scan: <xsl:value-of select="/nmaprun/@startstr"/></xsl:otherwise></xsl:choose></span>
         <button class="btn btn-ghost btn-sm" data-action="help" title="Help &amp; Legend">[?] Help</button>
         <button class="btn btn-ghost btn-sm" data-action="share" title="Copy shareable link">[+] Share</button>
         <button class="btn btn-secondary btn-sm" data-action="import">^ Import</button>
@@ -707,10 +729,10 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
      DASHBOARD SECTION
      ============================================ -->
 <xsl:template name="dashboard-section">
-  <xsl:variable name="total" select="/nmaprun/runstats/hosts/@total"/>
-  <xsl:variable name="up" select="/nmaprun/runstats/hosts/@up"/>
-  <xsl:variable name="down" select="/nmaprun/runstats/hosts/@down"/>
-  <xsl:variable name="open-ports" select="count(/nmaprun/host/ports/port[state/@state='open'])"/>
+  <xsl:variable name="total" select="sum($all-runs/runstats/hosts/@total)"/>
+  <xsl:variable name="up" select="sum($all-runs/runstats/hosts/@up)"/>
+  <xsl:variable name="down" select="sum($all-runs/runstats/hosts/@down)"/>
+  <xsl:variable name="open-ports" select="count($all-hosts/ports/port[state/@state='open'])"/>
   
   <section class="section active" data-section="dashboard">
     <div class="section-header">
@@ -817,7 +839,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 
     <!-- Card View (default) -->
     <div class="entity-grid" id="entity-grid">
-      <xsl:for-each select="/nmaprun/host[status/@state='up']">
+      <xsl:for-each select="$all-hosts[status/@state='up']">
         <xsl:call-template name="entity-card"/>
       </xsl:for-each>
     </div>
@@ -913,7 +935,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       </xsl:if>
     </div>
     <div class="entity-foot">
-      <span>1 source</span>
+      <span><xsl:choose><xsl:when test="$is-multi"><xsl:value-of select="ancestor::nmaprun/@startstr"/></xsl:when><xsl:otherwise>1 source</xsl:otherwise></xsl:choose></span>
       <button class="btn btn-ghost btn-sm">Details</button>
     </div>
   </div>
@@ -945,34 +967,36 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       <button class="btn btn-primary btn-sm" data-action="import">+ Add Source</button>
     </div>
     
+    <xsl:for-each select="$all-runs">
     <div class="source-card">
       <div class="source-head">
         <span style="font-size:1.25rem;">@</span>
-        <span class="source-name">Nmap Scan (Primary)</span>
+        <span class="source-name">Nmap Scan<xsl:if test="$is-multi"> #<xsl:value-of select="position()"/></xsl:if></span>
       </div>
       <div class="source-meta">
         <div>
           <div class="source-label">Tool</div>
-          <div class="source-val">nmap <xsl:value-of select="/nmaprun/@version"/></div>
+          <div class="source-val">nmap <xsl:value-of select="@version"/></div>
         </div>
         <div>
           <div class="source-label">Started</div>
-          <div class="source-val"><xsl:value-of select="/nmaprun/@startstr"/></div>
+          <div class="source-val"><xsl:value-of select="@startstr"/></div>
         </div>
         <div>
           <div class="source-label">Finished</div>
-          <div class="source-val"><xsl:value-of select="/nmaprun/runstats/finished/@timestr"/></div>
+          <div class="source-val"><xsl:value-of select="runstats/finished/@timestr"/></div>
         </div>
         <div>
           <div class="source-label">Hosts</div>
-          <div class="source-val"><xsl:value-of select="/nmaprun/runstats/hosts/@up"/> up / <xsl:value-of select="/nmaprun/runstats/hosts/@total"/> total</div>
+          <div class="source-val"><xsl:value-of select="runstats/hosts/@up"/> up / <xsl:value-of select="runstats/hosts/@total"/> total</div>
         </div>
         <div style="grid-column: 1 / -1;">
           <div class="source-label">Arguments</div>
-          <div class="source-val" style="word-break:break-all;"><xsl:value-of select="/nmaprun/@args"/></div>
+          <div class="source-val" style="word-break:break-all;"><xsl:value-of select="@args"/></div>
         </div>
       </div>
     </div>
+    </xsl:for-each>
     
     <div id="additional-sources"></div>
   </section>
@@ -1043,15 +1067,17 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
         <p style="color:#8b949e;margin-bottom:1rem;">Track changes across multiple scans over time.</p>
         <div class="timeline-container">
           <div class="timeline-track" id="timeline-track">
-            <!-- Current scan -->
-            <div class="timeline-scan active" data-scan="current">
-              <div class="timeline-scan-date"><xsl:value-of select="substring(/nmaprun/@startstr, 1, 10)"/></div>
-              <div class="timeline-scan-time"><xsl:value-of select="substring(/nmaprun/@startstr, 12)"/></div>
+            <xsl:for-each select="$all-runs">
+            <div class="timeline-scan" data-scan="scan-{position()}">
+              <xsl:if test="position()=1"><xsl:attribute name="class">timeline-scan active</xsl:attribute></xsl:if>
+              <div class="timeline-scan-date"><xsl:value-of select="substring(@startstr, 1, 10)"/></div>
+              <div class="timeline-scan-time"><xsl:value-of select="substring(@startstr, 12)"/></div>
               <div class="timeline-scan-stats">
-                <span class="timeline-scan-stat"><xsl:value-of select="/nmaprun/runstats/hosts/@up"/> hosts</span>
-                <span class="timeline-scan-stat"><xsl:value-of select="count(/nmaprun/host/ports/port[state/@state='open'])"/> ports</span>
+                <span class="timeline-scan-stat"><xsl:value-of select="runstats/hosts/@up"/> hosts</span>
+                <span class="timeline-scan-stat"><xsl:value-of select="count(host/ports/port[state/@state='open'])"/> ports</span>
               </div>
             </div>
+            </xsl:for-each>
           </div>
         </div>
       </div>
@@ -1261,6 +1287,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
             service:ssh service:http<br/>
             os:windows os:linux<br/>
             tag:ckt tag:crown<br/>
+            source:Wed* scan:Jan*<br/>
             cve:CVE-2024-*<br/>
             risk:>50 risk:&lt;25
           </div>
@@ -1280,25 +1307,41 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
   <script type="application/json" id="scan-data">
 {
   "scanInfo": {
-    "scanner": "<xsl:value-of select="/nmaprun/@scanner"/>",
-    "version": "<xsl:value-of select="/nmaprun/@version"/>",
-    "args": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="/nmaprun/@args"/></xsl:call-template>",
-    "start": "<xsl:value-of select="/nmaprun/@start"/>",
-    "startstr": "<xsl:value-of select="/nmaprun/@startstr"/>",
-    "endstr": "<xsl:value-of select="/nmaprun/runstats/finished/@timestr"/>"
+    "scanner": "<xsl:value-of select="$first-run/@scanner"/>",
+    "version": "<xsl:value-of select="$first-run/@version"/>",
+    "args": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="$first-run/@args"/></xsl:call-template>",
+    "start": "<xsl:value-of select="$first-run/@start"/>",
+    "startstr": "<xsl:value-of select="$first-run/@startstr"/>",
+    "endstr": "<xsl:value-of select="$first-run/runstats/finished/@timestr"/>",
+    "multiScan": <xsl:choose><xsl:when test="$is-multi">true</xsl:when><xsl:otherwise>false</xsl:otherwise></xsl:choose>
   },
+  "sources": [<xsl:for-each select="$all-runs">
+    {
+      "scanner": "<xsl:value-of select="@scanner"/>",
+      "version": "<xsl:value-of select="@version"/>",
+      "args": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="@args"/></xsl:call-template>",
+      "start": "<xsl:value-of select="@start"/>",
+      "startstr": "<xsl:value-of select="@startstr"/>",
+      "endstr": "<xsl:value-of select="runstats/finished/@timestr"/>",
+      "total": <xsl:value-of select="runstats/hosts/@total"/>,
+      "up": <xsl:value-of select="runstats/hosts/@up"/>,
+      "down": <xsl:value-of select="runstats/hosts/@down"/>
+    }<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
+  ],
   "stats": {
-    "total": <xsl:value-of select="/nmaprun/runstats/hosts/@total"/>,
-    "up": <xsl:value-of select="/nmaprun/runstats/hosts/@up"/>,
-    "down": <xsl:value-of select="/nmaprun/runstats/hosts/@down"/>
+    "total": <xsl:value-of select="sum($all-runs/runstats/hosts/@total)"/>,
+    "up": <xsl:value-of select="sum($all-runs/runstats/hosts/@up)"/>,
+    "down": <xsl:value-of select="sum($all-runs/runstats/hosts/@down)"/>
   },
-  "hosts": [<xsl:for-each select="/nmaprun/host">
+  "hosts": [<xsl:for-each select="$all-hosts">
     {
       "ip": "<xsl:value-of select="address[@addrtype='ipv4']/@addr"/><xsl:value-of select="address[@addrtype='ipv6']/@addr"/>",
       "mac": "<xsl:value-of select="address[@addrtype='mac']/@addr"/>",
       "macVendor": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="address[@addrtype='mac']/@vendor"/></xsl:call-template>",
       "hostname": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="hostnames/hostname/@name"/></xsl:call-template>",
       "status": "<xsl:value-of select="status/@state"/>",
+      "source": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="ancestor::nmaprun/@startstr"/></xsl:call-template>",
+      "sourceArgs": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="ancestor::nmaprun/@args"/></xsl:call-template>",
       "os": [<xsl:for-each select="os/osmatch">{"name":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="@name"/></xsl:call-template>","accuracy":<xsl:value-of select="@accuracy"/>}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
       "osFingerprint": "<xsl:call-template name="escape-json"><xsl:with-param name="text" select="os/osfingerprint/@fingerprint"/></xsl:call-template>",
       "ports": [<xsl:for-each select="ports/port">{"port":<xsl:value-of select="@portid"/>,"proto":"<xsl:value-of select="@protocol"/>","state":"<xsl:value-of select="state/@state"/>","svc":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/@name"/></xsl:call-template>","product":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/@product"/></xsl:call-template>","version":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/@version"/></xsl:call-template>","cpe":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/cpe"/></xsl:call-template>","fp":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="service/@servicefp"/></xsl:call-template>","scripts":[<xsl:for-each select="script">{"id":"<xsl:value-of select="@id"/>","output":"<xsl:call-template name="escape-json"><xsl:with-param name="text" select="@output"/></xsl:call-template>"}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>]}<xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>],
@@ -1760,6 +1803,10 @@ function matchesSearchTerms(host, terms) {
 
       case 'mac':
         return host.mac && matches(host.mac);
+
+      case 'source':
+      case 'scan':
+        return host.source && matches(host.source);
 
       case 'tag':
       case 'label':
@@ -3710,7 +3757,7 @@ function createEntityCard(host) {
       ${vulnsHtml}
     </div>
     <div class="entity-foot">
-      <span>${(state.data.sources ? state.data.sources.length : 1)} source${state.data.sources && state.data.sources.length !== 1 ? 's' : ''}</span>
+      <span>${host.source ? host.source : ((state.data.sources ? state.data.sources.length : 1) + ' source' + (state.data.sources && state.data.sources.length !== 1 ? 's' : ''))}</span>
       <button class="btn btn-ghost btn-sm">Details</button>
     </div>
   `;
