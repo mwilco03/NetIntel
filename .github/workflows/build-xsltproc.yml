@@ -15,11 +15,6 @@ permissions:
 
 on:
   workflow_dispatch:
-    inputs:
-      release_tag:
-        description: "Release tag to upload assets to (e.g. v1.0.0). Leave empty to skip release upload."
-        required: false
-        default: ""
   release:
     types: [created]
 
@@ -158,13 +153,26 @@ jobs:
           name: ${{ matrix.artifact }}
           path: zig-libxml2/zig-out/bin/${{ matrix.artifact }}.tar.gz
 
-      # ── attach to release ─────────────────────────────────────────
-      - name: Upload release asset
-        if: github.event_name == 'release' || inputs.release_tag != ''
+  # ── create/update release with all assets ──────────────────────
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh release upload "$TAG" \
-            "zig-libxml2/zig-out/bin/${{ matrix.artifact }}.tar.gz" \
-            --clobber
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="v$(date -u +%Y%m%d%H%M%S)"
+            gh release create "$TAG" --title "xsltproc $TAG" --notes "Static xsltproc binaries (Linux amd64 + Windows amd64)" --latest
+          fi
+          for f in artifacts/*/*.tar.gz; do
+            gh release upload "$TAG" "$f" --clobber
+          done
