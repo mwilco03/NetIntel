@@ -72,6 +72,13 @@ jobs:
           sed -i '/const xmllint_mod/,/b\.installArtifact(xmllint_exe);/d' build.zig
           sed -i '/const xmlcatalog_mod/,/b\.installArtifact(xmlcatalog_exe);/d' build.zig
 
+          # Define LIBXML_STATIC / LIBXSLT_STATIC / LIBEXSLT_STATIC on Windows
+          # Without these, headers use __declspec(dllimport) causing LNK4217 errors
+          sed -i '/libxml2_mod.addCSourceFiles/i\    if (is_windows) libxml2_mod.addCMacro("LIBXML_STATIC", "1");' build.zig
+          sed -i '/libxslt_mod.addCSourceFiles/i\    if (is_windows) { libxslt_mod.addCMacro("LIBXML_STATIC", "1"); libxslt_mod.addCMacro("LIBXSLT_STATIC", "1"); }' build.zig
+          sed -i '/libexslt_mod.addCSourceFiles/i\    if (is_windows) { libexslt_mod.addCMacro("LIBXML_STATIC", "1"); libexslt_mod.addCMacro("LIBXSLT_STATIC", "1"); libexslt_mod.addCMacro("LIBEXSLT_STATIC", "1"); }' build.zig
+          sed -i '/xsltproc_mod.addCSourceFile/i\    if (is_windows) { xsltproc_mod.addCMacro("LIBXML_STATIC", "1"); xsltproc_mod.addCMacro("LIBXSLT_STATIC", "1"); xsltproc_mod.addCMacro("LIBEXSLT_STATIC", "1"); }' build.zig
+
       # ── build: size-optimised ──────────────────────────────────────
       - name: Build xsltproc (ReleaseSmall, features stripped)
         run: |
