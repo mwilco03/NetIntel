@@ -144,9 +144,10 @@ jobs:
       # ── package & upload ───────────────────────────────────────────
       - name: Package
         run: |
-          cp nmap-intel.xsl zig-libxml2/zig-out/bin/
+          cp nmap-intel.xsl merge-nmap.sh merge-nmap.bat zig-libxml2/zig-out/bin/
           cd zig-libxml2/zig-out/bin
-          tar czf ${{ matrix.artifact }}.tar.gz xsltproc${{ matrix.ext }} nmap-intel.xsl
+          chmod +x merge-nmap.sh
+          tar czf ${{ matrix.artifact }}.tar.gz xsltproc${{ matrix.ext }} nmap-intel.xsl merge-nmap.sh merge-nmap.bat
 
       - uses: actions/upload-artifact@v4
         with:
