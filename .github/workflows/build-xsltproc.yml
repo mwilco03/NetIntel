@@ -104,8 +104,7 @@ jobs:
             -Dxslt-debugger=false \
             -Dxslt-profiler=false \
             -Dxslt-mem-debug=false \
-            -Diso8859x=false \
-            -Dwriter=false
+            -Diso8859x=false
 
       # ── strip symbols ──────────────────────────────────────────────
       - name: Strip binary
