@@ -1,0 +1,80 @@
+#!/bin/sh
+# nmap-intel — Generate a Network Intelligence Report from one or more nmap XML files
+#
+# Usage:
+#   nmap-intel scan.xml > report.html
+#   nmap-intel *.xml > report.html
+#   nmap-intel --classification SECRET --classification-color "#c8102e" *.xml > report.html
+#
+# Requires xsltproc (bundled in release or system-installed)
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+XSL="$SCRIPT_DIR/nmap-intel.xsl"
+XSLTPROC="${SCRIPT_DIR}/xsltproc"
+
+# Fall back to system xsltproc if not bundled
+if [ ! -x "$XSLTPROC" ]; then
+  XSLTPROC="$(command -v xsltproc 2>/dev/null || true)"
+fi
+
+if [ -z "$XSLTPROC" ]; then
+  echo "Error: xsltproc not found (not bundled and not in PATH)" >&2
+  exit 1
+fi
+
+if [ ! -f "$XSL" ]; then
+  echo "Error: nmap-intel.xsl not found in $SCRIPT_DIR" >&2
+  exit 1
+fi
+
+# Parse optional flags
+XSLT_PARAMS=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --classification)
+      XSLT_PARAMS="$XSLT_PARAMS --stringparam classification $2"
+      shift 2 ;;
+    --classification-color)
+      XSLT_PARAMS="$XSLT_PARAMS --stringparam classification-color $2"
+      shift 2 ;;
+    --) shift; break ;;
+    -*) echo "Unknown option: $1" >&2; exit 1 ;;
+    *)  break ;;
+  esac
+done
+
+if [ $# -eq 0 ]; then
+  echo "Usage: nmap-intel [OPTIONS] file1.xml [file2.xml ...] > report.html" >&2
+  echo "" >&2
+  echo "Options:" >&2
+  echo "  --classification TEXT    Banner text (default: UNCLASSIFIED)" >&2
+  echo "  --classification-color   Banner color (default: #007a33)" >&2
+  exit 1
+fi
+
+# Single file: pass directly to xsltproc (backward compatible, no manifest needed)
+if [ $# -eq 1 ]; then
+  $XSLTPROC $XSLT_PARAMS "$XSL" "$1"
+  exit $?
+fi
+
+# Multiple files: generate manifest, transform, clean up
+MANIFEST="$(mktemp "${TMPDIR:-/tmp}/nmap-intel-XXXXXX.xml")"
+trap 'rm -f "$MANIFEST"' EXIT
+
+{
+  echo '<?xml version="1.0" encoding="UTF-8"?>'
+  echo '<netintel-scans>'
+  for f in "$@"; do
+    case "$f" in
+      /*) abs="$f" ;;
+      *)  abs="$(cd "$(dirname "$f")" && pwd)/$(basename "$f")" ;;
+    esac
+    echo "  <scan file=\"$abs\"/>"
+  done
+  echo '</netintel-scans>'
+} > "$MANIFEST"
+
+$XSLTPROC $XSLT_PARAMS "$XSL" "$MANIFEST"
