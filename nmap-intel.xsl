@@ -2448,7 +2448,7 @@ function importVulnDb(file) {
   if (!file) return;
 
   if (file.size > MAX_IMPORT_SIZE) {
-    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
+    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 50MB.`);
     return;
   }
 
@@ -2483,7 +2483,7 @@ function loadComparisonScan(file) {
   if (!file) return;
 
   if (file.size > MAX_IMPORT_SIZE) {
-    alert(`File too large. Maximum size is 10MB.`);
+    alert(`File too large. Maximum size is 50MB.`);
     return;
   }
 
