@@ -540,6 +540,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       <li><a href="#" data-nav="topology">o Topology</a></li>
       <li><a href="#" data-nav="timeline">~ Timeline</a></li>
       <li><a href="#" data-nav="cleartext">! Cleartext</a></li>
+      <li><a href="#" data-nav="vulns" id="vulns-nav" style="display:none">* Vulnerabilities</a></li>
       <li><a href="#" data-nav="diff">&lt;&gt; Scan Diff</a></li>
       <li><a href="#" data-nav="sources">[] Sources</a></li>
     </ul>
@@ -587,6 +588,9 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
 
       <!-- Cleartext Section -->
       <xsl:call-template name="cleartext-section"/>
+
+      <!-- Vulnerabilities Section (Nessus) -->
+      <xsl:call-template name="vulns-section"/>
 
       <!-- Diff Section -->
       <xsl:call-template name="diff-section"/>
@@ -758,6 +762,15 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
       </ul>
     </div>
     
+    <!-- ACAS/Nessus Vulnerability Summary (hidden by default, shown when Nessus data loaded) -->
+    <div class="card hidden" id="nessus-summary-panel" style="margin-top:1rem;">
+      <div class="card-header">
+        <span class="card-title">ACAS Vulnerability Summary</span>
+        <a href="#" class="btn btn-ghost btn-sm" data-nav="vulns">View All &gt;&gt;</a>
+      </div>
+      <div class="card-body" id="nessus-summary"></div>
+    </div>
+
     <!-- Two Column Layout -->
     <div class="flex gap-4" style="flex-wrap:wrap;margin-top:1rem;">
       <!-- OS Distribution -->
@@ -930,6 +943,37 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;backgrou
     <div class="card">
       <div class="card-body" id="cleartext-detail">
         <p style="color:#8b949e;">Analyzing cleartext protocols...</p>
+      </div>
+    </div>
+  </section>
+</xsl:template>
+
+<!-- ============================================
+     VULNERABILITIES SECTION (NESSUS/ACAS)
+     ============================================ -->
+<xsl:template name="vulns-section">
+  <section class="section" data-section="vulns">
+    <div class="section-header">
+      <h2 class="section-title">Vulnerability Findings</h2>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <select id="vuln-sev-filter" class="select" style="width:auto;">
+          <option value="all">All Severities</option>
+          <option value="4">Critical</option>
+          <option value="3">High</option>
+          <option value="2">Medium</option>
+          <option value="1">Low</option>
+        </select>
+        <select id="vuln-sort" class="select" style="width:auto;">
+          <option value="severity">Sort by Severity</option>
+          <option value="hosts">Sort by Host Count</option>
+          <option value="cvss">Sort by CVSS</option>
+        </select>
+      </div>
+    </div>
+    <div id="vuln-summary-bar" style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;"></div>
+    <div class="card">
+      <div class="card-body" id="vulns-detail">
+        <p style="color:#8b949e;">No vulnerability data loaded. Import a .nessus file to see findings.</p>
       </div>
     </div>
   </section>
@@ -1435,7 +1479,7 @@ const ADMIN_PORTS = {
 };
 
 const OS_PATTERNS = {win:/windows|microsoft/i,lin:/linux|ubuntu|debian|centos|redhat/i,net:/cisco|juniper|fortinet/i};
-const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10MB max file size
+const MAX_IMPORT_SIZE = 50 * 1024 * 1024; // 50MB max file size (Nessus files can be large)
 
 // === ASSET IDENTIFICATION ===
 // Use MAC as primary key (stable), fall back to IP if no MAC
@@ -1694,6 +1738,22 @@ function buildSearchIndex() {
       const cveId = cve.cve.toLowerCase();
       if (!searchIndex.byCve[cveId]) searchIndex.byCve[cveId] = [];
       searchIndex.byCve[cveId].push(ip);
+    });
+
+    // Index Nessus findings (CVEs, plugin names, risk factors)
+    (host.nessusFindings || []).forEach(f => {
+      // Index CVEs from Nessus findings
+      (f.cves || []).forEach(cve => {
+        const cveId = cve.toLowerCase();
+        if (!searchIndex.byCve[cveId]) searchIndex.byCve[cveId] = [];
+        if (!searchIndex.byCve[cveId].includes(ip)) searchIndex.byCve[cveId].push(ip);
+      });
+      // Index plugin names as products for search
+      if (f.pluginName) {
+        const name = f.pluginName.toLowerCase();
+        if (!searchIndex.byProduct[name]) searchIndex.byProduct[name] = [];
+        if (!searchIndex.byProduct[name].includes(ip)) searchIndex.byProduct[name].push(ip);
+      }
     });
   });
 
@@ -2055,6 +2115,7 @@ function initRouter() {
     })
     .on('timeline', () => navigateToSection('timeline'))
     .on('cleartext', () => navigateToSection('cleartext'))
+    .on('vulns', () => navigateToSection('vulns'))
     .on('diff', () => navigateToSection('diff'))
     .on('sources', () => navigateToSection('sources'))
     .init();
@@ -2089,6 +2150,7 @@ function navigateToSection(section, param = null) {
 
   // Section-specific initialization
   if (section === 'cleartext') renderCleartext();
+  if (section === 'vulns') renderVulns();
   if (section === 'topology') { initTopology(); renderTopology(); }
   if (section === 'timeline') { initTimeline(); renderTimeline(); }
 }
@@ -2117,6 +2179,7 @@ function initIcons() {
     'topology': 'network',
     'timeline': 'chart',
     'cleartext': 'warning',
+    'vulns': 'bug',
     'diff': 'magnify',
     'sources': 'folder',
     'import': 'upload',
@@ -2748,15 +2811,34 @@ function calculateRisk(host) {
     return baseRisk + cleartextBonus;
   }).filter(w => w > 0).sort((a, b) => b - a);
 
-  if (!weights.length) return 0;
-
-  // Logarithmic diminishing returns: highest risk at full value, rest diminish
-  // This ensures 1 critical port > many low-risk ports
-  let risk = weights[0];
-  for (let i = 1; i < weights.length; i++) {
-    risk += weights[i] / Math.log2(i + 2);
+  // Port-based risk
+  let portRisk = 0;
+  if (weights.length) {
+    portRisk = weights[0];
+    for (let i = 1; i &lt; weights.length; i++) {
+      portRisk += weights[i] / Math.log2(i + 2);
+    }
   }
-  return Math.min(Math.round(risk), 100);
+
+  // Nessus vulnerability-based risk
+  let vulnRisk = 0;
+  const findings = host.nessusFindings || [];
+  if (findings.length > 0) {
+    const sevWeights = { 4: 25, 3: 15, 2: 5, 1: 1 };
+    const sorted = findings.map(f => {
+      let w = sevWeights[f.severity] || 0;
+      if (f.exploitAvailable) w += 5;
+      return w;
+    }).filter(w => w > 0).sort((a, b) => b - a);
+    if (sorted.length) {
+      vulnRisk = sorted[0];
+      for (let i = 1; i &lt; sorted.length; i++) {
+        vulnRisk += sorted[i] / Math.log2(i + 2);
+      }
+    }
+  }
+
+  return Math.min(Math.round(Math.max(portRisk, vulnRisk)), 100);
 }
 
 function initFilters() {
@@ -3149,7 +3231,17 @@ function renderStats() {
     reasons.forEach((r, i) => {
       risk += i === 0 ? r.w : r.w / Math.log2(i + 2);
     });
-    risk = Math.min(Math.round(risk), 100);
+    // Also factor in Nessus vulnerability risk
+    const nessusRisk = calculateRisk(host);
+    risk = Math.max(Math.min(Math.round(risk), 100), nessusRisk);
+
+    // Add Nessus context to reasons
+    const nf = host.nessusFindings || [];
+    const nCrit = nf.filter(f => f.severity === 4).length;
+    const nHigh = nf.filter(f => f.severity === 3).length;
+    if (nCrit > 0) reasons.unshift({port: 'ACAS', svc: `${nCrit} critical vulns`, w: 25});
+    else if (nHigh > 0) reasons.unshift({port: 'ACAS', svc: `${nHigh} high vulns`, w: 15});
+
     if (risk > 0) {
       totalRisk += risk;
       riskCount++;
@@ -3181,8 +3273,66 @@ function renderStats() {
   const riskList = document.getElementById('top-risks');
   riskList.innerHTML = topRisks.length ? topRisks.map(r => {
     const level = r.risk >= 70 ? 'critical' : r.risk >= 50 ? 'high' : r.risk >= 25 ? 'medium' : 'low';
-    return `<li class="risk-item"><div class="risk-score ${level}">${r.risk}</div><div class="risk-info"><div class="risk-title">${r.host.ip}${r.host.hostname ? ' ('+r.host.hostname+')' : ''}</div><div class="risk-desc">${r.reasons[0] ? 'Port '+r.reasons[0].port : 'Multiple factors'}</div></div></li>`;
+    const desc = r.reasons[0] ? (r.reasons[0].port === 'ACAS' ? r.reasons[0].svc : 'Port '+r.reasons[0].port) : 'Multiple factors';
+    return `<li class="risk-item"><div class="risk-score ${level}">${r.risk}</div><div class="risk-info"><div class="risk-title">${r.host.ip}${r.host.hostname ? ' ('+r.host.hostname+')' : ''}</div><div class="risk-desc">${desc}</div></div></li>`;
   }).join('') : '<li class="risk-item" style="color:#8b949e;">No significant risks detected</li>';
+
+  // Nessus/ACAS vulnerability summary on dashboard
+  renderNessusSummary();
+}
+
+function renderNessusSummary() {
+  const panel = document.getElementById('nessus-summary-panel');
+  const summary = document.getElementById('nessus-summary');
+  if (!panel || !summary) return;
+
+  const allFindings = [];
+  state.data.hosts.forEach(h => {
+    (h.nessusFindings || []).forEach(f => allFindings.push({ ...f, hostIp: h.ip }));
+  });
+
+  if (allFindings.length === 0) return;
+
+  panel.classList.remove('hidden');
+  const vulnsNav = document.getElementById('vulns-nav');
+  if (vulnsNav) vulnsNav.style.display = '';
+
+  const crit = allFindings.filter(f => f.severity === 4).length;
+  const high = allFindings.filter(f => f.severity === 3).length;
+  const med = allFindings.filter(f => f.severity === 2).length;
+  const low = allFindings.filter(f => f.severity === 1).length;
+  const exploitable = allFindings.filter(f => f.exploitAvailable).length;
+  const hostsWithVulns = new Set(allFindings.map(f => f.hostIp)).size;
+
+  // Top 5 most common vulns (by pluginID across hosts)
+  const pluginCounts = {};
+  allFindings.forEach(f => {
+    if (!pluginCounts[f.pluginID]) pluginCounts[f.pluginID] = { name: f.pluginName, severity: f.severity, severityLabel: f.severityLabel, cvss3: f.cvss3, count: 0 };
+    pluginCounts[f.pluginID].count++;
+  });
+  const topVulns = Object.values(pluginCounts).sort((a, b) => b.severity - a.severity || b.count - a.count).slice(0, 5);
+
+  summary.innerHTML = `
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <div class="stat danger" style="flex:1;min-width:100px;padding:.75rem;"><div class="stat-label">Critical</div><div class="stat-value">${crit}</div></div>
+      <div class="stat warning" style="flex:1;min-width:100px;padding:.75rem;"><div class="stat-label">High</div><div class="stat-value">${high}</div></div>
+      <div class="stat info" style="flex:1;min-width:100px;padding:.75rem;"><div class="stat-label">Medium</div><div class="stat-value">${med}</div></div>
+      <div class="stat" style="flex:1;min-width:100px;padding:.75rem;border:1px solid #30363d;border-radius:6px;"><div class="stat-label">Low</div><div class="stat-value">${low}</div></div>
+      <div class="stat" style="flex:1;min-width:100px;padding:.75rem;border:1px solid #30363d;border-radius:6px;"><div class="stat-label">Exploitable</div><div class="stat-value" style="color:#f85149;">${exploitable}</div></div>
+      <div class="stat" style="flex:1;min-width:100px;padding:.75rem;border:1px solid #30363d;border-radius:6px;"><div class="stat-label">Hosts Affected</div><div class="stat-value">${hostsWithVulns}</div></div>
+    </div>
+    <div style="font-weight:600;margin-bottom:.5rem;">Top Vulnerabilities</div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Severity</th><th>Vulnerability</th><th>CVSS</th><th>Hosts</th></tr></thead><tbody>
+      ${topVulns.map(v => `
+        <tr>
+          <td><span class="admin-port-sev sev-${v.severityLabel.toLowerCase()}">${v.severityLabel}</span></td>
+          <td>${v.name}</td>
+          <td>${v.cvss3 || '--'}</td>
+          <td>${v.count}</td>
+        </tr>
+      `).join('')}
+    </tbody></table></div>
+  `;
 }
 
 function updateEntityCards() {
@@ -3356,13 +3506,126 @@ function renderCleartext() {
     `).join('');
 }
 
+// === VULNERABILITIES VIEW (NESSUS/ACAS) ===
+function renderVulns() {
+  const el = document.getElementById('vulns-detail');
+  if (!el) return;
+
+  // Collect all findings grouped by pluginID
+  const pluginMap = {};
+  state.data.hosts.forEach(host => {
+    (host.nessusFindings || []).forEach(f => {
+      if (!pluginMap[f.pluginID]) {
+        pluginMap[f.pluginID] = {
+          pluginID: f.pluginID,
+          pluginName: f.pluginName,
+          severity: f.severity,
+          severityLabel: f.severityLabel,
+          riskFactor: f.riskFactor,
+          cvss3: f.cvss3,
+          cvss: f.cvss,
+          vpr: f.vpr,
+          cves: f.cves || [],
+          synopsis: f.synopsis,
+          description: f.description,
+          solution: f.solution,
+          exploitAvailable: f.exploitAvailable,
+          stigSeverity: f.stigSeverity,
+          references: f.references,
+          hosts: []
+        };
+      }
+      pluginMap[f.pluginID].hosts.push({ ip: host.ip, hostname: host.hostname, port: f.port, output: f.output });
+    });
+  });
+
+  const plugins = Object.values(pluginMap);
+  if (plugins.length === 0) {
+    el.innerHTML = '<p style="color:#8b949e;">No vulnerability data loaded. Import a .nessus file to see findings.</p>';
+    return;
+  }
+
+  // Summary bar
+  const summaryBar = document.getElementById('vuln-summary-bar');
+  if (summaryBar) {
+    const crit = plugins.filter(p => p.severity === 4).length;
+    const high = plugins.filter(p => p.severity === 3).length;
+    const med = plugins.filter(p => p.severity === 2).length;
+    const low = plugins.filter(p => p.severity === 1).length;
+    summaryBar.innerHTML = `
+      <span class="badge badge-critical">${crit} Critical</span>
+      <span class="badge badge-warning" style="background:#d29922;">${high} High</span>
+      <span class="badge" style="background:#1f6feb;color:#fff;">${med} Medium</span>
+      <span class="badge" style="background:#388bfd44;color:#8b949e;">${low} Low</span>
+      <span style="color:#8b949e;font-size:.85rem;margin-left:.5rem;">${plugins.length} unique findings across ${new Set(plugins.flatMap(p => p.hosts.map(h => h.ip))).size} hosts</span>
+    `;
+  }
+
+  // Get filter/sort state
+  const sevFilter = document.getElementById('vuln-sev-filter')?.value || 'all';
+  const sortBy = document.getElementById('vuln-sort')?.value || 'severity';
+
+  let filtered = plugins;
+  if (sevFilter !== 'all') {
+    filtered = filtered.filter(p => p.severity === parseInt(sevFilter));
+  }
+
+  if (sortBy === 'hosts') {
+    filtered.sort((a, b) => b.hosts.length - a.hosts.length || b.severity - a.severity);
+  } else if (sortBy === 'cvss') {
+    filtered.sort((a, b) => (b.cvss3 || b.cvss || 0) - (a.cvss3 || a.cvss || 0));
+  } else {
+    filtered.sort((a, b) => b.severity - a.severity || b.hosts.length - a.hosts.length);
+  }
+
+  el.innerHTML = filtered.slice(0, 100).map((p, idx) => `
+    <div class="card mb-4" style="border-left:3px solid ${p.severity === 4 ? '#f85149' : p.severity === 3 ? '#d29922' : p.severity === 2 ? '#1f6feb' : '#388bfd'};">
+      <div class="card-header" style="cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+        <div style="display:flex;align-items:center;gap:.5rem;flex:1;">
+          <span class="admin-port-sev sev-${p.severityLabel.toLowerCase()}">${p.severityLabel}</span>
+          <span style="font-weight:600;">${p.pluginName}</span>
+          ${p.cvss3 ? `<span class="vuln-score ${getCvssClass(p.cvss3)}">${p.cvss3}</span>` : ''}
+          ${p.exploitAvailable ? '<span class="badge badge-critical" style="font-size:.7rem;">EXPLOIT</span>' : ''}
+          ${p.stigSeverity ? `<span class="badge" style="background:#30363d;font-size:.7rem;">STIG ${p.stigSeverity}</span>` : ''}
+        </div>
+        <span class="badge" style="background:#21262d;">${p.hosts.length} host${p.hosts.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="card-body" style="display:none;">
+        ${p.cves.length ? `<div style="margin-bottom:.5rem;"><strong>CVEs:</strong> ${p.cves.map(c => `<span class="vuln-id" style="margin-right:.25rem;">${c}</span>`).join('')}</div>` : ''}
+        ${p.synopsis ? `<div style="margin-bottom:.5rem;"><strong>Synopsis:</strong> ${p.synopsis}</div>` : ''}
+        ${p.description ? `<div style="margin-bottom:.5rem;color:#8b949e;font-size:.85rem;max-height:100px;overflow-y:auto;">${p.description}</div>` : ''}
+        ${p.solution ? `<div style="margin-bottom:.5rem;"><strong>Solution:</strong> <span style="color:#3fb950;">${p.solution}</span></div>` : ''}
+        ${p.references ? `<div style="margin-bottom:.5rem;font-size:.85rem;"><strong>References:</strong><br>${p.references.split('\n').map(r => r.trim()).filter(Boolean).map(r => `<a href="${r}" target="_blank" rel="noopener" style="color:#58a6ff;">${r}</a>`).join('<br>')}</div>` : ''}
+        <div style="margin-top:.5rem;">
+          <strong>Affected Hosts:</strong>
+          <div class="tbl-wrap" style="margin-top:.25rem;"><table class="tbl"><thead><tr><th>Host</th><th>Port</th></tr></thead><tbody>
+            ${p.hosts.map(h => `<tr><td class="mono">${h.ip}${h.hostname ? ' <span style="color:#8b949e;">('+h.hostname+')</span>' : ''}</td><td class="mono">${h.port || '--'}</td></tr>`).join('')}
+          </tbody></table></div>
+        </div>
+      </div>
+    </div>
+  `).join('') + (filtered.length > 100 ? `<p style="color:#8b949e;">Showing first 100 of ${filtered.length} findings</p>` : '');
+
+  // Wire up filter/sort change handlers
+  const sevFilterEl = document.getElementById('vuln-sev-filter');
+  const sortEl = document.getElementById('vuln-sort');
+  if (sevFilterEl &amp;&amp; !sevFilterEl._vulnBound) {
+    sevFilterEl.addEventListener('change', () => renderVulns());
+    sevFilterEl._vulnBound = true;
+  }
+  if (sortEl &amp;&amp; !sortEl._vulnBound) {
+    sortEl.addEventListener('change', () => renderVulns());
+    sortEl._vulnBound = true;
+  }
+}
+
 // === IMPORT/EXPORT ===
 function importFile(file) {
   if (!file) return;
 
-  // File size check (10MB limit)
+  // File size check
   if (file.size > MAX_IMPORT_SIZE) {
-    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
+    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 50MB.`);
     return;
   }
 
@@ -3380,15 +3643,23 @@ function importFile(file) {
         alert('Invalid XML file: ' + parseError.textContent.slice(0, 100));
         return;
       }
+      // Auto-detect format: Nmap XML vs Nessus XML
       const nmaprun = doc.querySelector('nmaprun');
-      if (!nmaprun) {
-        alert('Not a valid Nmap XML file (missing nmaprun element)');
+      const nessusRoot = doc.querySelector('NessusClientData_v2');
+      let newHosts;
+      let sourceName;
+
+      if (nmaprun) {
+        newHosts = parseNmapXml(doc);
+        sourceName = `Imported: ${file.name}`;
+      } else if (nessusRoot) {
+        newHosts = parseNessusXml(doc);
+        sourceName = `ACAS/Nessus: ${file.name}`;
+      } else {
+        alert('Unsupported XML format. Expected Nmap XML (nmaprun) or Nessus XML (NessusClientData_v2).');
         return;
       }
 
-      // Parse and merge the new scan data
-      const newHosts = parseNmapXml(doc);
-      const sourceName = `Imported: ${file.name}`;
       mergeHosts(newHosts, sourceName);
 
       document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
@@ -3460,6 +3731,141 @@ function parseNmapXml(doc) {
   return hosts;
 }
 
+// Parse Nessus XML document into host objects
+function parseNessusXml(doc) {
+  const hosts = [];
+  const SEV_LABELS = ['Info', 'Low', 'Medium', 'High', 'Critical'];
+
+  doc.querySelectorAll('ReportHost').forEach(hostEl => {
+    // Build HostProperties map
+    const props = {};
+    hostEl.querySelectorAll('HostProperties tag').forEach(tag => {
+      const name = tag.getAttribute('name');
+      if (name) {
+        if (props[name]) {
+          // Multi-value (e.g. cpe-0, cpe-1 are separate but plain 'cpe' can repeat)
+          if (!Array.isArray(props[name])) props[name] = [props[name]];
+          props[name].push(tag.textContent || '');
+        } else {
+          props[name] = tag.textContent || '';
+        }
+      }
+    });
+
+    const ip = props['host-ip'] || hostEl.getAttribute('name') || '';
+    if (!ip) return;
+
+    const host = {
+      ip: ip,
+      mac: '',
+      macVendor: '',
+      hostname: props['hostname'] || props['netbios-name'] || '',
+      netbiosName: props['netbios-name'] || '',
+      status: 'up',
+      os: [],
+      ports: [],
+      trace: [],
+      cpes: [],
+      nessusFindings: [],
+      credentialedScan: props['Credentialed_Scan'] === 'true'
+    };
+
+    // OS detection from host properties
+    if (props['operating-system']) {
+      const osConf = parseInt(props['operating-system-conf']) || 50;
+      host.os.push({ name: props['operating-system'], accuracy: osConf });
+    }
+
+    // Host-level CPEs (cpe, cpe-0, cpe-1, ...)
+    Object.keys(props).forEach(k => {
+      if (k === 'cpe' || /^cpe-\d+$/.test(k)) {
+        const vals = Array.isArray(props[k]) ? props[k] : [props[k]];
+        vals.forEach(v => { if (v &amp;&amp; !host.cpes.includes(v)) host.cpes.push(v); });
+      }
+    });
+
+    // Traceroute hops
+    Object.keys(props).forEach(k => {
+      const hopMatch = k.match(/^traceroute-hop-(\d+)$/);
+      if (hopMatch) {
+        host.trace.push({ ttl: parseInt(hopMatch[1]) + 1, ip: props[k] });
+      }
+    });
+    host.trace.sort((a, b) => a.ttl - b.ttl);
+
+    // Parse ReportItems
+    const portSet = new Set();
+    hostEl.querySelectorAll('ReportItem').forEach(item => {
+      const port = parseInt(item.getAttribute('port')) || 0;
+      const proto = item.getAttribute('protocol') || 'tcp';
+      const svc = item.getAttribute('svc_name') || '';
+      const severity = parseInt(item.getAttribute('severity')) || 0;
+      const pluginID = item.getAttribute('pluginID') || '';
+      const pluginName = item.getAttribute('pluginName') || '';
+
+      // Add port entry (deduped by port+proto)
+      if (port > 0) {
+        const portKey = port + '/' + proto;
+        if (!portSet.has(portKey)) {
+          portSet.add(portKey);
+          host.ports.push({
+            port: port,
+            proto: proto,
+            state: 'open',
+            svc: svc === '?' ? '' : svc,
+            product: '',
+            version: '',
+            cpe: ''
+          });
+        }
+      }
+
+      // Extract finding data for non-info items
+      if (severity > 0) {
+        const getChildText = (tag) => {
+          const el = item.querySelector(tag);
+          return el ? el.textContent || '' : '';
+        };
+        const getAllChildText = (tag) => {
+          const els = item.querySelectorAll(tag);
+          return Array.from(els).map(el => el.textContent || '').filter(Boolean);
+        };
+
+        const finding = {
+          pluginID: pluginID,
+          pluginName: pluginName,
+          severity: severity,
+          severityLabel: SEV_LABELS[severity] || 'Unknown',
+          riskFactor: getChildText('risk_factor'),
+          cvss3: parseFloat(getChildText('cvss3_base_score')) || null,
+          cvss: parseFloat(getChildText('cvss_base_score')) || null,
+          vpr: parseFloat(getChildText('vpr_score')) || null,
+          cves: getAllChildText('cve'),
+          cpe: getChildText('cpe'),
+          synopsis: getChildText('synopsis'),
+          description: getChildText('description'),
+          solution: getChildText('solution'),
+          output: getChildText('plugin_output'),
+          exploitAvailable: getChildText('exploit_available') === 'true',
+          stigSeverity: getChildText('stig_severity'),
+          references: getChildText('see_also'),
+          xrefs: getAllChildText('xref'),
+          port: port,
+          proto: proto,
+          svc: svc
+        };
+        host.nessusFindings.push(finding);
+      }
+    });
+
+    // Sort findings by severity descending
+    host.nessusFindings.sort((a, b) => b.severity - a.severity || (b.cvss3 || b.cvss || 0) - (a.cvss3 || a.cvss || 0));
+
+    hosts.push(host);
+  });
+  return hosts;
+}
+
 // Merge imported hosts into existing data
 function mergeHosts(newHosts, sourceName) {
   let added = 0, updated = 0;
@@ -3496,6 +3902,30 @@ function mergeHosts(newHosts, sourceName) {
         existing.trace = newHost.trace;
       }
 
+      // Merge Nessus findings (dedupe by pluginID+port)
+      if (newHost.nessusFindings &amp;&amp; newHost.nessusFindings.length > 0) {
+        if (!existing.nessusFindings) existing.nessusFindings = [];
+        const existingKeys = new Set(existing.nessusFindings.map(f => f.pluginID + ':' + f.port));
+        newHost.nessusFindings.forEach(f => {
+          const key = f.pluginID + ':' + f.port;
+          if (!existingKeys.has(key)) {
+            existing.nessusFindings.push(f);
+            existingKeys.add(key);
+          }
+        });
+        existing.nessusFindings.sort((a, b) => b.severity - a.severity);
+      }
+
+      // Merge CPEs
+      if (newHost.cpes &amp;&amp; newHost.cpes.length > 0) {
+        if (!existing.cpes) existing.cpes = [];
+        newHost.cpes.forEach(c => { if (!existing.cpes.includes(c)) existing.cpes.push(c); });
+      }
+
+      // Set netbios name if not present
+      if (newHost.netbiosName &amp;&amp; !existing.netbiosName) existing.netbiosName = newHost.netbiosName;
+      if (newHost.credentialedScan) existing.credentialedScan = true;
+
       updated++;
     } else {
       // New host - add to collection
@@ -3517,11 +3947,18 @@ function mergeHosts(newHosts, sourceName) {
     timestamp: new Date().toISOString()
   });
 
+  // Show vulns nav if any Nessus data present
+  const hasNessus = state.data.hosts.some(h => h.nessusFindings &amp;&amp; h.nessusFindings.length > 0);
+  const vulnsNav = document.getElementById('vulns-nav');
+  if (vulnsNav &amp;&amp; hasNessus) vulnsNav.style.display = '';
+
   // Re-render UI
   rebuildEntityGrid();
   render();
 
-  alert(`Import complete!\nAdded: ${added} new hosts\nUpdated: ${updated} existing hosts`);
+  const totalFindings = newHosts.reduce((sum, h) => sum + (h.nessusFindings ? h.nessusFindings.length : 0), 0);
+  const findingsMsg = totalFindings > 0 ? `\nVulnerability findings: ${totalFindings}` : '';
+  alert(`Import complete!\nAdded: ${added} new hosts\nUpdated: ${updated} existing hosts${findingsMsg}`);
 }
 
 // Rebuild entity grid after import (since XSL only runs once)
@@ -3676,6 +4113,32 @@ function createEntityCard(host) {
     </div>
   ` : '';
 
+  // Nessus/ACAS findings summary
+  const nessusFindings = host.nessusFindings || [];
+  const nessusCrit = nessusFindings.filter(f => f.severity === 4).length;
+  const nessusHigh = nessusFindings.filter(f => f.severity === 3).length;
+  const nessusMed = nessusFindings.filter(f => f.severity === 2).length;
+  const nessusLow = nessusFindings.filter(f => f.severity === 1).length;
+  const nessusHtml = nessusFindings.length > 0 ? `
+    <div class="nessus-findings">
+      <div class="nse-title">${icon('bug')} ACAS Findings (${nessusFindings.length})</div>
+      <div style="display:flex;gap:.25rem;margin:.25rem 0;">
+        ${nessusCrit ? `<span class="badge badge-critical">${nessusCrit} Crit</span>` : ''}
+        ${nessusHigh ? `<span class="badge badge-warning" style="background:#d29922;">${nessusHigh} High</span>` : ''}
+        ${nessusMed ? `<span class="badge" style="background:#1f6feb;color:#fff;">${nessusMed} Med</span>` : ''}
+        ${nessusLow ? `<span class="badge" style="background:#388bfd44;color:#8b949e;">${nessusLow} Low</span>` : ''}
+      </div>
+      ${nessusFindings.slice(0, 3).map(f => `
+        <div class="nse-finding">
+          <span class="admin-port-sev sev-${f.severityLabel.toLowerCase()}">${f.severityLabel}</span>
+          <span class="nse-detail" style="flex:1">${f.pluginName}</span>
+          ${f.cvss3 ? `<span class="vuln-score ${getCvssClass(f.cvss3)}">${f.cvss3}</span>` : ''}
+        </div>
+      `).join('')}
+      ${nessusFindings.length > 3 ? `<div class="nse-more">...and ${nessusFindings.length - 3} more</div>` : ''}
+    </div>
+  ` : '';
+
   card.innerHTML = `
     <div class="entity-head">
       <div class="entity-icon" data-os-icon="">\u25a3</div>
@@ -3687,6 +4150,8 @@ function createEntityCard(host) {
       ${nseVulns.length > 0 ? `<span class="badge badge-critical" title="NSE vulns detected">${icon('shield')}</span>` : ''}
       ${criticalAdmin > 0 ? `<span class="badge badge-warning" title="Admin ports exposed">${icon('warning')}</span>` : ''}
       ${cves.length > 0 ? `<span class="badge badge-critical">${cves.length} CVE${cves.length !== 1 ? 's' : ''}</span>` : ''}
+      ${nessusCrit > 0 ? `<span class="badge badge-critical" title="ACAS Critical findings">${nessusCrit} Crit</span>` : ''}
+      ${nessusHigh > 0 &amp;&amp; nessusCrit === 0 ? `<span class="badge badge-warning" title="ACAS High findings">${nessusHigh} High</span>` : ''}
     </div>
     <div class="entity-body">
       <div class="entity-stats">
@@ -3707,6 +4172,7 @@ function createEntityCard(host) {
       ${nseHtml}
       ${adminHtml}
       ${nseVulnHtml}
+      ${nessusHtml}
       ${vulnsHtml}
     </div>
     <div class="entity-foot">
