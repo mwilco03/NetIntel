@@ -1479,8 +1479,6 @@ const ADMIN_PORTS = {
 };
 
 const OS_PATTERNS = {win:/windows|microsoft/i,lin:/linux|ubuntu|debian|centos|redhat/i,net:/cisco|juniper|fortinet/i};
-const MAX_IMPORT_SIZE = 50 * 1024 * 1024; // 50MB max file size (Nessus files can be large)
-
 // === ASSET IDENTIFICATION ===
 // Use MAC as primary key (stable), fall back to IP if no MAC
 function getAssetKey(host) {
@@ -2447,11 +2445,6 @@ function initDropZones() {
 function importVulnDb(file) {
   if (!file) return;
 
-  if (file.size > MAX_IMPORT_SIZE) {
-    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
-    return;
-  }
-
   const reader = new FileReader();
   reader.onerror = () => {
     console.error('[NetIntel] Error reading vuln db:', reader.error);
@@ -2481,11 +2474,6 @@ function importVulnDb(file) {
 // === SCAN DIFF ===
 function loadComparisonScan(file) {
   if (!file) return;
-
-  if (file.size > MAX_IMPORT_SIZE) {
-    alert(`File too large. Maximum size is 10MB.`);
-    return;
-  }
 
   const reader = new FileReader();
   reader.onerror = () => alert('Error reading file.');
@@ -3622,12 +3610,6 @@ function renderVulns() {
 // === IMPORT/EXPORT ===
 function importFile(file) {
   if (!file) return;
-
-  // File size check
-  if (file.size > MAX_IMPORT_SIZE) {
-    alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 50MB.`);
-    return;
-  }
 
   const reader = new FileReader();
   reader.onerror = () => {
