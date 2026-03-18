@@ -1,8 +1,10 @@
-# Plan: Nessus (.nessus) File Import for NetIntel SPA
+# Nessus (.nessus) File Import — Implementation Notes
+
+> **Status: IMPLEMENTED** — This plan was executed and merged. Kept here as a reference for the data model and design decisions.
 
 ## Overview
 
-Add the ability to import ACAS/Nessus `.nessus` files into NetIntel alongside the existing Nmap XML import. The .nessus format (XML-based, `NessusClientData_v2` root element) contains rich vulnerability scan data including per-host findings with CVEs, CVSS scores, severity levels, CPEs, exploit availability, and remediation guidance. This data will be parsed in the browser, mapped into the existing host data model (with extensions), and displayed throughout the SPA.
+Nessus/ACAS `.nessus` file import is supported alongside Nmap XML import. The .nessus format (XML-based, `NessusClientData_v2` root element) contains rich vulnerability scan data including per-host findings with CVEs, CVSS scores, severity levels, CPEs, exploit availability, and remediation guidance. Data is parsed in the browser, mapped into the host data model, and displayed throughout the SPA.
 
 ## Data Mapping: Nessus → NetIntel Host Model
 

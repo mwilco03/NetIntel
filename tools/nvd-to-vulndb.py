@@ -118,11 +118,11 @@ def build_vulndb(
     api_key: Optional[str] = None,
     days_back: Optional[int] = None,
     cpe_match: Optional[str] = None,
-    verbose: bool = False
+    verbose: bool = False,
+    start_index: int = 0
 ) -> dict:
     """Build the vulnerability database."""
     vulndb = {}
-    start_index = 0
     total_results = None
     processed = 0
 
@@ -132,15 +132,27 @@ def build_vulndb(
         if verbose:
             print(f"  Fetching from index {start_index}...")
 
-        try:
-            data = fetch_cves(
-                api_key=api_key,
-                days_back=days_back,
-                cpe_match=cpe_match,
-                start_index=start_index
-            )
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching data: {e}")
+        max_retries = 3
+        data = None
+        for attempt in range(max_retries):
+            try:
+                data = fetch_cves(
+                    api_key=api_key,
+                    days_back=days_back,
+                    cpe_match=cpe_match,
+                    start_index=start_index
+                )
+                break
+            except requests.exceptions.RequestException as e:
+                wait = 2 ** (attempt + 1)
+                if attempt < max_retries - 1:
+                    print(f"  Error fetching data (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"  Retrying in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    print(f"  Failed after {max_retries} attempts: {e}")
+                    print(f"  Partial results saved. Resume with --start-index {start_index}")
+        if data is None:
             break
 
         if total_results is None:
@@ -209,6 +221,12 @@ def main():
         action="store_true",
         help="Verbose output"
     )
+    parser.add_argument(
+        "--start-index", "-s",
+        type=int,
+        default=0,
+        help="Resume from this start index (for resuming interrupted fetches)"
+    )
 
     args = parser.parse_args()
 
@@ -216,7 +234,8 @@ def main():
         api_key=args.api_key,
         days_back=args.days,
         cpe_match=args.cpe,
-        verbose=args.verbose
+        verbose=args.verbose,
+        start_index=args.start_index
     )
 
     # Statistics

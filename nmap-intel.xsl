@@ -2097,9 +2097,12 @@ function initRouter() {
     .on('dashboard', () => navigateToSection('dashboard'))
     .on('entities', ({ query }) => {
       navigateToSection('entities');
-      // Apply filter state from URL query params
+      // Apply filter state from URL query params, or restore saved state
       if (query) {
         applyUrlFilterState(query);
+      } else if (state._savedEntityFilters) {
+        applyUrlFilterState(state._savedEntityFilters);
+        delete state._savedEntityFilters;
       }
     })
     .on('entities/:ip', ({ params, query }) => {
@@ -2140,11 +2143,22 @@ function navigateToSection(section, param = null) {
     s.classList.toggle('active', s.dataset.section === section);
   });
 
-  // Clear search when leaving entities page (search only applies there)
+  // Save filter state when leaving entities page, clear search
   const searchEl = document.getElementById('search');
-  if (section !== 'entities' && searchEl && searchEl.value) {
-    searchEl.value = '';
-    searchEl.dispatchEvent(new Event('input'));
+  if (section !== 'entities') {
+    const filterEl = document.getElementById('entity-filter');
+    const groupEl = document.getElementById('entity-group');
+    const activeView = document.querySelector('[data-view].active')?.dataset.view;
+    state._savedEntityFilters = {
+      filter: filterEl?.value || 'all',
+      group: groupEl?.value || 'none',
+      q: searchEl?.value || '',
+      view: activeView || 'cards'
+    };
+    if (searchEl && searchEl.value) {
+      searchEl.value = '';
+      searchEl.dispatchEvent(new Event('input'));
+    }
   }
 
   // Section-specific initialization
