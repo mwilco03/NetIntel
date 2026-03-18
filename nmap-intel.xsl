@@ -5,8 +5,9 @@ MIT License - No use restrictions
 Air-gapped, self-contained HTML output
 
 Usage:
-  xsltproc nmap-intel.xsl scan.xml > report.html
-  xsltproc - -stringparam classification "SECRET" - -stringparam classification-color "#c8102e" nmap-intel.xsl scan.xml > report.html
+  xsltproc -o report.html nmap-intel.xsl scan.xml
+  xsltproc -o report.html --stringparam classification "SECRET" --stringparam classification-color "#c8102e" nmap-intel.xsl scan.xml
+  NOTE: Always use -o flag instead of > redirect to avoid PowerShell UTF-16 encoding issues
 -->
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 <xsl:output method="html" encoding="utf-8" indent="yes" doctype-system="about:legacy-compat"/>
@@ -2096,9 +2097,12 @@ function initRouter() {
     .on('dashboard', () => navigateToSection('dashboard'))
     .on('entities', ({ query }) => {
       navigateToSection('entities');
-      // Apply filter state from URL query params
+      // Apply filter state from URL query params, or restore saved state
       if (query) {
         applyUrlFilterState(query);
+      } else if (state._savedEntityFilters) {
+        applyUrlFilterState(state._savedEntityFilters);
+        delete state._savedEntityFilters;
       }
     })
     .on('entities/:ip', ({ params, query }) => {
@@ -2139,11 +2143,22 @@ function navigateToSection(section, param = null) {
     s.classList.toggle('active', s.dataset.section === section);
   });
 
-  // Clear search when leaving entities page (search only applies there)
+  // Save filter state when leaving entities page, clear search
   const searchEl = document.getElementById('search');
-  if (section !== 'entities' &amp;&amp; searchEl &amp;&amp; searchEl.value) {
-    searchEl.value = '';
-    searchEl.dispatchEvent(new Event('input'));
+  if (section !== 'entities') {
+    const filterEl = document.getElementById('entity-filter');
+    const groupEl = document.getElementById('entity-group');
+    const activeView = document.querySelector('[data-view].active')?.dataset.view;
+    state._savedEntityFilters = {
+      filter: filterEl?.value || 'all',
+      group: groupEl?.value || 'none',
+      q: searchEl?.value || '',
+      view: activeView || 'cards'
+    };
+    if (searchEl && searchEl.value) {
+      searchEl.value = '';
+      searchEl.dispatchEvent(new Event('input'));
+    }
   }
 
   // Section-specific initialization
@@ -2803,7 +2818,7 @@ function calculateRisk(host) {
   let portRisk = 0;
   if (weights.length) {
     portRisk = weights[0];
-    for (let i = 1; i &lt; weights.length; i++) {
+    for (let i = 1; i < weights.length; i++) {
       portRisk += weights[i] / Math.log2(i + 2);
     }
   }
@@ -2820,7 +2835,7 @@ function calculateRisk(host) {
     }).filter(w => w > 0).sort((a, b) => b - a);
     if (sorted.length) {
       vulnRisk = sorted[0];
-      for (let i = 1; i &lt; sorted.length; i++) {
+      for (let i = 1; i < sorted.length; i++) {
         vulnRisk += sorted[i] / Math.log2(i + 2);
       }
     }
@@ -3364,7 +3379,7 @@ function updateEntityTags() {
     // Criticality
     'ckt': '[!] CKT', 'mission-critical': '[!!] Mission Critical', 'mission-essential': '[!] Mission Essential', 'business-critical': '[*] Business Critical',
     // Tactical
-    'crown': '[*] Crown Jewel', 'choke': '[o] Choke Point', 'key': '[K] Key Terrain', 'pivot': '[&lt;&gt;] Pivot', 'attack-surface': '[!] Attack Surface', 'egress': '[-&gt;] Egress',
+    'crown': '[*] Crown Jewel', 'choke': '[o] Choke Point', 'key': '[K] Key Terrain', 'pivot': '[<>] Pivot', 'attack-surface': '[!] Attack Surface', 'egress': '[->] Egress',
     // Environment
     'production': '[P] Prod', 'staging': '[S] Stage', 'development': '[D] Dev', 'test': '[T] Test', 'deprecated': '[X] Deprecated',
     // Priority
@@ -3597,11 +3612,11 @@ function renderVulns() {
   // Wire up filter/sort change handlers
   const sevFilterEl = document.getElementById('vuln-sev-filter');
   const sortEl = document.getElementById('vuln-sort');
-  if (sevFilterEl &amp;&amp; !sevFilterEl._vulnBound) {
+  if (sevFilterEl && !sevFilterEl._vulnBound) {
     sevFilterEl.addEventListener('change', () => renderVulns());
     sevFilterEl._vulnBound = true;
   }
-  if (sortEl &amp;&amp; !sortEl._vulnBound) {
+  if (sortEl && !sortEl._vulnBound) {
     sortEl.addEventListener('change', () => renderVulns());
     sortEl._vulnBound = true;
   }
@@ -3762,7 +3777,7 @@ function parseNessusXml(doc) {
     Object.keys(props).forEach(k => {
       if (k === 'cpe' || /^cpe-\d+$/.test(k)) {
         const vals = Array.isArray(props[k]) ? props[k] : [props[k]];
-        vals.forEach(v => { if (v &amp;&amp; !host.cpes.includes(v)) host.cpes.push(v); });
+        vals.forEach(v => { if (v && !host.cpes.includes(v)) host.cpes.push(v); });
       }
     });
 
@@ -3885,7 +3900,7 @@ function mergeHosts(newHosts, sourceName) {
       }
 
       // Merge Nessus findings (dedupe by pluginID+port)
-      if (newHost.nessusFindings &amp;&amp; newHost.nessusFindings.length > 0) {
+      if (newHost.nessusFindings && newHost.nessusFindings.length > 0) {
         if (!existing.nessusFindings) existing.nessusFindings = [];
         const existingKeys = new Set(existing.nessusFindings.map(f => f.pluginID + ':' + f.port));
         newHost.nessusFindings.forEach(f => {
@@ -3899,13 +3914,13 @@ function mergeHosts(newHosts, sourceName) {
       }
 
       // Merge CPEs
-      if (newHost.cpes &amp;&amp; newHost.cpes.length > 0) {
+      if (newHost.cpes && newHost.cpes.length > 0) {
         if (!existing.cpes) existing.cpes = [];
         newHost.cpes.forEach(c => { if (!existing.cpes.includes(c)) existing.cpes.push(c); });
       }
 
       // Set netbios name if not present
-      if (newHost.netbiosName &amp;&amp; !existing.netbiosName) existing.netbiosName = newHost.netbiosName;
+      if (newHost.netbiosName && !existing.netbiosName) existing.netbiosName = newHost.netbiosName;
       if (newHost.credentialedScan) existing.credentialedScan = true;
 
       updated++;
@@ -3930,9 +3945,9 @@ function mergeHosts(newHosts, sourceName) {
   });
 
   // Show vulns nav if any Nessus data present
-  const hasNessus = state.data.hosts.some(h => h.nessusFindings &amp;&amp; h.nessusFindings.length > 0);
+  const hasNessus = state.data.hosts.some(h => h.nessusFindings && h.nessusFindings.length > 0);
   const vulnsNav = document.getElementById('vulns-nav');
-  if (vulnsNav &amp;&amp; hasNessus) vulnsNav.style.display = '';
+  if (vulnsNav && hasNessus) vulnsNav.style.display = '';
 
   // Re-render UI
   rebuildEntityGrid();
@@ -4133,7 +4148,7 @@ function createEntityCard(host) {
       ${criticalAdmin > 0 ? `<span class="badge badge-warning" title="Admin ports exposed">${icon('warning')}</span>` : ''}
       ${cves.length > 0 ? `<span class="badge badge-critical">${cves.length} CVE${cves.length !== 1 ? 's' : ''}</span>` : ''}
       ${nessusCrit > 0 ? `<span class="badge badge-critical" title="ACAS Critical findings">${nessusCrit} Crit</span>` : ''}
-      ${nessusHigh > 0 &amp;&amp; nessusCrit === 0 ? `<span class="badge badge-warning" title="ACAS High findings">${nessusHigh} High</span>` : ''}
+      ${nessusHigh > 0 && nessusCrit === 0 ? `<span class="badge badge-warning" title="ACAS High findings">${nessusHigh} High</span>` : ''}
     </div>
     <div class="entity-body">
       <div class="entity-stats">
