@@ -5,8 +5,9 @@ MIT License - No use restrictions
 Air-gapped, self-contained HTML output
 
 Usage:
-  xsltproc nmap-intel.xsl scan.xml > report.html
-  xsltproc - -stringparam classification "SECRET" - -stringparam classification-color "#c8102e" nmap-intel.xsl scan.xml > report.html
+  xsltproc -o report.html nmap-intel.xsl scan.xml
+  xsltproc -o report.html --stringparam classification "SECRET" --stringparam classification-color "#c8102e" nmap-intel.xsl scan.xml
+  NOTE: Always use -o flag instead of > redirect to avoid PowerShell UTF-16 encoding issues
 -->
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 <xsl:output method="html" encoding="utf-8" indent="yes" doctype-system="about:legacy-compat"/>

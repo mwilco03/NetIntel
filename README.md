@@ -15,16 +15,19 @@ Try it instantly with the included sample scan:
 choco install xsltproc -y
 git clone https://github.com/mwilco03/NetIntel.git
 cd NetIntel
-xsltproc nmap-intel.xsl Test.xml > report.html
+xsltproc -o report.html nmap-intel.xsl Test.xml
 start report.html
 ```
+
+> **Note:** Always use xsltproc's `-o` flag instead of shell `>` redirect on Windows.
+> PowerShell's `>` operator re-encodes output as UTF-16, which corrupts the HTML file.
 
 **Linux (Debian/Ubuntu)**
 ```bash
 sudo apt install xsltproc git -y
 git clone https://github.com/mwilco03/NetIntel.git
 cd NetIntel
-xsltproc nmap-intel.xsl Test.xml > report.html
+xsltproc -o report.html nmap-intel.xsl Test.xml
 xdg-open report.html
 ```
 
@@ -33,7 +36,7 @@ xdg-open report.html
 sudo dnf install xsltproc git -y
 git clone https://github.com/mwilco03/NetIntel.git
 cd NetIntel
-xsltproc nmap-intel.xsl Test.xml > report.html
+xsltproc -o report.html nmap-intel.xsl Test.xml
 xdg-open report.html
 ```
 
@@ -42,7 +45,7 @@ xdg-open report.html
 brew install libxslt
 git clone https://github.com/mwilco03/NetIntel.git
 cd NetIntel
-xsltproc nmap-intel.xsl Test.xml > report.html
+xsltproc -o report.html nmap-intel.xsl Test.xml
 open report.html
 ```
 
@@ -50,19 +53,20 @@ open report.html
 
 ```bash
 # Basic usage - generate report from nmap scan
-xsltproc nmap-intel.xsl scan.xml > report.html
+xsltproc -o report.html nmap-intel.xsl scan.xml
 
 # With classification banner
-xsltproc --stringparam classification "SECRET" \
+xsltproc -o report.html \
+         --stringparam classification "SECRET" \
          --stringparam classification-color "#c8102e" \
-         nmap-intel.xsl scan.xml > report.html
+         nmap-intel.xsl scan.xml
 
 # Inline with nmap (scan and generate in one command)
-nmap -sV -O --traceroute -oX - 192.168.1.0/24 | xsltproc nmap-intel.xsl - > report.html
+nmap -sV -O --traceroute -oX - 192.168.1.0/24 | xsltproc -o report.html nmap-intel.xsl -
 
 # Full scan with scripts and OS detection
 nmap -sV -sC -O --traceroute -oX scan.xml 192.168.1.0/24
-xsltproc nmap-intel.xsl scan.xml > report.html
+xsltproc -o report.html nmap-intel.xsl scan.xml
 ```
 
 Then open `report.html` in any modern browser (Chromium recommended).
@@ -127,9 +131,10 @@ sudo nmap -sU -sV -oX udp-scan.xml 192.168.1.0/24
 
 Example:
 ```bash
-xsltproc --stringparam classification "TOP SECRET" \
+xsltproc -o report.html \
+         --stringparam classification "TOP SECRET" \
          --stringparam classification-color "#ff8c00" \
-         nmap-intel.xsl scan.xml > report.html
+         nmap-intel.xsl scan.xml
 ```
 
 ## Vulnerability Database
@@ -236,7 +241,7 @@ The [live demo](https://mwilco03.github.io/NetIntel/examples/report.html) is hos
 **To update the demo report:**
 
 ```bash
-xsltproc nmap-intel.xsl your-scan.xml > examples/report.html
+xsltproc -o examples/report.html nmap-intel.xsl your-scan.xml
 git add examples/report.html
 git commit -m "Update demo report"
 git push
