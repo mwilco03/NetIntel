@@ -2,16 +2,18 @@
 
 CLI that ingests Nmap and Nessus scan output into NetBox.
 
-> **Status:** Phase 1 scaffold. Stubs only — no real logic yet. The shape is for review.
+> **Status:** Phase 1 in progress.
+> - `discover` — implemented + tested
+> - `init`, `plan`, `ingest` — stubs (raise `NotImplementedError`)
 
 ## Commands
 
-| Command | What it does | Default safety |
-|---|---|---|
-| `netbox-bridge discover --url <netbox>` | Enumerate NetBox state; report what exists and what the bridge needs but doesn't find. | Read-only. |
-| `netbox-bridge init --url <netbox>` | Create the custom fields and tags the bridge needs. | Dry-run; pass `--apply` to actually write. |
-| `netbox-bridge plan --url <netbox> --input scan.xml` | Show what `ingest` would do, without writing. | Read-only. |
-| `netbox-bridge ingest --url <netbox> --input scan.xml` | Parse a scan file and upsert into NetBox. | Writes; pass `--dry-run` to preview. |
+| Command | What it does | Default safety | Status |
+|---|---|---|---|
+| `netbox-bridge discover --url <netbox>` | Enumerate NetBox state; report what exists and what the bridge needs but doesn't find. | Read-only. | implemented |
+| `netbox-bridge init --url <netbox>` | Create the custom fields and tags the bridge needs. | Dry-run; pass `--apply` to actually write. | stub |
+| `netbox-bridge plan --url <netbox> --input scan.xml` | Show what `ingest` would do, without writing. | Read-only. | stub |
+| `netbox-bridge ingest --url <netbox> --input scan.xml` | Parse a scan file and upsert into NetBox. | Writes; pass `--dry-run` to preview. | stub |
 
 ## Auth
 
@@ -43,3 +45,25 @@ Tear down: `make dev-down` keeps volumes, `make dev-reset` drops them.
 ## NetBox compatibility
 
 Targets NetBox 4.x. Pinned `pynetbox>=7.4`. If the target environment runs an older NetBox, adjust here.
+
+## Testing
+
+TDD throughout. New behavior gets a failing test first, then implementation.
+
+```
+pip install -e ".[dev]"
+python -m pytest tests/ -v
+```
+
+Test layout:
+
+- `tests/test_discover.py` — orchestration of `discover()` and rendering
+- `tests/test_cli.py` — click command wiring (NetBoxClient mocked)
+- `tests/test_client.py` — `NetBoxClient` pynetbox passthroughs (pynetbox.api mocked)
+
+Integration tests against a live NetBox (the `dev/` netbox-docker harness) are not written yet — they're the next layer once `init` and `ingest` exist. For now, verify `discover` end-to-end manually:
+
+```
+cd dev && make dev-up && make dev-token   # mint a token in the UI
+NETBOX_TOKEN=<token> netbox-bridge discover --url http://localhost:8000
+```

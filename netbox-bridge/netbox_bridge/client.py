@@ -28,25 +28,25 @@ class NetBoxClient:
         auth.apply(self.api)
 
     def version(self) -> str:
-        raise NotImplementedError
+        return str(self.api.version)
 
     def list_sites(self) -> list[Any]:
-        raise NotImplementedError
+        return list(self.api.dcim.sites.all())
 
     def list_tenants(self) -> list[Any]:
-        raise NotImplementedError
+        return list(self.api.tenancy.tenants.all())
 
     def list_device_roles(self) -> list[Any]:
-        raise NotImplementedError
+        return list(self.api.dcim.device_roles.all())
 
     def list_platforms(self) -> list[Any]:
-        raise NotImplementedError
+        return list(self.api.dcim.platforms.all())
 
     def list_custom_fields(self, content_type: str) -> list[Any]:
-        raise NotImplementedError
+        return list(self.api.extras.custom_fields.filter(content_types=content_type))
 
     def list_tags(self) -> list[Any]:
-        raise NotImplementedError
+        return list(self.api.extras.tags.all())
 
     def find_device_by_mac(self, mac: str) -> Any | None:
         raise NotImplementedError
