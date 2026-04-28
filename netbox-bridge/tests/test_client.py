@@ -246,3 +246,26 @@ class TestUpdatePassthroughs:
         api.dcim.devices.get.return_value = None
         result = client.update_device(99, {"primary_ip4": 1})
         assert result is None
+
+
+class TestReadPassthroughs:
+    def test_get_device_calls_dcim_devices_get(self):
+        client, api = _client_with_mock_api()
+        device = MagicMock()
+        api.dcim.devices.get.return_value = device
+        assert client.get_device(42) is device
+        api.dcim.devices.get.assert_called_once_with(42)
+
+    def test_get_device_returns_none_when_missing(self):
+        client, api = _client_with_mock_api()
+        api.dcim.devices.get.return_value = None
+        assert client.get_device(999) is None
+
+    def test_list_services_for_device_filters_by_device_id(self):
+        # NetBox keeps backward-compat filter device_id even with parent_object_type rename.
+        client, api = _client_with_mock_api()
+        s1, s2 = MagicMock(), MagicMock()
+        api.ipam.services.filter.return_value = iter([s1, s2])
+        result = client.list_services_for_device(42)
+        assert result == [s1, s2]
+        api.ipam.services.filter.assert_called_once_with(device_id=42)

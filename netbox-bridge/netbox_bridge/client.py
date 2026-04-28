@@ -118,3 +118,9 @@ class NetBoxClient:
             setattr(iface, k, v)
         iface.save()
         return iface
+
+    def get_device(self, device_id: int) -> Any | None:
+        return self.api.dcim.devices.get(device_id)
+
+    def list_services_for_device(self, device_id: int) -> list[Any]:
+        return list(self.api.ipam.services.filter(device_id=device_id))

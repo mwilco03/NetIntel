@@ -40,6 +40,27 @@ class _Stub:
 
 
 @dataclass
+class _NamedTag:
+    name: str
+
+
+@dataclass
+class _ServiceRow:
+    port: int
+    protocol: str
+
+
+@dataclass
+class _ExistingDevice:
+    id: int
+    tags: list[_NamedTag] = field(default_factory=list)
+    custom_fields: dict = field(default_factory=dict)
+    primary_ip4: Any | None = None
+    primary_ip6: Any | None = None
+    name: str = ""
+
+
+@dataclass
 class FakeClient:
     devices_created: list[dict] = field(default_factory=list)
     interfaces_created: list[dict] = field(default_factory=list)
@@ -48,6 +69,8 @@ class FakeClient:
     services_created: list[dict] = field(default_factory=list)
     devices_updated: list[tuple[int, dict]] = field(default_factory=list)
     interfaces_updated: list[tuple[int, dict]] = field(default_factory=list)
+    existing_devices: dict[int, _ExistingDevice] = field(default_factory=dict)
+    existing_services: dict[int, list[_ServiceRow]] = field(default_factory=dict)
     next_device_id: int = 100
     next_interface_id: int = 200
     next_mac_id: int = 250
@@ -91,6 +114,12 @@ class FakeClient:
     def update_interface(self, interface_id: int, fields: dict) -> Any:
         self.interfaces_updated.append((interface_id, fields))
         return _Stub(interface_id)
+
+    def get_device(self, device_id: int) -> Any | None:
+        return self.existing_devices.get(device_id)
+
+    def list_services_for_device(self, device_id: int) -> list[Any]:
+        return list(self.existing_services.get(device_id, []))
 
 
 def _defaults(site_id: int = 1, role_id: int = 2, device_type_id: int = 3) -> UpsertDefaults:
@@ -392,3 +421,242 @@ class TestDryRun:
         )
         assert result.action == UpsertAction.CREATE
         assert result.netbox_device_id is None
+
+
+# ---------------------------------------------------------------------------
+# UPDATE path
+# ---------------------------------------------------------------------------
+
+
+def _existing_bridge_owned(
+    *,
+    device_id: int = 42,
+    last_seen: str = "2026-04-20T10:00:00+00:00",
+    first_seen: str = "2026-01-01T00:00:00+00:00",
+    last_scan_id: str = "00000000-0000-0000-0000-old",
+    sources: tuple[str, ...] = ("nmap",),
+    extra_tags: tuple[str, ...] = (),
+) -> _ExistingDevice:
+    tags = [_NamedTag(SOURCE_TAG)] + [_NamedTag(f"source:{s}") for s in sources]
+    tags += [_NamedTag(t) for t in extra_tags]
+    return _ExistingDevice(
+        id=device_id,
+        tags=tags,
+        custom_fields={
+            "last_seen": last_seen,
+            "first_seen": first_seen,
+            "last_scan_id": last_scan_id,
+            "source": ",".join(sources),
+        },
+    )
+
+
+def _existing_human_owned(*, device_id: int = 42) -> _ExistingDevice:
+    return _ExistingDevice(
+        id=device_id,
+        tags=[],  # no source:netintel-bridge tag
+        custom_fields={},
+    )
+
+
+def _update(
+    host: Host,
+    existing: _ExistingDevice,
+    *,
+    match_kind: MatchKind = MatchKind.BY_MAC,
+    dry_run: bool = False,
+    strategy: Strategy = Strategy.MERGE,
+    existing_services: list[_ServiceRow] | None = None,
+) -> tuple[FakeClient, "UpsertResult"]:
+    client = FakeClient()
+    client.existing_devices[existing.id] = existing
+    if existing_services is not None:
+        client.existing_services[existing.id] = existing_services
+    result = upsert_host(
+        host,
+        MatchResult(kind=match_kind, netbox_device_id=existing.id),
+        client,
+        scan_id=SCAN_ID,
+        dry_run=dry_run,
+        strategy=strategy,
+        defaults=_defaults(),
+    )
+    return client, result
+
+
+class TestUpdateBridgeOwned:
+    """Device has source:netintel-bridge tag — bridge owns it."""
+
+    def test_returns_update_when_last_seen_advances(self):
+        existing = _existing_bridge_owned(last_seen="2026-04-20T10:00:00+00:00")
+        host = _host(primary_ip="10.0.0.5")  # observed_at = 2026-04-28
+        client, result = _update(host, existing)
+        assert result.action == UpsertAction.UPDATE
+        assert result.netbox_device_id == 42
+
+    def test_diff_includes_last_seen_change(self):
+        existing = _existing_bridge_owned(last_seen="2026-04-20T10:00:00+00:00")
+        host = _host()
+        _, result = _update(host, existing)
+        diffs = {d.field: (d.before, d.after) for d in result.diffs}
+        assert "last_seen" in diffs
+        assert diffs["last_seen"][0] == "2026-04-20T10:00:00+00:00"
+        assert "2026-04-28" in diffs["last_seen"][1]
+
+    def test_update_payload_only_contains_changed_keys(self):
+        existing = _existing_bridge_owned()
+        host = _host()
+        client, _ = _update(host, existing)
+        # Only one update_device call, with only the keys that changed
+        assert len(client.devices_updated) == 1
+        device_id, patch = client.devices_updated[0]
+        assert device_id == 42
+        # last_seen, last_scan_id changed; first_seen and source did NOT
+        assert "first_seen" not in patch
+        assert "custom_fields" in patch
+        assert "last_seen" in patch["custom_fields"]
+        assert "last_scan_id" in patch["custom_fields"]
+        assert "first_seen" not in patch["custom_fields"]
+
+    def test_does_not_overwrite_first_seen_on_update(self):
+        existing = _existing_bridge_owned(first_seen="2026-01-01T00:00:00+00:00")
+        client, _ = _update(_host(), existing)
+        _, patch = client.devices_updated[0]
+        assert "first_seen" not in patch.get("custom_fields", {})
+
+    def test_adds_per_source_tag_when_missing(self):
+        existing = _existing_bridge_owned(sources=("nmap",))
+        client, _ = _update(_host(source="malcolm"), existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        tag_names = set(patch["tags"])
+        assert "source:malcolm" in tag_names
+        # Existing tags preserved
+        assert SOURCE_TAG in tag_names
+        assert "source:nmap" in tag_names
+
+    def test_does_not_change_tags_when_per_source_already_present(self):
+        existing = _existing_bridge_owned(sources=("nmap",))
+        client, _ = _update(_host(source="nmap"), existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" not in patch
+
+    def test_returns_noop_when_observation_is_older_than_last_seen(self):
+        existing = _existing_bridge_owned(last_seen="2027-01-01T00:00:00+00:00")
+        host = _host()  # observed 2026-04-28
+        client, result = _update(host, existing)
+        assert result.action == UpsertAction.NOOP
+        assert client.devices_updated == []
+
+    def test_returns_noop_when_nothing_changed(self):
+        existing = _existing_bridge_owned(
+            last_seen="2026-04-28T12:00:00+00:00",
+            last_scan_id=SCAN_ID,
+            sources=("nmap",),
+        )
+        host = _host(source="nmap")  # observed_at = 2026-04-28T12:00:00+00:00
+        client, result = _update(host, existing)
+        assert result.action == UpsertAction.NOOP
+        assert client.devices_updated == []
+
+
+class TestUpdateBridgeOwnedServices:
+    def test_creates_new_service_for_new_port(self):
+        existing = _existing_bridge_owned()
+        existing_services = [_ServiceRow(port=22, protocol="tcp")]
+        host = _host(
+            services=(
+                Service(port=22, protocol="tcp", name="ssh"),
+                Service(port=443, protocol="tcp", name="ssl"),  # NEW
+            )
+        )
+        client, _ = _update(host, existing, existing_services=existing_services)
+        # Only one new service created
+        assert len(client.services_created) == 1
+        assert client.services_created[0]["ports"] == [443]
+
+    def test_does_not_recreate_existing_service(self):
+        existing = _existing_bridge_owned()
+        existing_services = [
+            _ServiceRow(port=22, protocol="tcp"),
+            _ServiceRow(port=443, protocol="tcp"),
+        ]
+        host = _host(
+            services=(
+                Service(port=22, protocol="tcp", name="ssh"),
+                Service(port=443, protocol="tcp", name="ssl"),
+            )
+        )
+        client, _ = _update(host, existing, existing_services=existing_services)
+        assert client.services_created == []
+
+    def test_distinct_protocols_on_same_port_treated_as_distinct(self):
+        # 53/tcp and 53/udp are different services
+        existing = _existing_bridge_owned()
+        existing_services = [_ServiceRow(port=53, protocol="tcp")]
+        host = _host(services=(Service(port=53, protocol="udp", name="dns"),))
+        client, _ = _update(host, existing, existing_services=existing_services)
+        assert len(client.services_created) == 1
+        assert client.services_created[0]["protocol"] == "udp"
+
+
+class TestUpdateNotBridgeOwned:
+    """Device exists but no source:netintel-bridge tag — human-managed."""
+
+    def test_only_touches_bridge_custom_fields(self):
+        existing = _existing_human_owned()
+        client, result = _update(_host(), existing)
+        assert client.devices_updated, "expected at least the last_seen update"
+        device_id, patch = client.devices_updated[0]
+        # No tag changes, only our custom field touch
+        assert "tags" not in patch
+        # Patch's only top-level key should be custom_fields with last_seen
+        assert set(patch.keys()) == {"custom_fields"}
+        assert "last_seen" in patch["custom_fields"]
+
+    def test_does_not_create_services_on_human_owned_device(self):
+        existing = _existing_human_owned()
+        host = _host(services=(Service(port=22, protocol="tcp", name="ssh"),))
+        client, _ = _update(host, existing)
+        assert client.services_created == []
+
+    def test_does_not_set_last_scan_id_on_human_owned_device(self):
+        existing = _existing_human_owned()
+        client, _ = _update(_host(), existing)
+        _, patch = client.devices_updated[0]
+        cfs = patch.get("custom_fields", {})
+        assert "last_scan_id" not in cfs
+
+    def test_overwrite_strategy_treats_human_owned_as_bridge_owned(self):
+        existing = _existing_human_owned()
+        host = _host(services=(Service(port=22, protocol="tcp", name="ssh"),))
+        client, _ = _update(host, existing, strategy=Strategy.OVERWRITE)
+        # With overwrite, services and tags ARE managed
+        assert client.services_created
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+
+
+class TestUpdateDryRun:
+    def test_no_writes_in_dry_run(self):
+        existing = _existing_bridge_owned()
+        host = _host(services=(Service(port=80, protocol="tcp", name="http"),))
+        client, result = _update(host, existing, dry_run=True, existing_services=[])
+        assert client.devices_updated == []
+        assert client.services_created == []
+        # Action and diffs still computed
+        assert result.action == UpsertAction.UPDATE
+        assert result.diffs
+
+
+class TestUpdatePayloadContract:
+    def test_update_patch_contains_only_allowed_device_fields(self):
+        from tests.test_payload_contracts import (
+            DEVICE_CREATE_FIELDS,
+            assert_payload_in_schema,
+        )
+
+        existing = _existing_bridge_owned(sources=("nmap",))
+        client, _ = _update(_host(source="malcolm"), existing)
+        _, patch = client.devices_updated[0]
+        assert_payload_in_schema(patch, DEVICE_CREATE_FIELDS, ctx="update_device patch")
