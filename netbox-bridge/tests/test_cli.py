@@ -90,13 +90,52 @@ class TestDiscoverCommand:
         assert "token" in result.output.lower()
 
 
+class TestInitCommand:
+    def _fake_plan(self, **overrides):
+        from netbox_bridge.init import InitPlan
+
+        defaults = dict(
+            custom_fields_to_create=[
+                {"name": "last_seen", "type": "datetime", "object_types": ["dcim.device"]}
+            ],
+            tags_to_create=[{"name": "source:nmap", "slug": "source-nmap", "color": "43a047"}],
+            applied=False,
+        )
+        defaults.update(overrides)
+        return InitPlan(**defaults)
+
+    def test_dry_run_by_default(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.NetBoxClient"), patch(
+            "netbox_bridge.cli.run_init"
+        ) as mock_run:
+            mock_run.return_value = self._fake_plan(applied=False)
+            result = runner.invoke(main, ["init", "--url", "http://x", "--token", "t"])
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["apply"] is False
+        assert "Would create" in result.output
+
+    def test_apply_flag_passes_apply_true(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.NetBoxClient"), patch(
+            "netbox_bridge.cli.run_init"
+        ) as mock_run:
+            mock_run.return_value = self._fake_plan(applied=True)
+            result = runner.invoke(
+                main, ["init", "--url", "http://x", "--token", "t", "--apply"]
+            )
+        assert result.exit_code == 0
+        assert mock_run.call_args.kwargs["apply"] is True
+        assert "Created" in result.output
+
+    def test_exits_nonzero_when_token_missing(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["init", "--url", "http://x"], env={"NETBOX_TOKEN": ""})
+        assert result.exit_code != 0
+
+
 class TestStubCommands:
     """Commands that are still stubs should fail loudly, not silently succeed."""
-
-    def test_init_not_implemented(self):
-        runner = CliRunner()
-        result = runner.invoke(main, ["init", "--url", "http://x", "--token", "t"])
-        assert result.exit_code != 0
 
     def test_plan_not_implemented(self, tmp_path):
         scan = tmp_path / "scan.xml"

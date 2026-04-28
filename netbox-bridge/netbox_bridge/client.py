@@ -48,6 +48,12 @@ class NetBoxClient:
     def list_tags(self) -> list[Any]:
         return list(self.api.extras.tags.all())
 
+    def create_custom_field(self, spec: dict) -> Any:
+        return self.api.extras.custom_fields.create(spec)
+
+    def create_tag(self, spec: dict) -> Any:
+        return self.api.extras.tags.create(spec)
+
     def find_device_by_mac(self, mac: str) -> Any | None:
         raise NotImplementedError
 

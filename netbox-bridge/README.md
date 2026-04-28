@@ -3,15 +3,15 @@
 CLI that ingests Nmap and Nessus scan output into NetBox.
 
 > **Status:** Phase 1 in progress.
-> - `discover` — implemented + tested
-> - `init`, `plan`, `ingest` — stubs (raise `NotImplementedError`)
+> - `discover`, `init` — implemented + tested
+> - `plan`, `ingest` — stubs (raise `NotImplementedError`)
 
 ## Commands
 
 | Command | What it does | Default safety | Status |
 |---|---|---|---|
 | `netbox-bridge discover --url <netbox>` | Enumerate NetBox state; report what exists and what the bridge needs but doesn't find. | Read-only. | implemented |
-| `netbox-bridge init --url <netbox>` | Create the custom fields and tags the bridge needs. | Dry-run; pass `--apply` to actually write. | stub |
+| `netbox-bridge init --url <netbox>` | Create the custom fields and tags the bridge needs. | Dry-run; pass `--apply` to actually write. | implemented |
 | `netbox-bridge plan --url <netbox> --input scan.xml` | Show what `ingest` would do, without writing. | Read-only. | stub |
 | `netbox-bridge ingest --url <netbox> --input scan.xml` | Parse a scan file and upsert into NetBox. | Writes; pass `--dry-run` to preview. | stub |
 
@@ -58,6 +58,7 @@ python -m pytest tests/ -v
 Test layout:
 
 - `tests/test_discover.py` — orchestration of `discover()` and rendering
+- `tests/test_init.py` — CF/tag spec generation, plan/apply behavior, rendering
 - `tests/test_cli.py` — click command wiring (NetBoxClient mocked)
 - `tests/test_client.py` — `NetBoxClient` pynetbox passthroughs (pynetbox.api mocked)
 

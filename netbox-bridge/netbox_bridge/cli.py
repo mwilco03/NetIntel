@@ -6,6 +6,9 @@ from . import __version__
 from .client import NetBoxClient, TokenAdapter
 from .discover import discover as run_discover
 from .discover import render_human, render_json
+from .init import render_human as render_init_human
+from .init import render_json as render_init_json
+from .init import run_init
 
 
 @click.group()
@@ -48,9 +51,13 @@ def discover(url: str, token: str | None, verify_tls: bool, as_json: bool) -> No
     is_flag=True,
     help="Actually create custom fields and tags. Without this flag, prints a plan only.",
 )
-def init(url: str, token: str | None, verify_tls: bool, apply: bool) -> None:
+@click.option("--json", "as_json", is_flag=True)
+def init(url: str, token: str | None, verify_tls: bool, apply: bool, as_json: bool) -> None:
     """Create the custom fields and tags the bridge needs. Dry-run by default."""
-    raise NotImplementedError
+    token = _require_token(token)
+    client = NetBoxClient(url, TokenAdapter(token), verify_tls=verify_tls)
+    plan = run_init(client, apply=apply)
+    click.echo(render_init_json(plan) if as_json else render_init_human(plan))
 
 
 @main.command()

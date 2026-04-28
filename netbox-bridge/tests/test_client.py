@@ -67,3 +67,15 @@ class TestNetBoxClient:
         client, api = _client_with_mock_api()
         api.extras.tags.all.return_value = iter(["t1"])
         assert client.list_tags() == ["t1"]
+
+    def test_create_custom_field_posts_to_extras_custom_fields(self):
+        client, api = _client_with_mock_api()
+        spec = {"name": "last_seen", "type": "datetime", "object_types": ["dcim.device"]}
+        client.create_custom_field(spec)
+        api.extras.custom_fields.create.assert_called_once_with(spec)
+
+    def test_create_tag_posts_to_extras_tags(self):
+        client, api = _client_with_mock_api()
+        spec = {"name": "source:nmap", "slug": "source-nmap", "color": "43a047"}
+        client.create_tag(spec)
+        api.extras.tags.create.assert_called_once_with(spec)
