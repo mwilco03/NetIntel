@@ -319,6 +319,179 @@ class TestFetchCommand:
         assert result.exit_code != 0
 
 
+class TestProbeCommand:
+    def _fake_report(self, **overrides):
+        from netbox_bridge.probe import REQUIRED_FIELDS, ProbeReport
+
+        defaults = dict(
+            cluster_name="malcolm",
+            cluster_status="green",
+            version="2.11.0",
+            indices=[{"index": "arkime-241124", "docs.count": "100", "store.size": "1gb"}],
+            fields_present=list(REQUIRED_FIELDS),
+            fields_missing=[],
+            datasets={"conn": 100},
+        )
+        defaults.update(overrides)
+        return ProbeReport(**defaults)
+
+    def test_uses_malcolm_default_index_pattern(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.run_probe", return_value=self._fake_report()
+        ) as mock_probe:
+            runner.invoke(
+                main,
+                [
+                    "probe",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                ],
+            )
+        assert mock_probe.call_args.kwargs["index_pattern"] == "arkime_sessions3-*"
+
+    def test_uses_security_onion_default_index_pattern(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.run_probe", return_value=self._fake_report()
+        ) as mock_probe:
+            runner.invoke(
+                main,
+                [
+                    "probe",
+                    "--source",
+                    "security-onion",
+                    "--url",
+                    "https://so:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                ],
+            )
+        assert mock_probe.call_args.kwargs["index_pattern"] == "logs-zeek-so"
+
+    def test_index_pattern_override(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.run_probe", return_value=self._fake_report()
+        ) as mock_probe:
+            runner.invoke(
+                main,
+                [
+                    "probe",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                    "--index-pattern",
+                    "custom-*",
+                ],
+            )
+        assert mock_probe.call_args.kwargs["index_pattern"] == "custom-*"
+
+    def test_since_passed_through(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.run_probe", return_value=self._fake_report()
+        ) as mock_probe:
+            runner.invoke(
+                main,
+                [
+                    "probe",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                    "--since",
+                    "7d",
+                ],
+            )
+        assert mock_probe.call_args.kwargs["since"] == "now-7d"
+
+    def test_human_output_includes_status(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.run_probe", return_value=self._fake_report()
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "probe",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                ],
+            )
+        assert result.exit_code == 0
+        assert "READY" in result.output
+
+    def test_json_output(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.run_probe", return_value=self._fake_report()
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "probe",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                    "--json",
+                ],
+            )
+        parsed = json.loads(result.output)
+        assert parsed["ready"] is True
+
+    def test_exits_nonzero_when_not_ready(self):
+        runner = CliRunner()
+        not_ready = self._fake_report(indices=[], fields_missing=["destination.ip"])
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.run_probe", return_value=not_ready
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "probe",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                ],
+            )
+        # NOT READY → exit non-zero so scripts can short-circuit
+        assert result.exit_code != 0
+
+
 class TestStubCommands:
     """Commands that are still stubs should fail loudly, not silently succeed."""
 

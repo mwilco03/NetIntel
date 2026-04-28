@@ -3,7 +3,7 @@
 CLI that ingests Nmap and Nessus scan output into NetBox.
 
 > **Status:** Phase 1 / Phase 2 in progress.
-> - `discover`, `init`, `fetch` — implemented + tested
+> - `discover`, `init`, `probe`, `fetch` — implemented + tested
 > - `plan`, `ingest` — stubs (raise `NotImplementedError`)
 
 ## Commands
@@ -12,18 +12,21 @@ CLI that ingests Nmap and Nessus scan output into NetBox.
 |---|---|---|---|
 | `netbox-bridge discover --url <netbox>` | Enumerate NetBox state; report what exists and what the bridge needs but doesn't find. | Read-only. | implemented |
 | `netbox-bridge init --url <netbox>` | Create the custom fields and tags the bridge needs. | Dry-run; pass `--apply` to actually write. | implemented |
+| `netbox-bridge probe --source <malcolm\|security-onion> --url <opensearch>` | Pre-query: ask the OpenSearch backend which indices exist, which fields are populated, which datasets have data. Use before fetch/ingest. | Read-only. Exits non-zero if not ready. | implemented |
 | `netbox-bridge fetch --source <malcolm\|security-onion> --url <opensearch> --since 7d` | Pull observed hosts from an OpenSearch backend, emit normalized Host JSON. | Read-only against OpenSearch; no NetBox writes. | implemented |
 | `netbox-bridge plan --url <netbox> --input scan.xml` | Show what `ingest` would do, without writing. | Read-only. | stub |
 | `netbox-bridge ingest --url <netbox> --input scan.xml` | Parse a scan file and upsert into NetBox. | Writes; pass `--dry-run` to preview. | stub |
 
 ### Sources
 
-The `fetch` command supports two OpenSearch backends:
+The `fetch` and `probe` commands support two OpenSearch backends:
 
-- **Malcolm** — index pattern `arkime_sessions3-*`, no dataset filter. Aggregates by `destination.ip` so hosts running observed services become Hosts. Carries protocol names from Zeek's custom parsers (modbus, dnp3, bacnet, s7comm) verbatim.
-- **Security Onion** — data stream `logs-zeek-so`, default `event.dataset` filter `[conn, known_services]`. Same ECS-aligned aggregation.
+- **Malcolm** — index pattern `arkime_sessions3-*`, no dataset filter. Field renames verified against `cisagov/Malcolm/logstash/pipelines/zeek/1200_zeek_mutate.conf`: `id.orig_h`→`source.ip`, `id.resp_h`→`destination.ip`, `proto`→`network.transport`, `service`→`network.protocol`. Aggregates by `destination.ip` so hosts running observed services become Hosts. Carries Zeek custom-parser protocols (modbus, dnp3, bacnet, s7comm) verbatim.
+- **Security Onion** — data stream `logs-zeek-so`. Default `event.dataset` filter is `[conn]` only (verified against `Security-Onion-Solutions/securityonion/salt/elasticsearch/files/ingest/`: SO does **not** ship `zeek.known_services` or `zeek.known_hosts` ingest pipelines, so filtering on those silently drops everything). Same ECS-aligned aggregation as Malcolm. Field renames verified against `zeek.common` and `zeek.conn`.
 
 Both use HTTP basic auth on port 9200. Pass `--password` or set `OPENSEARCH_PASSWORD`.
+
+**Always run `probe` before `fetch` against a new deployment.** It hits OpenSearch's own `_cat/indices`, `_field_caps`, and an `event.dataset` terms agg to confirm the indices exist, the fields you need are populated, and which datasets have data. Exits non-zero on NOT READY so you can wire it into a script.
 
 ## Auth
 

@@ -38,8 +38,10 @@ class TestBuildQuery:
     def test_default_index_pattern_is_so_zeek_data_stream(self):
         assert DEFAULT_INDEX_PATTERN == "logs-zeek-so"
 
-    def test_default_datasets_filter_includes_conn(self):
-        assert "conn" in DEFAULT_DATASETS
+    def test_default_datasets_filter_is_conn_only(self):
+        # SO's default ingest doesn't process known_services/known_hosts.
+        # Filtering on them would silently drop everything.
+        assert DEFAULT_DATASETS == ["conn"]
 
     def test_query_filters_by_event_dataset(self):
         q = build_query(since=timedelta(days=7), datasets=["conn", "known_services"])

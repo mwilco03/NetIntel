@@ -17,7 +17,12 @@ from ._common import (
 )
 
 DEFAULT_INDEX_PATTERN = "logs-zeek-so"
-DEFAULT_DATASETS: list[str] = ["conn", "known_services"]
+# Security Onion's default ingest pipelines (verified against
+# Security-Onion-Solutions/securityonion master) include zeek.conn but not
+# zeek.known_services or zeek.known_hosts — those Zeek policies aren't run
+# by default. Keep "conn" as the safe default; expand via --datasets when
+# a deployment is known to ingest more.
+DEFAULT_DATASETS: list[str] = ["conn"]
 
 
 def build_query(*, since: timedelta, datasets: list[str]) -> dict:

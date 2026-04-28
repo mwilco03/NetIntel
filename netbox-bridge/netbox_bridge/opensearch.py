@@ -55,3 +55,52 @@ class OpenSearchClient:
             return response.json()
         except requests.RequestException as e:
             raise OpenSearchError(f"OpenSearch transport error: {e}") from e
+
+    def list_indices(self, pattern: str) -> list[dict[str, Any]]:
+        """GET /_cat/indices/<pattern>?format=json — index name, doc count, store size."""
+        url = f"{self.base_url}/_cat/indices/{pattern}"
+        try:
+            response = self.session.get(url, params={"format": "json"})
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as e:
+            status = getattr(e.response, "status_code", "?")
+            text = getattr(e.response, "text", "")
+            raise OpenSearchError(f"OpenSearch HTTP {status}: {text}") from e
+        except requests.RequestException as e:
+            raise OpenSearchError(f"OpenSearch transport error: {e}") from e
+
+    def field_caps(self, pattern: str, fields: list[str]) -> dict[str, Any]:
+        """GET /<pattern>/_field_caps?fields=...  — confirm field existence and types."""
+        url = f"{self.base_url}/{pattern}/_field_caps"
+        try:
+            response = self.session.get(url, params={"fields": ",".join(fields)})
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as e:
+            status = getattr(e.response, "status_code", "?")
+            text = getattr(e.response, "text", "")
+            raise OpenSearchError(f"OpenSearch HTTP {status}: {text}") from e
+        except requests.RequestException as e:
+            raise OpenSearchError(f"OpenSearch transport error: {e}") from e
+
+    def dataset_distribution(
+        self,
+        pattern: str,
+        *,
+        since: str | None = None,
+    ) -> dict[str, int]:
+        """Terms aggregation on event.dataset — which datasets are populated, with doc counts."""
+        body: dict[str, Any] = {
+            "size": 0,
+            "aggs": {
+                "datasets": {"terms": {"field": "event.dataset", "size": 100}}
+            },
+        }
+        if since is not None:
+            body["query"] = {
+                "bool": {"filter": [{"range": {"@timestamp": {"gte": since}}}]}
+            }
+        response = self.search(pattern, body)
+        buckets = response.get("aggregations", {}).get("datasets", {}).get("buckets", [])
+        return {b["key"]: b["doc_count"] for b in buckets}

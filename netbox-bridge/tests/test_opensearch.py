@@ -126,3 +126,77 @@ class TestOpenSearchClient:
         url = session.get.call_args.args[0]
         assert url == "https://os.example.com:9200/"
         assert info["cluster_name"] == "malcolm"
+
+
+class TestIntrospection:
+    def test_list_indices_calls_cat_indices_with_pattern(self):
+        client, session = _client_with_mock_session()
+        session.get.return_value.json.return_value = [
+            {"index": "arkime_sessions3-241124", "docs.count": "1234567", "store.size": "4.5gb"},
+        ]
+        result = client.list_indices("arkime_sessions3-*")
+        url = session.get.call_args.args[0]
+        assert url == "https://os.example.com:9200/_cat/indices/arkime_sessions3-*"
+        params = session.get.call_args.kwargs.get("params") or {}
+        assert params.get("format") == "json"
+        assert result[0]["index"] == "arkime_sessions3-241124"
+
+    def test_field_caps_calls_field_caps_endpoint(self):
+        client, session = _client_with_mock_session()
+        session.get.return_value.json.return_value = {
+            "indices": ["arkime_sessions3-241124"],
+            "fields": {
+                "destination.ip": {"ip": {"type": "ip", "searchable": True, "aggregatable": True}},
+                "@timestamp": {"date": {"type": "date", "searchable": True, "aggregatable": True}},
+            },
+        }
+        result = client.field_caps("arkime_sessions3-*", ["destination.ip", "@timestamp"])
+        url = session.get.call_args.args[0]
+        assert url == "https://os.example.com:9200/arkime_sessions3-*/_field_caps"
+        params = session.get.call_args.kwargs.get("params") or {}
+        assert params.get("fields") == "destination.ip,@timestamp"
+        assert "destination.ip" in result["fields"]
+
+    def test_dataset_distribution_returns_event_dataset_buckets(self):
+        client, session = _client_with_mock_session()
+        session.post.return_value.json.return_value = {
+            "hits": {"total": {"value": 1000}, "hits": []},
+            "aggregations": {
+                "datasets": {
+                    "buckets": [
+                        {"key": "conn", "doc_count": 800},
+                        {"key": "dns", "doc_count": 150},
+                        {"key": "modbus", "doc_count": 50},
+                    ]
+                }
+            },
+        }
+        result = client.dataset_distribution("arkime_sessions3-*")
+        body = session.post.call_args.kwargs["json"]
+        assert body["size"] == 0
+        assert body["aggs"]["datasets"]["terms"]["field"] == "event.dataset"
+        assert result == {"conn": 800, "dns": 150, "modbus": 50}
+
+    def test_dataset_distribution_with_time_filter(self):
+        client, session = _client_with_mock_session()
+        session.post.return_value.json.return_value = {
+            "hits": {"total": {"value": 0}, "hits": []},
+            "aggregations": {"datasets": {"buckets": []}},
+        }
+        client.dataset_distribution("arkime_sessions3-*", since="now-7d")
+        body = session.post.call_args.kwargs["json"]
+        filters = body["query"]["bool"]["filter"]
+        assert any("range" in f and f["range"]["@timestamp"]["gte"] == "now-7d" for f in filters)
+
+    def test_dataset_distribution_no_filter_when_no_since(self):
+        client, session = _client_with_mock_session()
+        session.post.return_value.json.return_value = {
+            "hits": {"total": {"value": 0}, "hits": []},
+            "aggregations": {"datasets": {"buckets": []}},
+        }
+        client.dataset_distribution("arkime_sessions3-*")
+        body = session.post.call_args.kwargs["json"]
+        # No range filter (or no bool filter at all)
+        query = body.get("query", {})
+        if "bool" in query:
+            assert not any("range" in f for f in query["bool"].get("filter", []))
