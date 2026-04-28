@@ -55,10 +55,23 @@ class NetBoxClient:
         return self.api.extras.tags.create(spec)
 
     def find_device_by_mac(self, mac: str) -> Any | None:
-        raise NotImplementedError
+        for iface in self.api.dcim.interfaces.filter(mac_address=mac):
+            device = getattr(iface, "device", None)
+            if device is not None:
+                return device
+        return None
 
     def find_device_by_primary_ip(self, ip: str) -> Any | None:
-        raise NotImplementedError
+        for ip_obj in self.api.ipam.ip_addresses.filter(address=ip):
+            if getattr(ip_obj, "assigned_object_type", None) != "dcim.interface":
+                continue
+            iface = getattr(ip_obj, "assigned_object", None)
+            device = getattr(iface, "device", None) if iface is not None else None
+            if device is not None:
+                return device
+        return None
 
     def find_device_by_name(self, name: str) -> Any | None:
-        raise NotImplementedError
+        for device in self.api.dcim.devices.filter(name=name):
+            return device
+        return None
