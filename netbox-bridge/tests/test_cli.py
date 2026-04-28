@@ -134,6 +134,191 @@ class TestInitCommand:
         assert result.exit_code != 0
 
 
+class TestFetchCommand:
+    def _fake_hosts(self):
+        from datetime import datetime, timezone
+        from netbox_bridge.model import Host, Service
+
+        return [
+            Host(
+                primary_ip="10.0.0.5",
+                services=[Service(port=22, protocol="tcp", name="ssh")],
+                source="malcolm",
+                observed_at=datetime(2026, 4, 25, 10, 0, tzinfo=timezone.utc),
+            )
+        ]
+
+    def test_malcolm_source_emits_host_json(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.MalcolmSource"
+        ) as MockSource:
+            MockSource.return_value.fetch_hosts.return_value = self._fake_hosts()
+            result = runner.invoke(
+                main,
+                [
+                    "fetch",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://malcolm:9200",
+                    "--username",
+                    "admin",
+                    "--password",
+                    "p",
+                    "--since",
+                    "7d",
+                ],
+            )
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        assert isinstance(parsed, list)
+        assert parsed[0]["primary_ip"] == "10.0.0.5"
+        assert parsed[0]["source"] == "malcolm"
+
+    def test_since_passed_through_as_timedelta(self):
+        from datetime import timedelta
+
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.MalcolmSource"
+        ) as MockSource:
+            MockSource.return_value.fetch_hosts.return_value = []
+            runner.invoke(
+                main,
+                [
+                    "fetch",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                    "--since",
+                    "2h",
+                ],
+            )
+        kwargs = MockSource.return_value.fetch_hosts.call_args.kwargs
+        assert kwargs["since"] == timedelta(hours=2)
+
+    def test_password_picked_up_from_env(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient") as MockClient, patch(
+            "netbox_bridge.cli.MalcolmSource"
+        ) as MockSource:
+            MockSource.return_value.fetch_hosts.return_value = []
+            runner.invoke(
+                main,
+                [
+                    "fetch",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--since",
+                    "1d",
+                ],
+                env={"OPENSEARCH_PASSWORD": "from-env"},
+            )
+        kwargs = MockClient.call_args.kwargs
+        assert kwargs["password"] == "from-env"
+
+    def test_index_pattern_override(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.MalcolmSource"
+        ) as MockSource:
+            MockSource.return_value.fetch_hosts.return_value = []
+            runner.invoke(
+                main,
+                [
+                    "fetch",
+                    "--source",
+                    "malcolm",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                    "--since",
+                    "1d",
+                    "--index-pattern",
+                    "custom-*",
+                ],
+            )
+        assert MockSource.call_args.kwargs["index_pattern"] == "custom-*"
+
+    def test_invalid_since_fails(self):
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                "fetch",
+                "--source",
+                "malcolm",
+                "--url",
+                "https://m:9200",
+                "--username",
+                "u",
+                "--password",
+                "p",
+                "--since",
+                "garbage",
+            ],
+        )
+        assert result.exit_code != 0
+
+    def test_security_onion_source_routed_correctly(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.SecurityOnionSource"
+        ) as MockSource:
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(
+                main,
+                [
+                    "fetch",
+                    "--source",
+                    "security-onion",
+                    "--url",
+                    "https://so:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                    "--since",
+                    "1d",
+                ],
+            )
+        assert result.exit_code == 0
+        MockSource.assert_called_once()
+
+    def test_invalid_source_fails(self):
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                "fetch",
+                "--source",
+                "snake-oil",
+                "--url",
+                "https://m:9200",
+                "--username",
+                "u",
+                "--password",
+                "p",
+                "--since",
+                "1d",
+            ],
+        )
+        assert result.exit_code != 0
+
+
 class TestStubCommands:
     """Commands that are still stubs should fail loudly, not silently succeed."""
 

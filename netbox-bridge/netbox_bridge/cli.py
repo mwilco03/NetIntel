@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import re
+from datetime import timedelta
+
 import click
 
 from . import __version__
@@ -9,6 +13,25 @@ from .discover import render_human, render_json
 from .init import render_human as render_init_human
 from .init import render_json as render_init_json
 from .init import run_init
+from .opensearch import OpenSearchClient
+from .sources.malcolm import MalcolmSource
+from .sources.security_onion import SecurityOnionSource
+
+_SINCE_PATTERN = re.compile(r"^(\d+)([smhd])$")
+_SINCE_UNITS: dict[str, str] = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
+
+_SOURCE_NAMES: list[str] = ["malcolm", "security-onion"]
+
+
+def _parse_since(value: str) -> timedelta:
+    match = _SINCE_PATTERN.match(value)
+    if not match:
+        raise click.BadParameter(
+            f"Invalid --since value '{value}'. Expected forms like 30s, 5m, 2h, 7d."
+        )
+    n = int(match.group(1))
+    unit = _SINCE_UNITS[match.group(2)]
+    return timedelta(**{unit: n})
 
 
 @click.group()
@@ -117,6 +140,53 @@ def ingest(
 ) -> None:
     """Parse a scan file and upsert into NetBox."""
     raise NotImplementedError
+
+
+@main.command()
+@click.option(
+    "--source",
+    "source_name",
+    type=click.Choice(_SOURCE_NAMES),
+    required=True,
+)
+@click.option("--url", required=True, help="OpenSearch base URL, e.g. https://malcolm:9200")
+@click.option("--username", required=True)
+@click.option("--password", envvar="OPENSEARCH_PASSWORD", help="(or OPENSEARCH_PASSWORD env var)")
+@click.option("--verify-tls/--no-verify-tls", default=True)
+@click.option("--since", "since_str", required=True, help="Time window: 30s, 5m, 2h, 7d.")
+@click.option(
+    "--index-pattern",
+    default=None,
+    help="Override the source's default index pattern.",
+)
+def fetch(
+    source_name: str,
+    url: str,
+    username: str,
+    password: str | None,
+    verify_tls: bool,
+    since_str: str,
+    index_pattern: str | None,
+) -> None:
+    """Pull observed hosts from an OpenSearch backend (Malcolm, Security Onion).
+
+    Outputs the normalized Host records as JSON. Does not write to NetBox.
+    """
+    since = _parse_since(since_str)
+    client = OpenSearchClient(
+        url, username=username, password=password, verify_tls=verify_tls
+    )
+    sources: dict[str, type] = {
+        "malcolm": MalcolmSource,
+        "security-onion": SecurityOnionSource,
+    }
+    source_cls = sources[source_name]
+    source_kwargs: dict = {}
+    if index_pattern is not None:
+        source_kwargs["index_pattern"] = index_pattern
+    source = source_cls(client, **source_kwargs)
+    hosts = source.fetch_hosts(since=since)
+    click.echo(json.dumps([h.model_dump(mode="json") for h in hosts], indent=2, default=str))
 
 
 if __name__ == "__main__":

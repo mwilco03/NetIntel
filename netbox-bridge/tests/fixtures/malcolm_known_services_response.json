@@ -1,0 +1,116 @@
+{
+  "took": 12,
+  "timed_out": false,
+  "_shards": {"total": 5, "successful": 5, "skipped": 0, "failed": 0},
+  "hits": {
+    "total": {"value": 1234, "relation": "eq"},
+    "max_score": null,
+    "hits": []
+  },
+  "aggregations": {
+    "by_destination_ip": {
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0,
+      "buckets": [
+        {
+          "key": "10.0.0.5",
+          "doc_count": 800,
+          "last_seen": {
+            "value": 1745568000000,
+            "value_as_string": "2026-04-25T10:00:00.000Z"
+          },
+          "by_port": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {
+                "key": 22,
+                "doc_count": 50,
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [{"key": "tcp", "doc_count": 50}]
+                },
+                "by_protocol": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [{"key": "ssh", "doc_count": 50}]
+                }
+              },
+              {
+                "key": 443,
+                "doc_count": 750,
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [{"key": "tcp", "doc_count": 750}]
+                },
+                "by_protocol": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [{"key": "ssl", "doc_count": 750}]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "10.0.0.6",
+          "doc_count": 200,
+          "last_seen": {
+            "value": 1745481600000,
+            "value_as_string": "2026-04-24T10:00:00.000Z"
+          },
+          "by_port": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {
+                "key": 502,
+                "doc_count": 200,
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [{"key": "tcp", "doc_count": 200}]
+                },
+                "by_protocol": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [{"key": "modbus", "doc_count": 200}]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "10.0.0.7",
+          "doc_count": 234,
+          "last_seen": {
+            "value": 1745395200000,
+            "value_as_string": "2026-04-23T10:00:00.000Z"
+          },
+          "by_port": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {
+                "key": 53,
+                "doc_count": 234,
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [{"key": "udp", "doc_count": 234}]
+                },
+                "by_protocol": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [{"key": "dns", "doc_count": 234}]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

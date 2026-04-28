@@ -2,8 +2,8 @@
 
 CLI that ingests Nmap and Nessus scan output into NetBox.
 
-> **Status:** Phase 1 in progress.
-> - `discover`, `init` — implemented + tested
+> **Status:** Phase 1 / Phase 2 in progress.
+> - `discover`, `init`, `fetch` — implemented + tested
 > - `plan`, `ingest` — stubs (raise `NotImplementedError`)
 
 ## Commands
@@ -12,8 +12,18 @@ CLI that ingests Nmap and Nessus scan output into NetBox.
 |---|---|---|---|
 | `netbox-bridge discover --url <netbox>` | Enumerate NetBox state; report what exists and what the bridge needs but doesn't find. | Read-only. | implemented |
 | `netbox-bridge init --url <netbox>` | Create the custom fields and tags the bridge needs. | Dry-run; pass `--apply` to actually write. | implemented |
+| `netbox-bridge fetch --source <malcolm\|security-onion> --url <opensearch> --since 7d` | Pull observed hosts from an OpenSearch backend, emit normalized Host JSON. | Read-only against OpenSearch; no NetBox writes. | implemented |
 | `netbox-bridge plan --url <netbox> --input scan.xml` | Show what `ingest` would do, without writing. | Read-only. | stub |
 | `netbox-bridge ingest --url <netbox> --input scan.xml` | Parse a scan file and upsert into NetBox. | Writes; pass `--dry-run` to preview. | stub |
+
+### Sources
+
+The `fetch` command supports two OpenSearch backends:
+
+- **Malcolm** — index pattern `arkime_sessions3-*`, no dataset filter. Aggregates by `destination.ip` so hosts running observed services become Hosts. Carries protocol names from Zeek's custom parsers (modbus, dnp3, bacnet, s7comm) verbatim.
+- **Security Onion** — data stream `logs-zeek-so`, default `event.dataset` filter `[conn, known_services]`. Same ECS-aligned aggregation.
+
+Both use HTTP basic auth on port 9200. Pass `--password` or set `OPENSEARCH_PASSWORD`.
 
 ## Auth
 
@@ -59,8 +69,11 @@ Test layout:
 
 - `tests/test_discover.py` — orchestration of `discover()` and rendering
 - `tests/test_init.py` — CF/tag spec generation, plan/apply behavior, rendering
-- `tests/test_cli.py` — click command wiring (NetBoxClient mocked)
+- `tests/test_cli.py` — click command wiring (NetBoxClient / OpenSearchClient mocked)
 - `tests/test_client.py` — `NetBoxClient` pynetbox passthroughs (pynetbox.api mocked)
+- `tests/test_opensearch.py` — `OpenSearchClient` request/auth/error handling (requests.Session mocked)
+- `tests/test_malcolm_source.py` — query construction + Host mapping (fixture-driven)
+- `tests/test_security_onion_source.py` — same, for SO
 
 Integration tests against a live NetBox (the `dev/` netbox-docker harness) are not written yet — they're the next layer once `init` and `ingest` exist. For now, verify `discover` end-to-end manually:
 

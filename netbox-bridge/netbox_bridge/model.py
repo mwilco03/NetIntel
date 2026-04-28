@@ -35,5 +35,5 @@ class Host(BaseModel):
     addresses: list[IPAddress] = Field(default_factory=list)
     services: list[Service] = Field(default_factory=list)
     os: OSInfo | None = None
-    source: Literal["nmap", "nessus"]
+    source: Literal["nmap", "nessus", "malcolm", "security_onion"]
     observed_at: datetime
