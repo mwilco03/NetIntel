@@ -18,6 +18,7 @@ import pytest
 from netbox_bridge.matcher import MatchKind, MatchResult
 from netbox_bridge.model import Host, Interface, Service
 from netbox_bridge.upsert import (
+    RECENTLY_ADDED_TAG,
     SOURCE_TAG,
     Strategy,
     UpsertAction,
@@ -232,6 +233,10 @@ class TestDeviceCreatePayload:
         ]:
             spec = _create(_host(source=src)).devices_created[0]
             assert tag in spec["tags"], f"missing {tag} for source={src}"
+
+    def test_carries_recently_added_tag_on_create(self):
+        spec = _create(_host()).devices_created[0]
+        assert RECENTLY_ADDED_TAG in spec["tags"]
 
     def test_custom_fields_populated(self):
         spec = _create(_host()).devices_created[0]
@@ -660,3 +665,68 @@ class TestUpdatePayloadContract:
         client, _ = _update(_host(source="malcolm"), existing)
         _, patch = client.devices_updated[0]
         assert_payload_in_schema(patch, DEVICE_CREATE_FIELDS, ctx="update_device patch")
+
+
+class TestRecentlyAddedTagAging:
+    """The lifecycle:recently-added tag is added on CREATE and aged-out on UPDATE."""
+
+    def _existing_with_recent_tag(self, *, first_seen: str) -> _ExistingDevice:
+        e = _existing_bridge_owned(first_seen=first_seen, sources=("nmap",))
+        e.tags.append(_NamedTag(RECENTLY_ADDED_TAG))
+        return e
+
+    def test_within_window_keeps_recently_added_tag(self):
+        # observed_at = 2026-04-28, first_seen 2 days earlier = within 7d window
+        existing = self._existing_with_recent_tag(first_seen="2026-04-26T12:00:00+00:00")
+        client, _ = _update(_host(source="nmap"), existing)
+        # If patch has tags, the recent tag must still be present
+        patches = [p for _, p in client.devices_updated if "tags" in p]
+        if patches:
+            assert RECENTLY_ADDED_TAG in patches[0]["tags"]
+
+    def test_past_window_removes_recently_added_tag(self):
+        # observed_at = 2026-04-28, first_seen = 2026-01-01 → way past 7d
+        existing = self._existing_with_recent_tag(first_seen="2026-01-01T00:00:00+00:00")
+        client, _ = _update(_host(source="nmap"), existing)
+        # Tag-changing patch issued, recently-added removed
+        assert client.devices_updated, "expected an update because the tag aged out"
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert RECENTLY_ADDED_TAG not in patch["tags"]
+
+    def test_past_window_alone_triggers_an_update(self):
+        # No other changes (last_seen, last_scan_id, source all match) but tag must age out
+        same_iso = "2026-04-28T12:00:00+00:00"
+        existing = _existing_bridge_owned(
+            first_seen="2026-01-01T00:00:00+00:00",
+            last_seen=same_iso,
+            last_scan_id=SCAN_ID,
+            sources=("nmap",),
+        )
+        existing.tags.append(_NamedTag(RECENTLY_ADDED_TAG))
+        host = _host(source="nmap")
+        client, result = _update(host, existing)
+        assert result.action == UpsertAction.UPDATE
+        _, patch = client.devices_updated[0]
+        assert RECENTLY_ADDED_TAG not in patch["tags"]
+
+    def test_within_window_no_other_changes_is_noop(self):
+        same_iso = "2026-04-28T12:00:00+00:00"
+        existing = _existing_bridge_owned(
+            first_seen="2026-04-26T12:00:00+00:00",
+            last_seen=same_iso,
+            last_scan_id=SCAN_ID,
+            sources=("nmap",),
+        )
+        existing.tags.append(_NamedTag(RECENTLY_ADDED_TAG))
+        host = _host(source="nmap")
+        client, result = _update(host, existing)
+        assert result.action == UpsertAction.NOOP
+
+    def test_human_owned_device_not_tagged_recently_added(self):
+        # The bridge does not annotate human-managed devices with lifecycle metadata.
+        existing = _existing_human_owned()
+        client, _ = _update(_host(), existing)
+        # Patch only has custom_fields; no tags touched.
+        for _, patch in client.devices_updated:
+            assert "tags" not in patch

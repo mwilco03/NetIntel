@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Protocol
 
@@ -17,6 +17,8 @@ CF_LAST_SCAN_ID = "last_scan_id"
 CF_SOURCE = "source"
 
 SOURCE_TAG = "source:netintel-bridge"
+RECENTLY_ADDED_TAG = "lifecycle:recently-added"
+RECENTLY_ADDED_WINDOW = timedelta(days=7)
 
 
 class Strategy(str, Enum):
@@ -91,7 +93,7 @@ def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> di
         "role": defaults.role_id,
         "site": defaults.site_id,
         "status": "active",
-        "tags": [SOURCE_TAG, f"source:{host.source}"],
+        "tags": [SOURCE_TAG, f"source:{host.source}", RECENTLY_ADDED_TAG],
         "custom_fields": {
             CF_LAST_SEEN: timestamp,
             CF_FIRST_SEEN: timestamp,
@@ -99,6 +101,16 @@ def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> di
             CF_SOURCE: host.source,
         },
     }
+
+
+def _is_recently_added(first_seen_iso: str | None, now: datetime) -> bool:
+    """Bridge-tracked device counts as recently added when its first_seen is inside the window."""
+    if not first_seen_iso:
+        return False
+    first_seen = _parse_iso(first_seen_iso)
+    if first_seen is None:
+        return False
+    return (now - first_seen) < RECENTLY_ADDED_WINDOW
 
 
 def _build_interface_spec(device_id: int) -> dict:
@@ -197,6 +209,12 @@ def _build_update_patch(
     if owned_for_writes:
         existing_names = _existing_tag_names(existing)
         desired_names = existing_names | {SOURCE_TAG, f"source:{host.source}"}
+
+        if _is_recently_added(existing_cfs.get(CF_FIRST_SEEN), host.observed_at):
+            desired_names.add(RECENTLY_ADDED_TAG)
+        else:
+            desired_names.discard(RECENTLY_ADDED_TAG)
+
         if desired_names != existing_names:
             patch["tags"] = sorted(desired_names)
             diffs.append(
@@ -266,7 +284,9 @@ def _update_path(
 
     existing_cfs = getattr(existing, "custom_fields", {}) or {}
     existing_last_seen_dt = _parse_iso(existing_cfs.get(CF_LAST_SEEN))
-    if existing_last_seen_dt is not None and existing_last_seen_dt >= host.observed_at:
+    # Only short-circuit when the recorded last_seen is strictly newer. Equal timestamps still
+    # need to fall through so tag-aging (lifecycle:recently-added) can run.
+    if existing_last_seen_dt is not None and existing_last_seen_dt > host.observed_at:
         return UpsertResult(
             action=UpsertAction.NOOP,
             netbox_device_id=existing.id,

@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol
 
 from .discover import REQUIRED_DEVICE_CFS, REQUIRED_TAGS, discover
+from .upsert import RECENTLY_ADDED_TAG  # noqa: F401  (intentional cross-import)
 
 CF_CONTENT_TYPES: list[str] = ["dcim.device", "ipam.ipaddress", "ipam.service"]
 
@@ -31,11 +32,12 @@ _CF_DEFINITIONS: dict[str, dict[str, str]] = {
     },
 }
 
-# Distinct hex colors so the three source tags are visually distinguishable in the NetBox UI.
+# Distinct hex colors so each bridge-managed tag is visually distinguishable in the NetBox UI.
 _TAG_COLORS: dict[str, str] = {
-    "source:netintel-bridge": "1e88e5",
-    "source:nmap": "43a047",
-    "source:nessus": "e53935",
+    "source:netintel-bridge": "1e88e5",  # blue
+    "source:nmap": "43a047",             # green
+    "source:nessus": "e53935",           # red
+    "lifecycle:recently-added": "fb8c00",  # orange — eye-catching for "new in inventory"
 }
 
 

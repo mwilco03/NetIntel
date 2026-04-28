@@ -9,11 +9,17 @@ from .upsert import (
     CF_LAST_SCAN_ID,
     CF_LAST_SEEN,
     CF_SOURCE,
+    RECENTLY_ADDED_TAG,
     SOURCE_TAG,
 )
 
 REQUIRED_DEVICE_CFS: list[str] = [CF_LAST_SEEN, CF_FIRST_SEEN, CF_LAST_SCAN_ID, CF_SOURCE]
-REQUIRED_TAGS: list[str] = [SOURCE_TAG, "source:nmap", "source:nessus"]
+REQUIRED_TAGS: list[str] = [
+    SOURCE_TAG,
+    "source:nmap",
+    "source:nessus",
+    RECENTLY_ADDED_TAG,
+]
 
 DEVICE_CONTENT_TYPE = "dcim.device"
 
