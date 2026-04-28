@@ -55,8 +55,14 @@ class NetBoxClient:
         return self.api.extras.tags.create(spec)
 
     def find_device_by_mac(self, mac: str) -> Any | None:
-        for iface in self.api.dcim.interfaces.filter(mac_address=mac):
-            device = getattr(iface, "device", None)
+        # NetBox 4.2+ promoted MAC to its own model. Filter on dcim.mac_addresses; the assigned
+        # object resolves to the Interface, which has a .device. Only handle dcim.interface here
+        # (VM interfaces are out of scope for v1).
+        for mac_obj in self.api.dcim.mac_addresses.filter(mac_address=mac):
+            if getattr(mac_obj, "assigned_object_type", None) != "dcim.interface":
+                continue
+            iface = getattr(mac_obj, "assigned_object", None)
+            device = getattr(iface, "device", None) if iface is not None else None
             if device is not None:
                 return device
         return None
@@ -75,3 +81,40 @@ class NetBoxClient:
         for device in self.api.dcim.devices.filter(name=name):
             return device
         return None
+
+    def create_device(self, spec: dict) -> Any:
+        return self.api.dcim.devices.create(spec)
+
+    def create_interface(self, spec: dict) -> Any:
+        return self.api.dcim.interfaces.create(spec)
+
+    def create_mac_address(self, spec: dict) -> Any:
+        # NetBox 4.2+: MAC is its own model. POST to dcim/mac-addresses with assigned_object_type
+        # ("dcim.interface") and assigned_object_id pointing at the Interface that owns it.
+        return self.api.dcim.mac_addresses.create(spec)
+
+    def create_ip_address(self, spec: dict) -> Any:
+        return self.api.ipam.ip_addresses.create(spec)
+
+    def create_service(self, spec: dict) -> Any:
+        # Service uses parent_object_type/parent_object_id (NOT 'device'); see
+        # netbox/ipam/api/serializers_/services.py upstream.
+        return self.api.ipam.services.create(spec)
+
+    def update_device(self, device_id: int, fields: dict) -> Any | None:
+        device = self.api.dcim.devices.get(device_id)
+        if device is None:
+            return None
+        for k, v in fields.items():
+            setattr(device, k, v)
+        device.save()
+        return device
+
+    def update_interface(self, interface_id: int, fields: dict) -> Any | None:
+        iface = self.api.dcim.interfaces.get(interface_id)
+        if iface is None:
+            return None
+        for k, v in fields.items():
+            setattr(iface, k, v)
+        iface.save()
+        return iface
