@@ -14,6 +14,12 @@ from .init import render_human as render_init_human
 from .init import render_json as render_init_json
 from .init import run_init
 from .opensearch import OpenSearchClient
+from .pipeline import (
+    PipelineSummary,
+    render_human as render_pipeline_human,
+    render_json as render_pipeline_json,
+    run_pipeline,
+)
 from .probe import probe as run_probe
 from .probe import render_human as render_probe_human
 from .probe import render_json as render_probe_json
@@ -21,6 +27,7 @@ from .sources.malcolm import DEFAULT_INDEX_PATTERN as MALCOLM_INDEX_PATTERN
 from .sources.malcolm import MalcolmSource
 from .sources.security_onion import DEFAULT_INDEX_PATTERN as SO_INDEX_PATTERN
 from .sources.security_onion import SecurityOnionSource
+from .upsert import Strategy, UpsertAction, UpsertDefaults
 
 _SOURCE_DEFAULT_INDEX_PATTERN: dict[str, str] = {
     "malcolm": MALCOLM_INDEX_PATTERN,
@@ -99,63 +106,159 @@ def init(url: str, token: str | None, verify_tls: bool, apply: bool, as_json: bo
     click.echo(render_init_json(plan) if as_json else render_init_human(plan))
 
 
-@main.command()
-@click.option("--url", required=True)
-@click.option("--token", envvar="NETBOX_TOKEN")
-@click.option("--verify-tls/--no-verify-tls", default=True)
-@click.option(
-    "--input",
-    "input_path",
-    type=click.Path(exists=True, dir_okay=False),
-    required=True,
-    help="Nmap XML or Nessus .nessus file.",
-)
-@click.option(
-    "--strategy",
-    type=click.Choice(["merge", "overwrite", "skip"]),
-    default="merge",
-)
-@click.option("--verbose", is_flag=True, help="Expand UPDATE rows to field-level diffs.")
-@click.option("--json", "as_json", is_flag=True)
-def plan(
-    url: str,
-    token: str | None,
+def _pipeline_options(f):
+    """Reusable click options for plan/ingest. Applied bottom-up."""
+    decorators = [
+        click.option(
+            "--source",
+            "source_name",
+            type=click.Choice(_SOURCE_NAMES),
+            required=True,
+        ),
+        click.option("--opensearch-url", required=True, help="OpenSearch base URL."),
+        click.option("--opensearch-username", required=True),
+        click.option(
+            "--opensearch-password",
+            envvar="OPENSEARCH_PASSWORD",
+            help="(or OPENSEARCH_PASSWORD env var)",
+        ),
+        click.option("--verify-tls/--no-verify-tls", default=True),
+        click.option(
+            "--since", "since_str", required=True, help="Time window: 30s/5m/2h/7d."
+        ),
+        click.option(
+            "--index-pattern", default=None, help="Override the source's default index pattern."
+        ),
+        click.option("--netbox-url", required=True, help="NetBox base URL."),
+        click.option(
+            "--netbox-token",
+            envvar="NETBOX_TOKEN",
+            required=True,
+            help="(or NETBOX_TOKEN env var)",
+        ),
+        click.option("--site-id", type=int, required=True, help="NetBox Site ID for new devices."),
+        click.option("--role-id", type=int, required=True, help="NetBox DeviceRole ID."),
+        click.option(
+            "--device-type-id", type=int, required=True, help="NetBox DeviceType ID."
+        ),
+        click.option(
+            "--strategy",
+            type=click.Choice(["merge", "overwrite", "skip"]),
+            default="merge",
+        ),
+        click.option(
+            "--scan-id",
+            "scan_id_override",
+            default=None,
+            help="Override the auto-generated scan UUID.",
+        ),
+        click.option("--verbose", is_flag=True, help="Show field-level diffs in human output."),
+        click.option("--json", "as_json", is_flag=True),
+    ]
+    for d in reversed(decorators):
+        f = d(f)
+    return f
+
+
+def _build_source(
+    source_name: str,
+    *,
+    opensearch_url: str,
+    opensearch_username: str,
+    opensearch_password: str | None,
     verify_tls: bool,
-    input_path: str,
+    index_pattern: str | None,
+):
+    client = OpenSearchClient(
+        opensearch_url,
+        username=opensearch_username,
+        password=opensearch_password,
+        verify_tls=verify_tls,
+    )
+    sources: dict[str, type] = {
+        "malcolm": MalcolmSource,
+        "security-onion": SecurityOnionSource,
+    }
+    cls = sources[source_name]
+    kwargs: dict = {}
+    if index_pattern is not None:
+        kwargs["index_pattern"] = index_pattern
+    return cls(client, **kwargs)
+
+
+def _run_plan_or_ingest(
+    *,
+    dry_run: bool,
+    source_name: str,
+    opensearch_url: str,
+    opensearch_username: str,
+    opensearch_password: str | None,
+    verify_tls: bool,
+    since_str: str,
+    index_pattern: str | None,
+    netbox_url: str,
+    netbox_token: str,
+    site_id: int,
+    role_id: int,
+    device_type_id: int,
     strategy: str,
+    scan_id_override: str | None,
     verbose: bool,
     as_json: bool,
 ) -> None:
-    """Show what `ingest` would do, without writing."""
-    raise NotImplementedError
+    import uuid
+
+    source = _build_source(
+        source_name,
+        opensearch_url=opensearch_url,
+        opensearch_username=opensearch_username,
+        opensearch_password=opensearch_password,
+        verify_tls=verify_tls,
+        index_pattern=index_pattern,
+    )
+    hosts = source.fetch_hosts(since=_parse_since(since_str))
+
+    netbox_client = NetBoxClient(
+        netbox_url, TokenAdapter(netbox_token), verify_tls=verify_tls
+    )
+
+    scan_id = scan_id_override or str(uuid.uuid4())
+    defaults = UpsertDefaults(
+        site_id=site_id, role_id=role_id, device_type_id=device_type_id
+    )
+    strategy_enum = Strategy(strategy)
+
+    results = run_pipeline(
+        hosts=hosts,
+        client=netbox_client,
+        scan_id=scan_id,
+        dry_run=dry_run,
+        strategy=strategy_enum,
+        defaults=defaults,
+    )
+
+    summary = PipelineSummary.from_results(results)
+    if as_json:
+        click.echo(render_pipeline_json(results, summary=summary))
+    else:
+        click.echo(render_pipeline_human(results, summary=summary, verbose=verbose))
+
+    if summary.conflicts > 0:
+        raise click.exceptions.Exit(code=2)
 
 
 @main.command()
-@click.option("--url", required=True)
-@click.option("--token", envvar="NETBOX_TOKEN")
-@click.option("--verify-tls/--no-verify-tls", default=True)
-@click.option(
-    "--input",
-    "input_path",
-    type=click.Path(exists=True, dir_okay=False),
-    required=True,
-)
-@click.option(
-    "--strategy",
-    type=click.Choice(["merge", "overwrite", "skip"]),
-    default="merge",
-)
-@click.option("--dry-run", is_flag=True, help="Parse and match, but do not write to NetBox.")
-def ingest(
-    url: str,
-    token: str | None,
-    verify_tls: bool,
-    input_path: str,
-    strategy: str,
-    dry_run: bool,
-) -> None:
-    """Parse a scan file and upsert into NetBox."""
-    raise NotImplementedError
+@_pipeline_options
+def plan(**kwargs) -> None:
+    """Show what `ingest` would do, without writing."""
+    _run_plan_or_ingest(dry_run=True, **kwargs)
+
+
+@main.command()
+@_pipeline_options
+def ingest(**kwargs) -> None:
+    """Pull observed hosts from a source and upsert into NetBox."""
+    _run_plan_or_ingest(dry_run=False, **kwargs)
 
 
 @main.command()

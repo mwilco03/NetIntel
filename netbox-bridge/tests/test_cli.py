@@ -492,25 +492,201 @@ class TestProbeCommand:
         assert result.exit_code != 0
 
 
-class TestStubCommands:
-    """Commands that are still stubs should fail loudly, not silently succeed."""
+class TestPlanIngestCommands:
+    """Both `plan` and `ingest` orchestrate match->upsert per host. plan is dry_run=True."""
 
-    def test_plan_not_implemented(self, tmp_path):
-        scan = tmp_path / "scan.xml"
-        scan.write_text("<nmaprun/>")
-        runner = CliRunner()
-        result = runner.invoke(
-            main,
-            ["plan", "--url", "http://x", "--token", "t", "--input", str(scan)],
-        )
-        assert result.exit_code != 0
+    def _common_args(self, *, command: str = "plan", source: str = "malcolm"):
+        return [
+            command,
+            "--source",
+            source,
+            "--opensearch-url",
+            "https://m:9200",
+            "--opensearch-username",
+            "u",
+            "--opensearch-password",
+            "p",
+            "--since",
+            "1d",
+            "--netbox-url",
+            "https://netbox.example.com",
+            "--netbox-token",
+            "tok",
+            "--site-id",
+            "1",
+            "--role-id",
+            "2",
+            "--device-type-id",
+            "3",
+        ]
 
-    def test_ingest_not_implemented(self, tmp_path):
-        scan = tmp_path / "scan.xml"
-        scan.write_text("<nmaprun/>")
-        runner = CliRunner()
-        result = runner.invoke(
-            main,
-            ["ingest", "--url", "http://x", "--token", "t", "--input", str(scan)],
+    def _patches(self):
+        from netbox_bridge.pipeline import HostResult, PipelineSummary
+        from netbox_bridge.matcher import MatchKind, MatchResult
+        from netbox_bridge.model import Host
+        from netbox_bridge.upsert import UpsertAction, UpsertResult
+        from datetime import datetime, timezone
+
+        host = Host(
+            primary_ip="10.0.0.5",
+            services=[],
+            source="malcolm",
+            observed_at=datetime(2026, 4, 28, tzinfo=timezone.utc),
         )
+        result = HostResult(
+            host=host,
+            match=MatchResult(kind=MatchKind.NEW),
+            upsert=UpsertResult(action=UpsertAction.CREATE, netbox_device_id=42),
+        )
+        return [result]
+
+    def test_plan_invokes_pipeline_with_dry_run_true(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ) as mock_run:
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(main, self._common_args(command="plan"))
+        assert result.exit_code == 0, result.output
+        assert mock_run.call_args.kwargs["dry_run"] is True
+
+    def test_ingest_invokes_pipeline_with_dry_run_false(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ) as mock_run:
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(main, self._common_args(command="ingest"))
+        assert result.exit_code == 0, result.output
+        assert mock_run.call_args.kwargs["dry_run"] is False
+
+    def test_strategy_propagates(self):
+        from netbox_bridge.upsert import Strategy
+
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ) as mock_run:
+            MockSource.return_value.fetch_hosts.return_value = []
+            runner.invoke(
+                main,
+                self._common_args(command="ingest") + ["--strategy", "overwrite"],
+            )
+        assert mock_run.call_args.kwargs["strategy"] == Strategy.OVERWRITE
+
+    def test_security_onion_source_routed(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.SecurityOnionSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ):
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(
+                main, self._common_args(command="plan", source="security-onion")
+            )
+        assert result.exit_code == 0
+        MockSource.assert_called_once()
+
+    def test_defaults_passed_to_pipeline(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ) as mock_run:
+            MockSource.return_value.fetch_hosts.return_value = []
+            runner.invoke(main, self._common_args(command="ingest"))
+        defaults = mock_run.call_args.kwargs["defaults"]
+        assert defaults.site_id == 1
+        assert defaults.role_id == 2
+        assert defaults.device_type_id == 3
+
+    def test_scan_id_auto_generated_when_not_provided(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ) as mock_run:
+            MockSource.return_value.fetch_hosts.return_value = []
+            runner.invoke(main, self._common_args(command="ingest"))
+        scan_id = mock_run.call_args.kwargs["scan_id"]
+        assert scan_id  # non-empty
+        assert len(scan_id) >= 8  # uuid-shaped
+
+    def test_scan_id_override(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ) as mock_run:
+            MockSource.return_value.fetch_hosts.return_value = []
+            runner.invoke(
+                main,
+                self._common_args(command="ingest") + ["--scan-id", "fixed-scan"],
+            )
+        assert mock_run.call_args.kwargs["scan_id"] == "fixed-scan"
+
+    def test_human_output_default(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ):
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(main, self._common_args(command="plan"))
+        assert "[CREATE]" in result.output
+        assert "Summary:" in result.output
+
+    def test_json_output(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ):
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(
+                main, self._common_args(command="plan") + ["--json"]
+            )
+        parsed = json.loads(result.output)
+        assert "summary" in parsed
+        assert "results" in parsed
+
+    def test_exits_nonzero_when_conflicts_present(self):
+        from netbox_bridge.pipeline import HostResult
+        from netbox_bridge.matcher import MatchKind, MatchResult
+        from netbox_bridge.model import Host
+        from netbox_bridge.upsert import UpsertAction, UpsertResult
+        from datetime import datetime, timezone
+
+        conflicts = [
+            HostResult(
+                host=Host(
+                    primary_ip="10.0.0.5",
+                    services=[],
+                    source="malcolm",
+                    observed_at=datetime(2026, 4, 28, tzinfo=timezone.utc),
+                ),
+                match=MatchResult(kind=MatchKind.CONFLICT, reason="x"),
+                upsert=UpsertResult(action=UpsertAction.CONFLICT, reason="x"),
+            )
+        ]
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=conflicts
+        ):
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(main, self._common_args(command="ingest"))
         assert result.exit_code != 0
