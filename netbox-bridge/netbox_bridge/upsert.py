@@ -15,10 +15,13 @@ CF_LAST_SEEN = "last_seen"
 CF_FIRST_SEEN = "first_seen"
 CF_LAST_SCAN_ID = "last_scan_id"
 CF_SOURCE = "source"
+CF_RELATED_MACS = "related_macs"
 
 SOURCE_TAG = "source:netintel-bridge"
 RECENTLY_ADDED_TAG = "lifecycle:recently-added"
+ALERT_MAC_CHANGE_TAG = "alert:mac-change"
 RECENTLY_ADDED_WINDOW = timedelta(days=7)
+RELATED_MAC_WINDOW = timedelta(days=7)
 
 
 class Strategy(str, Enum):
@@ -85,8 +88,41 @@ def _service_name(svc: Service) -> str:
     return svc.name or f"port-{svc.port}/{svc.protocol}"
 
 
+def _observed_macs(host: Host) -> list[str]:
+    return [i.mac.lower() for i in host.interfaces if i.mac]
+
+
+def _new_mac_entry(mac: str, observed_at: datetime, scan_id: str) -> dict:
+    return {
+        "mac": mac.lower(),
+        "observed_at": observed_at.isoformat(),
+        "scan_id": scan_id,
+    }
+
+
+def _trim_mac_entries(entries: list[dict], now: datetime) -> list[dict]:
+    threshold = now - RELATED_MAC_WINDOW
+    keep: list[dict] = []
+    for e in entries:
+        ts = _parse_iso(e.get("observed_at"))
+        if ts is not None and ts >= threshold:
+            keep.append(e)
+    return keep
+
+
 def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> dict:
     timestamp = host.observed_at.isoformat()
+    custom_fields: dict = {
+        CF_LAST_SEEN: timestamp,
+        CF_FIRST_SEEN: timestamp,
+        CF_LAST_SCAN_ID: scan_id,
+        CF_SOURCE: host.source,
+    }
+    macs = _observed_macs(host)
+    if macs:
+        custom_fields[CF_RELATED_MACS] = [
+            _new_mac_entry(m, host.observed_at, scan_id) for m in macs
+        ]
     return {
         "name": _device_name(host),
         "device_type": defaults.device_type_id,
@@ -94,12 +130,7 @@ def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> di
         "site": defaults.site_id,
         "status": "active",
         "tags": [SOURCE_TAG, f"source:{host.source}", RECENTLY_ADDED_TAG],
-        "custom_fields": {
-            CF_LAST_SEEN: timestamp,
-            CF_FIRST_SEEN: timestamp,
-            CF_LAST_SCAN_ID: scan_id,
-            CF_SOURCE: host.source,
-        },
+        "custom_fields": custom_fields,
     }
 
 
@@ -214,6 +245,30 @@ def _build_update_patch(
             desired_names.add(RECENTLY_ADDED_TAG)
         else:
             desired_names.discard(RECENTLY_ADDED_TAG)
+
+        # related_macs windowed list + alert:mac-change tag aging
+        existing_related = list(existing_cfs.get(CF_RELATED_MACS) or [])
+        appended = list(existing_related)
+        for mac in _observed_macs(host):
+            appended.append(_new_mac_entry(mac, host.observed_at, scan_id))
+        trimmed = _trim_mac_entries(appended, host.observed_at)
+        if trimmed != existing_related:
+            custom_fields_patch[CF_RELATED_MACS] = trimmed
+            diffs.append(
+                FieldDiff(
+                    field=CF_RELATED_MACS,
+                    before=str(existing_related) if existing_related else None,
+                    after=str(trimmed),
+                )
+            )
+        distinct_active = {e["mac"] for e in trimmed}
+        if len(distinct_active) > 1:
+            desired_names.add(ALERT_MAC_CHANGE_TAG)
+        else:
+            desired_names.discard(ALERT_MAC_CHANGE_TAG)
+
+        if custom_fields_patch and "custom_fields" not in patch:
+            patch["custom_fields"] = custom_fields_patch
 
         if desired_names != existing_names:
             patch["tags"] = sorted(desired_names)

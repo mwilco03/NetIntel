@@ -18,6 +18,8 @@ import pytest
 from netbox_bridge.matcher import MatchKind, MatchResult
 from netbox_bridge.model import Host, Interface, Service
 from netbox_bridge.upsert import (
+    ALERT_MAC_CHANGE_TAG,
+    CF_RELATED_MACS,
     RECENTLY_ADDED_TAG,
     SOURCE_TAG,
     Strategy,
@@ -665,6 +667,108 @@ class TestUpdatePayloadContract:
         client, _ = _update(_host(source="malcolm"), existing)
         _, patch = client.devices_updated[0]
         assert_payload_in_schema(patch, DEVICE_CREATE_FIELDS, ctx="update_device patch")
+
+
+class TestRelatedMacsAndArpSpoofTag:
+    """The bridge tracks distinct MACs observed at a Device's IP in a windowed list and tags
+    devices with alert:mac-change when more than one MAC is currently active. The signal is the
+    SOC's ARP-spoof / device-replacement heuristic.
+    """
+
+    def test_create_with_observed_mac_populates_related_macs(self):
+        spec = _create(_host(macs=("aa:bb:cc:dd:ee:ff",))).devices_created[0]
+        related = spec["custom_fields"][CF_RELATED_MACS]
+        assert len(related) == 1
+        entry = related[0]
+        assert entry["mac"] == "aa:bb:cc:dd:ee:ff"
+        assert entry["scan_id"] == SCAN_ID
+        assert entry["observed_at"]
+
+    def test_create_without_mac_does_not_populate_related_macs(self):
+        spec = _create(_host(macs=())).devices_created[0]
+        cfs = spec["custom_fields"]
+        assert CF_RELATED_MACS not in cfs or cfs[CF_RELATED_MACS] == []
+
+    def test_create_does_not_carry_alert_tag(self):
+        spec = _create(_host(macs=("aa:bb:cc:dd:ee:ff",))).devices_created[0]
+        assert ALERT_MAC_CHANGE_TAG not in spec["tags"]
+
+    def test_update_appends_new_mac_to_list(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_RELATED_MACS] = [
+            {"mac": "aa:bb:cc:dd:ee:01", "observed_at": "2026-04-27T12:00:00+00:00", "scan_id": "old"}
+        ]
+        host = _host(macs=("aa:bb:cc:dd:ee:02",))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        new_list = patch["custom_fields"][CF_RELATED_MACS]
+        macs_seen = {e["mac"] for e in new_list}
+        assert macs_seen == {"aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"}
+
+    def test_update_with_two_distinct_macs_in_window_adds_alert_tag(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_RELATED_MACS] = [
+            {"mac": "aa:bb:cc:dd:ee:01", "observed_at": "2026-04-27T12:00:00+00:00", "scan_id": "old"}
+        ]
+        host = _host(macs=("aa:bb:cc:dd:ee:02",))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert ALERT_MAC_CHANGE_TAG in patch["tags"]
+
+    def test_update_same_mac_observed_again_does_not_alert(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_RELATED_MACS] = [
+            {"mac": "aa:bb:cc:dd:ee:01", "observed_at": "2026-04-27T12:00:00+00:00", "scan_id": "old"}
+        ]
+        host = _host(macs=("aa:bb:cc:dd:ee:01",))
+        client, _ = _update(host, existing)
+        for _, patch in client.devices_updated:
+            tags = patch.get("tags") or []
+            assert ALERT_MAC_CHANGE_TAG not in tags
+
+    def test_update_distinct_count_of_one_after_aging_clears_alert_tag(self):
+        existing = _existing_bridge_owned(extra_tags=(ALERT_MAC_CHANGE_TAG,))
+        existing.custom_fields[CF_RELATED_MACS] = [
+            {"mac": "aa:bb:cc:dd:ee:01", "observed_at": "2026-01-01T00:00:00+00:00", "scan_id": "old"}
+        ]
+        host = _host(macs=("aa:bb:cc:dd:ee:02",))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert ALERT_MAC_CHANGE_TAG not in patch["tags"]
+
+    def test_update_aged_out_list_is_trimmed(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_RELATED_MACS] = [
+            {"mac": "aa:bb:cc:dd:ee:01", "observed_at": "2026-01-01T00:00:00+00:00", "scan_id": "old"}
+        ]
+        host = _host(macs=("aa:bb:cc:dd:ee:02",))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        new_list = patch["custom_fields"][CF_RELATED_MACS]
+        macs_in_list = {e["mac"] for e in new_list}
+        assert "aa:bb:cc:dd:ee:01" not in macs_in_list
+        assert "aa:bb:cc:dd:ee:02" in macs_in_list
+
+    def test_update_no_new_mac_observed_still_re_evaluates_tag(self):
+        existing = _existing_bridge_owned(extra_tags=(ALERT_MAC_CHANGE_TAG,))
+        existing.custom_fields[CF_RELATED_MACS] = [
+            {"mac": "aa:bb:cc:dd:ee:01", "observed_at": "2026-01-01T00:00:00+00:00", "scan_id": "old"},
+            {"mac": "aa:bb:cc:dd:ee:02", "observed_at": "2026-04-27T12:00:00+00:00", "scan_id": "recent"},
+        ]
+        host = _host(macs=())
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert ALERT_MAC_CHANGE_TAG not in patch["tags"]
+
+    def test_human_owned_device_no_related_macs_no_alert(self):
+        existing = _existing_human_owned()
+        client, _ = _update(_host(macs=("aa:bb:cc:dd:ee:01",)), existing)
+        for _, patch in client.devices_updated:
+            cfs = patch.get("custom_fields", {})
+            assert CF_RELATED_MACS not in cfs
+            assert "tags" not in patch
 
 
 class TestRecentlyAddedTagAging:

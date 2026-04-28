@@ -30,6 +30,14 @@ _CF_DEFINITIONS: dict[str, dict[str, str]] = {
         "type": "text",
         "description": "Bridge source(s) that contributed to this object (nmap, nessus, ...).",
     },
+    "related_macs": {
+        "label": "Related MACs",
+        "type": "json",
+        "description": (
+            "Windowed list of MAC addresses observed for this device's IP. "
+            "More than one distinct MAC in the active window triggers alert:mac-change."
+        ),
+    },
 }
 
 # Distinct hex colors so each bridge-managed tag is visually distinguishable in the NetBox UI.
@@ -37,7 +45,8 @@ _TAG_COLORS: dict[str, str] = {
     "source:netintel-bridge": "1e88e5",  # blue
     "source:nmap": "43a047",             # green
     "source:nessus": "e53935",           # red
-    "lifecycle:recently-added": "fb8c00",  # orange — eye-catching for "new in inventory"
+    "lifecycle:recently-added": "fb8c00",  # orange — "new in inventory"
+    "alert:mac-change": "d32f2f",          # deep red — security alert
 }
 
 

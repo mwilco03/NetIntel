@@ -5,20 +5,29 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol
 
 from .upsert import (
+    ALERT_MAC_CHANGE_TAG,
     CF_FIRST_SEEN,
     CF_LAST_SCAN_ID,
     CF_LAST_SEEN,
+    CF_RELATED_MACS,
     CF_SOURCE,
     RECENTLY_ADDED_TAG,
     SOURCE_TAG,
 )
 
-REQUIRED_DEVICE_CFS: list[str] = [CF_LAST_SEEN, CF_FIRST_SEEN, CF_LAST_SCAN_ID, CF_SOURCE]
+REQUIRED_DEVICE_CFS: list[str] = [
+    CF_LAST_SEEN,
+    CF_FIRST_SEEN,
+    CF_LAST_SCAN_ID,
+    CF_SOURCE,
+    CF_RELATED_MACS,
+]
 REQUIRED_TAGS: list[str] = [
     SOURCE_TAG,
     "source:nmap",
     "source:nessus",
     RECENTLY_ADDED_TAG,
+    ALERT_MAC_CHANGE_TAG,
 ]
 
 DEVICE_CONTENT_TYPE = "dcim.device"

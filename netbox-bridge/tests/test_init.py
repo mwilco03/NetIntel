@@ -151,11 +151,12 @@ class TestPlanInit:
         plan = plan_init(client)
         cf_names = {s["name"] for s in plan.custom_fields_to_create}
         tag_names = {s["name"] for s in plan.tags_to_create}
-        assert cf_names == {"first_seen", "last_scan_id"}
+        assert cf_names == {"first_seen", "last_scan_id", "related_macs"}
         assert tag_names == {
             "source:netintel-bridge",
             "source:nessus",
             "lifecycle:recently-added",
+            "alert:mac-change",
         }
 
 

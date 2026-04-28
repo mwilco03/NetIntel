@@ -97,7 +97,11 @@ class TestDiscover:
     def test_flags_partial_custom_field_presence(self):
         report = discover(FakeClient(device_cfs=("last_seen", "source")))
         assert sorted(report.existing_device_cfs) == ["last_seen", "source"]
-        assert sorted(report.missing_device_cfs) == ["first_seen", "last_scan_id"]
+        assert sorted(report.missing_device_cfs) == [
+            "first_seen",
+            "last_scan_id",
+            "related_macs",
+        ]
         assert not report.ready
 
     def test_ignores_unrelated_custom_fields(self):
