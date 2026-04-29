@@ -246,14 +246,34 @@ def _build_ip_spec(host: Host, interface_id: int) -> dict:
     }
 
 
-def _build_service_spec(svc: Service, device_id: int) -> dict:
-    return {
-        "parent_object_type": "dcim.device",
-        "parent_object_id": device_id,
+def _parse_nb_version(version_str: str) -> tuple[int, int]:
+    """Parse '4.2.5' or '4.5' or '4.5.0-rc1' to (major, minor)."""
+    parts = version_str.split(".", 2)
+    try:
+        return (int(parts[0]), int(parts[1]))
+    except (IndexError, ValueError):
+        return (0, 0)
+
+
+def _build_service_spec(svc: Service, device_id: int, *, nb_version: str) -> dict:
+    """Build the Service POST payload.
+
+    Service serializer changed shape between NetBox 4.2 and 4.3:
+      - 4.2.x: writable fields include `device` and `virtual_machine` (verified at
+        https://github.com/netbox-community/netbox/blob/v4.2.5/netbox/ipam/api/serializers_/services.py)
+      - 4.3+:  `device` removed; uses `parent_object_type` + `parent_object_id`
+        (verified at https://github.com/netbox-community/netbox/blob/main/netbox/ipam/api/serializers_/services.py)
+    Sending the wrong shape returns 400. The version-aware switch keeps the bridge
+    correct for both target NetBox 4.2.5 deployments and current 4.5+ ones.
+    """
+    base = {
         "name": _service_name(svc),
         "ports": [svc.port],
         "protocol": svc.protocol,
     }
+    if _parse_nb_version(nb_version) >= (4, 3):
+        return {**base, "parent_object_type": "dcim.device", "parent_object_id": device_id}
+    return {**base, "device": device_id}
 
 
 def _parse_iso(s: str | None) -> datetime | None:
@@ -457,8 +477,9 @@ def _create_path(
     primary_field = "primary_ip6" if _ip_version(host.primary_ip) == 6 else "primary_ip4"
     client.update_device(device.id, {primary_field: ip.id})
 
+    nb_version = getattr(client, "netbox_version", "4.5")
     for svc in host.services:
-        client.create_service(_build_service_spec(svc, device.id))
+        client.create_service(_build_service_spec(svc, device.id, nb_version=nb_version))
 
     return UpsertResult(action=UpsertAction.CREATE, netbox_device_id=device.id)
 
@@ -500,8 +521,9 @@ def _update_path(
 
     new_services: list[dict] = []
     if owned_for_writes and host.services:
+        nb_version = getattr(client, "netbox_version", "4.5")
         for svc in _missing_services(host, client, existing.id):
-            new_services.append(_build_service_spec(svc, existing.id))
+            new_services.append(_build_service_spec(svc, existing.id, nb_version=nb_version))
 
     if not patch and not new_services:
         return UpsertResult(

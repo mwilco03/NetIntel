@@ -1,8 +1,12 @@
 # Deployment runbook
 
 Verified end-to-end on 2026-04-29 against:
-- **NetBox 4.5** (image `docker.io/netboxcommunity/netbox:v4.5-4.0.2`, image digest pinned by tag)
-- **OpenSearch 2.19.5** (image `docker.io/opensearchproject/opensearch:2`, single-node)
+- **NetBox 4.2.5** (image `docker.io/netboxcommunity/netbox:v4.2.5`, with netbox-docker tag `3.2.0`) — **target version**
+- **NetBox 4.5** (image `docker.io/netboxcommunity/netbox:v4.5-4.0.2`)
+- **OpenSearch 2.19.5** (image `docker.io/opensearchproject/opensearch:2`)
+- **Elasticsearch 8.11.4** (image `docker.elastic.co/elasticsearch/elasticsearch:8.11.4`)
+
+The bridge automatically adapts payload shape per detected NetBox version (see "Version compatibility" below).
 
 This runbook is the procedure that produced 5 `[CREATE]`s into a fresh NetBox from real-shaped Zeek + Suricata documents in OpenSearch, then ran twice more proving idempotency. Every step has the upstream citation an operator needs to verify it.
 
@@ -230,6 +234,20 @@ NB_URL=http://localhost:8000 NB_TOKEN=<token> python3 dev/end_to_end.py
 5. Verify final state shows the alert tag, OUI changed to Rockwell, related_macs has both entries.
 
 If any assertion fails, the script aborts with a clear pointer.
+
+## Version compatibility
+
+The bridge has been verified against NetBox 4.2.5 (target) and 4.5 (current). The two versions differ in three places that matter for the API surface:
+
+| Concern | NetBox 4.2.5 | NetBox 4.5 | Bridge handling |
+|---|---|---|---|
+| Service serializer | uses `device`, `virtual_machine` fields ([source](https://github.com/netbox-community/netbox/blob/v4.2.5/netbox/ipam/api/serializers_/services.py)) | uses `parent_object_type`, `parent_object_id` ([source](https://github.com/netbox-community/netbox/blob/main/netbox/ipam/api/serializers_/services.py)) | `client.netbox_version` queried on first use; `_build_service_spec` switches shape at version 4.3+ |
+| Token model | plaintext stored in `Token.key` field ([source](https://github.com/netbox-community/netbox/blob/v4.2.5/netbox/users/models/tokens.py)) | v1 (plaintext) + v2 (HMAC); `key` is now display-prefix only | `SUPERUSER_API_TOKEN` env works on both. Manual minting differs (see Step 2). |
+| Web server | nginx-unit (Python module) | granian (Rust) | Different sandbox-only patches needed for IPv6 binding; real deployments unaffected. |
+
+Both versions share: MACAddress as a separate model (introduced 4.2.0), `Interface.primary_mac_address` field, `CustomField.object_types`, `Tag.color` regex `^[0-9a-f]{6}$`. None of these required version-aware handling.
+
+If `_build_service_spec` ever sends the wrong shape, NetBox returns 400 with a clear message naming the unaccepted field — a follow-on guard.
 
 ## Known limitations
 

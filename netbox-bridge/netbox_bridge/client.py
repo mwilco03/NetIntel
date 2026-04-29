@@ -52,6 +52,23 @@ class NetBoxClient:
         self.api.http_session.mount("http://", adapter)
         self.api.http_session.mount("https://", adapter)
         auth.apply(self.api)
+        self._netbox_version: str | None = None
+
+    @property
+    def netbox_version(self) -> str:
+        """NetBox version string from /api/status/, e.g. '4.2.5'.
+
+        Cached after first call. Used by upsert to choose between the 4.2.5-era Service
+        shape (uses `device` field) and the 4.5+ shape (uses parent_object_type/_id).
+        Verified 2026-04-29 against:
+          - v4.2.5 serializer: device + virtual_machine fields
+            https://github.com/netbox-community/netbox/blob/v4.2.5/netbox/ipam/api/serializers_/services.py
+          - v4.5 serializer: parent_object_type + parent_object_id (device REMOVED)
+            https://github.com/netbox-community/netbox/blob/main/netbox/ipam/api/serializers_/services.py
+        """
+        if self._netbox_version is None:
+            self._netbox_version = str(self.api.version)
+        return self._netbox_version
 
     def version(self) -> str:
         return str(self.api.version)

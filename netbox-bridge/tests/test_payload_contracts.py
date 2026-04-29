@@ -54,9 +54,14 @@ IP_ADDRESS_CREATE_FIELDS: set[str] = {
 }
 
 SERVICE_CREATE_FIELDS: set[str] = {
-    # Service was generalized — NO 'device' field anymore.
-    "parent_object_type",  # "dcim.device" / "virtualization.virtualmachine"
-    "parent_object_id",
+    # Service serializer differs by NetBox version. The bridge sends the right shape per
+    # client.netbox_version. Allowlist is the UNION of both shapes:
+    # - 4.2.x (target version v4.2.5 verified): writable fields include 'device', 'virtual_machine'
+    #   https://github.com/netbox-community/netbox/blob/v4.2.5/netbox/ipam/api/serializers_/services.py
+    # - 4.3+: 'device' removed; uses 'parent_object_type' / 'parent_object_id'
+    #   https://github.com/netbox-community/netbox/blob/main/netbox/ipam/api/serializers_/services.py
+    "device", "virtual_machine",          # 4.2.x
+    "parent_object_type", "parent_object_id",  # 4.3+
     "name", "ports", "protocol",
     "ipaddresses",
     "description", "comments",
