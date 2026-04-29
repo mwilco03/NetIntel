@@ -495,8 +495,11 @@ class TestProbeCommand:
 class TestPlanIngestCommands:
     """Both `plan` and `ingest` orchestrate match->upsert per host. plan is dry_run=True."""
 
-    def _common_args(self, *, command: str = "plan", source: str = "malcolm"):
-        return [
+    def _common_args(self, *, command: str = "plan", source: str = "malcolm",
+                     include_no_probe: bool = True):
+        # Existing tests that aren't exercising the probe gate use --no-require-probe so they
+        # don't have to mock run_probe. The gate-specific tests below override include_no_probe.
+        args = [
             command,
             "--source",
             source,
@@ -519,6 +522,9 @@ class TestPlanIngestCommands:
             "--device-type-id",
             "3",
         ]
+        if include_no_probe:
+            args.append("--no-require-probe")
+        return args
 
     def _patches(self):
         from netbox_bridge.pipeline import HostResult, PipelineSummary
@@ -661,6 +667,81 @@ class TestPlanIngestCommands:
         parsed = json.loads(result.output)
         assert "summary" in parsed
         assert "results" in parsed
+
+    def test_default_runs_probe_before_ingest(self):
+        """Default behavior: ingest gates on probe to catch field-path/index mismatches before
+        we issue any writes. Verified end-to-end as the highest-impact resilience fix from the
+        self-audit."""
+        from netbox_bridge.probe import REQUIRED_FIELDS, ProbeReport
+
+        ready = ProbeReport(
+            cluster_name="m", cluster_status="green", version="2.19.5",
+            indices=[{"index": "i"}],
+            fields_present=list(REQUIRED_FIELDS), fields_missing=[], datasets={"conn": 1},
+        )
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ), patch(
+            "netbox_bridge.cli.run_probe", return_value=ready
+        ) as mock_probe:
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(
+                main, self._common_args(command="ingest", include_no_probe=False)
+            )
+        assert result.exit_code == 0, result.output
+        mock_probe.assert_called_once()
+
+    def test_aborts_when_probe_says_not_ready(self):
+        from netbox_bridge.probe import ProbeReport
+
+        not_ready = ProbeReport(
+            cluster_name="m", cluster_status="green", version="2.19.5",
+            indices=[],  # NOT ready: no indices
+            fields_present=[], fields_missing=["destination.ip"],
+        )
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource"), patch(
+            "netbox_bridge.cli.run_pipeline"
+        ) as mock_run, patch(
+            "netbox_bridge.cli.run_probe", return_value=not_ready
+        ):
+            result = runner.invoke(
+                main, self._common_args(command="ingest", include_no_probe=False)
+            )
+        assert result.exit_code == 2
+        # Critical: pipeline must NOT have been called when probe says NOT READY
+        mock_run.assert_not_called()
+
+    def test_no_require_probe_skips_the_gate(self):
+        from netbox_bridge.probe import ProbeReport
+
+        not_ready = ProbeReport(
+            cluster_name="m", cluster_status="green", version="2.19.5",
+            indices=[],
+            fields_present=[], fields_missing=["destination.ip"],
+        )
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.NetBoxClient"
+        ), patch("netbox_bridge.cli.MalcolmSource") as MockSource, patch(
+            "netbox_bridge.cli.run_pipeline", return_value=self._patches()
+        ) as mock_run, patch(
+            "netbox_bridge.cli.run_probe", return_value=not_ready
+        ) as mock_probe:
+            MockSource.return_value.fetch_hosts.return_value = []
+            result = runner.invoke(
+                main, self._common_args(command="ingest") + ["--no-require-probe"]
+            )
+        # Even with NOT READY probe, pipeline runs because gate was disabled.
+        # Probe is not called at all to avoid the network round-trip.
+        assert result.exit_code == 0
+        mock_probe.assert_not_called()
+        mock_run.assert_called_once()
 
     def test_exits_nonzero_when_conflicts_present(self):
         from netbox_bridge.pipeline import HostResult

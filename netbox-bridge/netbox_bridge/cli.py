@@ -158,6 +158,16 @@ def _pipeline_options(f):
         ),
         click.option("--verbose", is_flag=True, help="Show field-level diffs in human output."),
         click.option("--json", "as_json", is_flag=True),
+        click.option(
+            "--require-probe/--no-require-probe",
+            default=True,
+            help=(
+                "Run probe against the OpenSearch backend before ingest and abort if the "
+                "required fields are missing or the index pattern matches no indices. "
+                "Default ON; --no-require-probe skips the check (use only when you've "
+                "verified the deployment shape another way)."
+            ),
+        ),
     ]
     for d in reversed(decorators):
         f = d(f)
@@ -209,8 +219,30 @@ def _run_plan_or_ingest(
     scan_id_override: str | None,
     verbose: bool,
     as_json: bool,
+    require_probe: bool,
 ) -> None:
     import uuid
+
+    # Probe-gate before any source fetch — catches field-path/index-pattern mismatches
+    # at the right moment instead of producing zero results silently.
+    if require_probe:
+        os_client = OpenSearchClient(
+            opensearch_url,
+            username=opensearch_username,
+            password=opensearch_password,
+            verify_tls=verify_tls,
+        )
+        pattern = index_pattern or _SOURCE_DEFAULT_INDEX_PATTERN[source_name]
+        report = run_probe(os_client, index_pattern=pattern)
+        if not report.ready:
+            click.echo(render_probe_human(report), err=True)
+            click.echo("", err=True)
+            click.echo(
+                "Refusing to ingest: probe says the OpenSearch backend is NOT READY. "
+                "Re-run with --no-require-probe to bypass this check (not recommended).",
+                err=True,
+            )
+            raise click.exceptions.Exit(code=2)
 
     source = _build_source(
         source_name,
