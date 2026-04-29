@@ -1,17 +1,32 @@
 """Suricata alert-count enrichment source.
 
-Queries an OpenSearch backend for Suricata alert documents (event.kind == "alert") and
-aggregates by destination.ip with sub-aggregations on event.severity (Suricata convention:
-1=high, 2=medium, 3=low) and rule.signature_id.
+Queries an OpenSearch backend for Suricata alert documents (event.kind=alert) and aggregates by
+destination.ip with sub-aggregations on event.severity and rule.id.
 
-Field paths verified against ECS-aligned ingest pipelines (Suricata EVE -> Filebeat ECS module
-or Logstash mutate). Both Malcolm (arkime_sessions3-*) and Security Onion (logs-suricata-so)
-populate these paths when ingesting Suricata. If a target deployment uses raw Suricata fields
-(alert.severity, alert.signature_id) instead of ECS, override via custom field map — TODO future
-slice.
+Field paths verified against upstream on 2026-04-29:
 
-This is an *enrichment* source (not a Host producer): it returns a dict[ip -> HostAlertCounts]
-that the pipeline merges into Host.suricata_alerts before upsert.
+  Filebeat Suricata module ingest pipeline (Elastic / Security Onion):
+    https://raw.githubusercontent.com/elastic/beats/main/x-pack/filebeat/module/suricata/eve/ingest/pipeline.yml
+      alert.severity     -> event.severity   (preserves Suricata's 1=high/2=medium/3=low scale)
+      alert.signature_id -> rule.id
+      alert.signature    -> rule.name
+      alert.category     -> rule.category
+
+  Malcolm logstash Suricata pipeline:
+    https://raw.githubusercontent.com/cisagov/Malcolm/main/logstash/pipelines/suricata/11_suricata_logs.conf
+      [suricata][alert][signature_id] -> [rule][id]
+      [suricata][alert][signature]    -> [rule][name]
+      [suricata][alert][category]     -> [rule][category]
+      [event][kind] = "alert" when event_type == "alert"
+
+  Malcolm severity transform (NOTE: NOT Suricata's native scale):
+    https://raw.githubusercontent.com/cisagov/Malcolm/main/logstash/pipelines/suricata/19_severity.conf
+      [suricata][alert][severity] (1..4) -> [event][severity] = 91 - ((sev-1)*20)
+      So Malcolm produces event.severity in {91, 71, 51, 31, 11} — NOT 1/2/3.
+      Filebeat-based deployments (Security Onion) preserve 1/2/3.
+
+Severity bucket constants below assume Filebeat's preserved scale. For Malcolm, override via
+SuricataSource(severity_mapping={91: 'high', 71: 'medium', 51: 'low'}). TODO future slice.
 """
 from __future__ import annotations
 
@@ -22,11 +37,11 @@ from typing import Any
 from ..opensearch import OpenSearchClient
 from ._common import format_since
 
-DEFAULT_INDEX_PATTERN = "arkime_sessions3-*"  # Malcolm default; override for SO ("logs-suricata-so")
+DEFAULT_INDEX_PATTERN = "arkime_sessions3-*"
 DEFAULT_HOST_AGG_SIZE = 10000
 DEFAULT_TOP_SIGNATURES = 5
 
-# Suricata severity convention (NOT ECS — Suricata's own scale):
+# Filebeat preserves Suricata's native scale. Malcolm rewrites it (see module docstring).
 SEVERITY_HIGH = 1
 SEVERITY_MEDIUM = 2
 SEVERITY_LOW = 3
@@ -79,7 +94,7 @@ def build_query(*, since: timedelta, top_signatures: int = DEFAULT_TOP_SIGNATURE
                         "terms": {"field": "event.severity", "size": 10},
                     },
                     "top_signatures": {
-                        "terms": {"field": "rule.signature_id", "size": top_signatures},
+                        "terms": {"field": "rule.id", "size": top_signatures},
                         "aggs": {
                             "name": {"terms": {"field": "rule.name", "size": 1}}
                         },

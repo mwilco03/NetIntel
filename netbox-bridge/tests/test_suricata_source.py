@@ -52,10 +52,12 @@ class TestBuildQuery:
         sub = q["aggs"]["by_destination_ip"]["aggs"]
         assert sub["by_severity"]["terms"]["field"] == "event.severity"
 
-    def test_subaggregates_rule_signature_id(self):
+    def test_subaggregates_rule_id(self):
+        # alert.signature_id -> rule.id per Filebeat Suricata module ingest pipeline AND Malcolm
+        # logstash/pipelines/suricata/11_suricata_logs.conf. NOT rule.signature_id.
         q = build_query(since=timedelta(days=1))
         sub = q["aggs"]["by_destination_ip"]["aggs"]
-        assert sub["top_signatures"]["terms"]["field"] == "rule.signature_id"
+        assert sub["top_signatures"]["terms"]["field"] == "rule.id"
 
     def test_size_zero(self):
         q = build_query(since=timedelta(days=1))
