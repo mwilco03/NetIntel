@@ -1,0 +1,15 @@
+tests/
+dev/
+.git/
+.github/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+*.db
+.netbox-docker*/
