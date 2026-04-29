@@ -19,6 +19,13 @@
             "value": 1745568000000,
             "value_as_string": "2026-04-25T10:00:00.000Z"
           },
+          "by_mac": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {"key": "00:0e:8c:11:22:33", "doc_count": 800}
+            ]
+          },
           "by_port": {
             "doc_count_error_upper_bound": 0,
             "sum_other_doc_count": 0,
@@ -61,6 +68,13 @@
             "value": 1745481600000,
             "value_as_string": "2026-04-24T10:00:00.000Z"
           },
+          "by_mac": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {"key": "08:61:95:aa:bb:cc", "doc_count": 200}
+            ]
+          },
           "by_port": {
             "doc_count_error_upper_bound": 0,
             "sum_other_doc_count": 0,
@@ -88,6 +102,9 @@
           "last_seen": {
             "value": 1745395200000,
             "value_as_string": "2026-04-23T10:00:00.000Z"
+          },
+          "by_mac": {
+            "buckets": []
           },
           "by_port": {
             "doc_count_error_upper_bound": 0,

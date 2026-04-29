@@ -1,14 +1,17 @@
 """Shared helpers for OpenSearch-backed sources (Malcolm, Security Onion).
 
-Both currently aggregate by destination.ip → destination.port → network.transport / .protocol.
-The agg shape is identical, so the bucket-to-Host mapping lives here.
+Both currently aggregate by destination.ip → destination.port → network.transport / .protocol,
+plus a destination.mac sub-agg so the existing OUI / classification / related_macs flows fire on
+passive Zeek data without requiring file-based parsers.
+
+The agg shape is identical between sources, so the bucket-to-Host mapping lives here.
 """
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
-from ..model import Host, Service
+from ..model import Host, Interface, Service
 
 SourceTag = Literal["malcolm", "security_onion"]
 
@@ -59,8 +62,15 @@ def bucket_to_host(bucket: dict[str, Any], *, source: SourceTag) -> Host:
             )
         )
 
+    interfaces: list[Interface] = []
+    for mac_bucket in bucket.get("by_mac", {}).get("buckets", []) or []:
+        mac = mac_bucket.get("key")
+        if mac:
+            interfaces.append(Interface(mac=mac))
+
     return Host(
         primary_ip=ip,
+        interfaces=interfaces,
         services=services,
         source=source,
         observed_at=observed_at,
@@ -71,6 +81,7 @@ def aggregation_for_destination_ip(
     *,
     host_size: int = 10000,
     port_size: int = 100,
+    mac_size: int = 5,
 ) -> dict[str, Any]:
     return {
         "by_destination_ip": {
@@ -83,6 +94,7 @@ def aggregation_for_destination_ip(
                         "by_protocol": {"terms": {"field": "network.protocol", "size": 10}},
                     },
                 },
+                "by_mac": {"terms": {"field": "destination.mac", "size": mac_size}},
                 "last_seen": {"max": {"field": "@timestamp"}},
             },
         }

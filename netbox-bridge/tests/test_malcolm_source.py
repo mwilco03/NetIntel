@@ -192,3 +192,86 @@ class TestMalcolmSourceFetch:
         hosts = source.fetch_hosts(since=timedelta(days=1))
         assert len(hosts) == 1
         assert hosts[0].services == []
+
+
+class TestSourceSideMacExtraction:
+    def test_query_includes_destination_mac_subagg(self, stub_client):
+        source = MalcolmSource(stub_client)
+        source.fetch_hosts(since=timedelta(days=7))
+        body = stub_client.search.call_args.args[1]
+        sub = body["aggs"]["by_destination_ip"]["aggs"]
+        assert "by_mac" in sub
+        assert sub["by_mac"]["terms"]["field"] == "destination.mac"
+
+    def test_host_interfaces_populated_from_mac_bucket(self, stub_client):
+        source = MalcolmSource(stub_client)
+        hosts = {h.primary_ip: h for h in source.fetch_hosts(since=timedelta(days=7))}
+        host_5 = hosts["10.0.0.5"]
+        assert len(host_5.interfaces) == 1
+        assert host_5.interfaces[0].mac == "00:0e:8c:11:22:33"
+
+    def test_host_interfaces_empty_when_no_mac_bucket(self, stub_client):
+        source = MalcolmSource(stub_client)
+        hosts = {h.primary_ip: h for h in source.fetch_hosts(since=timedelta(days=7))}
+        host_7 = hosts["10.0.0.7"]
+        # 10.0.0.7's by_mac bucket in fixture is empty
+        assert host_7.interfaces == []
+
+    def test_multiple_mac_buckets_all_populate_interfaces(self):
+        client = MagicMock()
+        client.search.return_value = {
+            "hits": {"total": {"value": 1}, "hits": []},
+            "aggregations": {
+                "by_destination_ip": {
+                    "buckets": [
+                        {
+                            "key": "10.0.0.50",
+                            "doc_count": 100,
+                            "last_seen": {
+                                "value_as_string": "2026-04-25T10:00:00.000Z",
+                                "value": 1745568000000,
+                            },
+                            "by_mac": {
+                                "buckets": [
+                                    {"key": "aa:bb:cc:dd:ee:01", "doc_count": 60},
+                                    {"key": "aa:bb:cc:dd:ee:02", "doc_count": 40},
+                                ]
+                            },
+                            "by_port": {"buckets": []},
+                        }
+                    ]
+                }
+            },
+        }
+        source = MalcolmSource(client)
+        hosts = source.fetch_hosts(since=timedelta(days=1))
+        assert len(hosts) == 1
+        macs = [iface.mac for iface in hosts[0].interfaces]
+        assert macs == ["aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"]
+
+    def test_missing_mac_bucket_field_does_not_crash(self):
+        # Older Malcolm versions or deployments without L2 capture may not have destination.mac.
+        # The source must produce a Host with empty interfaces, not raise.
+        client = MagicMock()
+        client.search.return_value = {
+            "hits": {"total": {"value": 1}, "hits": []},
+            "aggregations": {
+                "by_destination_ip": {
+                    "buckets": [
+                        {
+                            "key": "10.0.0.51",
+                            "doc_count": 100,
+                            "last_seen": {
+                                "value_as_string": "2026-04-25T10:00:00.000Z",
+                                "value": 1745568000000,
+                            },
+                            "by_port": {"buckets": []},
+                            # NO by_mac bucket at all
+                        }
+                    ]
+                }
+            },
+        }
+        source = MalcolmSource(client)
+        hosts = source.fetch_hosts(since=timedelta(days=1))
+        assert hosts[0].interfaces == []
