@@ -79,6 +79,79 @@ class TestUpstreamFieldPaths:
         assert q["aggs"]["by_destination_ip"]["terms"]["field"] == "destination.ip"
 
 
+class TestRealFilebeatIngestVerification:
+    """Empirical verification: ran Filebeat 8.11.4 with the Suricata module against a real EVE
+    JSON file (3 alerts) and shipped them to Elasticsearch 8.11.4. Captured the actual fields
+    Filebeat produced. These tests lock our SuricataSource against THAT shape.
+
+    Captured 2026-04-29 from a real Filebeat run:
+      event.kind                       = 'alert'
+      event.module                     = 'suricata'
+      event.dataset                    = 'suricata.eve'    (NOT 'alert' as Malcolm uses)
+      event.severity                   = 1                  (numeric, native Suricata scale)
+      rule.id                          = '2027865'          (STRING, not int)
+      rule.name                        = 'ET POLICY HTTP ...'
+      rule.category                    = 'Potentially Bad Traffic'
+      source.ip / source.port          = ECS canonical
+      destination.ip / destination.port = ECS canonical
+      network.transport                = 'tcp'
+      network.protocol                 = ABSENT (Suricata alerts don't populate L7 protocol;
+                                          that's emitted on flow/dns/http records, not alerts)
+
+    The bridge filters on event.kind=alert (matches both Filebeat's value and Malcolm's), aggs
+    on rule.id (correctly cast int() from the string) and event.severity (numeric). All confirmed
+    end-to-end against real Filebeat output.
+    """
+
+    def test_filter_event_kind_alert_matches_filebeat_emission(self):
+        # Confirmed: Filebeat sets event.kind = "alert" for Suricata alert records.
+        from netbox_bridge.sources.suricata import build_query
+        from datetime import timedelta
+
+        q = build_query(since=timedelta(days=1))
+        terms = [f for f in q["query"]["bool"]["filter"] if "term" in f]
+        assert {"term": {"event.kind": "alert"}} in terms
+
+    def test_dataset_value_differs_between_filebeat_and_malcolm(self):
+        # Documentary: Filebeat -> 'suricata.eve', Malcolm -> 'alert'. The bridge does NOT
+        # filter on event.dataset for Suricata enrichment — only on event.kind — which is
+        # what makes both work.
+        from netbox_bridge.sources.suricata import build_query
+        from datetime import timedelta
+
+        q = build_query(since=timedelta(days=1))
+        for f in q["query"]["bool"]["filter"]:
+            if "term" in f:
+                # No term filter on event.dataset specifically — this would break Filebeat
+                # ingest because real Filebeat emits 'suricata.eve', not 'alert'.
+                assert "event.dataset" not in str(f), (
+                    "Suricata source must not filter on event.dataset value — Filebeat emits "
+                    "'suricata.eve' while Malcolm emits 'alert'. Filter on event.kind=alert "
+                    "instead, which both populate identically."
+                )
+
+    def test_int_cast_handles_string_rule_id(self):
+        # Confirmed: real Filebeat output stores rule.id as a STRING in the bucket key.
+        # _bucket_to_alert_counts() casts to int. Without that cast, AlertSignature.signature_id
+        # would carry the string and break consumers expecting an integer.
+        from netbox_bridge.sources.suricata import _bucket_to_alert_counts
+
+        bucket = {
+            "key": "10.0.0.5",
+            "doc_count": 1,
+            "by_severity": {"buckets": [{"key": 1, "doc_count": 1}]},
+            "top_signatures": {
+                "buckets": [
+                    {"key": "2027865", "doc_count": 1,
+                     "name": {"buckets": [{"key": "ET POLICY ...", "doc_count": 1}]}}
+                ]
+            },
+        }
+        result = _bucket_to_alert_counts(bucket)
+        assert result.top_signatures[0].signature_id == 2027865
+        assert isinstance(result.top_signatures[0].signature_id, int)
+
+
 class TestSeverityScaleAssumesFilebeat:
     """Default severity constants assume Filebeat's preserved Suricata scale.
 
