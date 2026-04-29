@@ -55,6 +55,9 @@ _TAG_COLORS: dict[str, str] = {
     "source:nessus": "e53935",           # red
     "lifecycle:recently-added": "fb8c00",  # orange — "new in inventory"
     "alert:mac-change": "d32f2f",          # deep red — security alert
+    "class:ot": "8e24aa",                  # purple — OT
+    "class:it": "00838f",                  # teal — IT
+    "class:mixed": "5d4037",               # brown — mixed environment
 }
 
 

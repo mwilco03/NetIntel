@@ -8,6 +8,7 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
+from .classify import ALL_CLASS_TAGS, classify_tags
 from .matcher import MatchKind, MatchResult
 from .model import Host, Service
 from .oui import lookup_vendor
@@ -120,6 +121,7 @@ def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> di
         CF_LAST_SCAN_ID: scan_id,
         CF_SOURCE: host.source,
     }
+    vendor: str | None = None
     macs = _observed_macs(host)
     if macs:
         custom_fields[CF_RELATED_MACS] = [
@@ -128,13 +130,17 @@ def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> di
         vendor = lookup_vendor(macs[0])
         if vendor:
             custom_fields[CF_OUI_VENDOR] = vendor
+
+    tags = [SOURCE_TAG, f"source:{host.source}", RECENTLY_ADDED_TAG]
+    tags.extend(sorted(classify_tags(host, vendor)))
+
     return {
         "name": _device_name(host),
         "device_type": defaults.device_type_id,
         "role": defaults.role_id,
         "site": defaults.site_id,
         "status": "active",
-        "tags": [SOURCE_TAG, f"source:{host.source}", RECENTLY_ADDED_TAG],
+        "tags": tags,
         "custom_fields": custom_fields,
     }
 
@@ -244,7 +250,8 @@ def _build_update_patch(
 
     if owned_for_writes:
         existing_names = _existing_tag_names(existing)
-        desired_names = existing_names | {SOURCE_TAG, f"source:{host.source}"}
+        # Strip class:* tags before recomputing — mutual exclusion among class:ot/it/mixed.
+        desired_names = (existing_names - ALL_CLASS_TAGS) | {SOURCE_TAG, f"source:{host.source}"}
 
         if _is_recently_added(existing_cfs.get(CF_FIRST_SEEN), host.observed_at):
             desired_names.add(RECENTLY_ADDED_TAG)
@@ -253,9 +260,10 @@ def _build_update_patch(
 
         # OUI vendor identification — refresh when a known vendor differs from existing.
         observed_macs = _observed_macs(host)
+        existing_vendor = existing_cfs.get(CF_OUI_VENDOR)
+        effective_vendor: str | None = existing_vendor
         if observed_macs:
             new_vendor = lookup_vendor(observed_macs[0])
-            existing_vendor = existing_cfs.get(CF_OUI_VENDOR)
             if new_vendor and new_vendor != existing_vendor:
                 custom_fields_patch[CF_OUI_VENDOR] = new_vendor
                 diffs.append(
@@ -265,6 +273,10 @@ def _build_update_patch(
                         after=new_vendor,
                     )
                 )
+                effective_vendor = new_vendor
+
+        # Re-classify based on current host services + effective vendor.
+        desired_names |= classify_tags(host, effective_vendor)
 
         # related_macs windowed list + alert:mac-change tag aging
         existing_related = list(existing_cfs.get(CF_RELATED_MACS) or [])

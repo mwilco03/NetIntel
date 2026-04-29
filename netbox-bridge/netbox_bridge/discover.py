@@ -30,6 +30,9 @@ REQUIRED_TAGS: list[str] = [
     "source:nessus",
     RECENTLY_ADDED_TAG,
     ALERT_MAC_CHANGE_TAG,
+    "class:ot",
+    "class:it",
+    "class:mixed",
 ]
 
 DEVICE_CONTENT_TYPE = "dcim.device"

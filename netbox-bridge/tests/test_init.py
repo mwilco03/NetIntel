@@ -157,6 +157,9 @@ class TestPlanInit:
             "source:nessus",
             "lifecycle:recently-added",
             "alert:mac-change",
+            "class:ot",
+            "class:it",
+            "class:mixed",
         }
 
 

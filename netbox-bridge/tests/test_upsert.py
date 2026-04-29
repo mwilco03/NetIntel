@@ -670,6 +670,108 @@ class TestUpdatePayloadContract:
         assert_payload_in_schema(patch, DEVICE_CREATE_FIELDS, ctx="update_device patch")
 
 
+class TestClassificationTagOnCreate:
+    def test_ot_protocol_creates_with_class_ot(self):
+        spec = _create(
+            _host(services=(Service(port=502, protocol="tcp", name="modbus"),))
+        ).devices_created[0]
+        assert "class:ot" in spec["tags"]
+
+    def test_it_protocol_creates_with_class_it(self):
+        spec = _create(
+            _host(services=(Service(port=22, protocol="tcp", name="ssh"),))
+        ).devices_created[0]
+        assert "class:it" in spec["tags"]
+
+    def test_ot_vendor_alone_creates_with_class_ot(self):
+        spec = _create(_host(macs=("00:0E:8C:11:22:33",))).devices_created[0]
+        assert "class:ot" in spec["tags"]
+
+    def test_mixed_protocol_creates_with_class_mixed(self):
+        spec = _create(
+            _host(
+                services=(
+                    Service(port=502, protocol="tcp", name="modbus"),
+                    Service(port=80, protocol="tcp", name="http"),
+                )
+            )
+        ).devices_created[0]
+        assert "class:mixed" in spec["tags"]
+        assert "class:ot" not in spec["tags"]
+        assert "class:it" not in spec["tags"]
+
+    def test_no_signal_creates_without_class_tag(self):
+        spec = _create(_host(services=())).devices_created[0]
+        for t in ("class:ot", "class:it", "class:mixed"):
+            assert t not in spec["tags"]
+
+
+class TestClassificationTagOnUpdate:
+    def test_promotes_it_to_mixed_when_ot_protocol_appears(self):
+        existing = _existing_bridge_owned()
+        existing.tags.append(_NamedTag("class:it"))
+        existing.custom_fields[CF_OUI_VENDOR] = ""
+        host = _host(
+            services=(
+                Service(port=80, protocol="tcp", name="http"),
+                Service(port=502, protocol="tcp", name="modbus"),
+            )
+        )
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert "class:mixed" in patch["tags"]
+        # Old class:it must be gone (mutual exclusion)
+        assert "class:it" not in patch["tags"]
+
+    def test_does_not_change_tag_when_classification_matches(self):
+        existing = _existing_bridge_owned()
+        existing.tags.append(_NamedTag("class:it"))
+        host = _host(
+            services=(Service(port=22, protocol="tcp", name="ssh"),),
+            source="nmap",
+        )
+        client, _ = _update(host, existing, existing_services=[
+            _ServiceRow(port=22, protocol="tcp"),
+        ])
+        for _, patch in client.devices_updated:
+            tags = patch.get("tags") or []
+            if tags:
+                assert "class:it" in tags  # still there
+                # the patch shouldn't have changed only because of classification
+                # (other diffs may force a tag patch — that's fine)
+
+    def test_ot_vendor_observed_promotes_classification(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_OUI_VENDOR] = ""
+        # Now we observe a Siemens MAC for the first time
+        host = _host(macs=("00:0E:8C:11:22:33",))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert "class:ot" in patch["tags"]
+
+    def test_human_owned_device_does_not_get_class_tag(self):
+        existing = _existing_human_owned()
+        host = _host(services=(Service(port=502, protocol="tcp", name="modbus"),))
+        client, _ = _update(host, existing)
+        for _, patch in client.devices_updated:
+            tags = patch.get("tags") or []
+            assert "class:ot" not in tags
+            assert "class:it" not in tags
+
+    def test_mutual_exclusion_only_one_class_tag_at_a_time(self):
+        existing = _existing_bridge_owned()
+        existing.tags.append(_NamedTag("class:mixed"))
+        # New observation: only IT protocol → should switch to class:it
+        host = _host(services=(Service(port=80, protocol="tcp", name="http"),))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        class_tags = {t for t in patch["tags"] if t.startswith("class:")}
+        assert class_tags == {"class:it"}
+
+
 class TestOuiVendorIdentification:
     """OUI lookup populates Device.custom_fields.oui_vendor when MAC is observed."""
 
