@@ -7,6 +7,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 
 from netbox_bridge.opensearch import OpenSearchClient, OpenSearchError
 
@@ -200,3 +201,77 @@ class TestIntrospection:
         query = body.get("query", {})
         if "bool" in query:
             assert not any("range" in f for f in query["bool"].get("filter", []))
+
+
+class TestRetryIntegration:
+    """OpenSearchClient must retry transient failures via _retry.with_retry."""
+
+    def _http_error(self, status: int):
+        from unittest.mock import MagicMock as MM
+        response = MM()
+        response.status_code = status
+        response.text = f"HTTP {status}"
+        response.headers = {}
+        response.raise_for_status.side_effect = requests.HTTPError(
+            f"HTTP {status}", response=response
+        )
+        return response
+
+    def test_search_retries_on_503(self, monkeypatch):
+        monkeypatch.setattr("netbox_bridge._retry.time.sleep", lambda _: None)
+        session = MagicMock()
+        good = MagicMock()
+        good.status_code = 200
+        good.json.return_value = {"hits": {"hits": []}}
+        good.raise_for_status.return_value = None
+        session.post.side_effect = [self._http_error(503), good]
+
+        client = OpenSearchClient("https://x", session=session)
+        client.search("idx", {})
+        assert session.post.call_count == 2
+
+    def test_search_does_not_retry_on_400(self, monkeypatch):
+        monkeypatch.setattr("netbox_bridge._retry.time.sleep", lambda _: None)
+        session = MagicMock()
+        session.post.return_value = self._http_error(400)
+        client = OpenSearchClient("https://x", session=session)
+        with pytest.raises(OpenSearchError):
+            client.search("idx", {})
+        assert session.post.call_count == 1
+
+    def test_cluster_info_retries_on_connection_error(self, monkeypatch):
+        monkeypatch.setattr("netbox_bridge._retry.time.sleep", lambda _: None)
+        session = MagicMock()
+        good = MagicMock()
+        good.status_code = 200
+        good.json.return_value = {"cluster_name": "ok"}
+        good.raise_for_status.return_value = None
+        session.get.side_effect = [requests.ConnectionError("dns"), good]
+        client = OpenSearchClient("https://x", session=session)
+        info = client.cluster_info()
+        assert info["cluster_name"] == "ok"
+        assert session.get.call_count == 2
+
+    def test_list_indices_retries_on_500(self, monkeypatch):
+        monkeypatch.setattr("netbox_bridge._retry.time.sleep", lambda _: None)
+        session = MagicMock()
+        good = MagicMock()
+        good.status_code = 200
+        good.json.return_value = []
+        good.raise_for_status.return_value = None
+        session.get.side_effect = [self._http_error(500), good]
+        client = OpenSearchClient("https://x", session=session)
+        client.list_indices("idx-*")
+        assert session.get.call_count == 2
+
+    def test_field_caps_retries_on_502(self, monkeypatch):
+        monkeypatch.setattr("netbox_bridge._retry.time.sleep", lambda _: None)
+        session = MagicMock()
+        good = MagicMock()
+        good.status_code = 200
+        good.json.return_value = {"fields": {}}
+        good.raise_for_status.return_value = None
+        session.get.side_effect = [self._http_error(502), good]
+        client = OpenSearchClient("https://x", session=session)
+        client.field_caps("idx-*", ["a"])
+        assert session.get.call_count == 2

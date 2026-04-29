@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import requests
+
 from netbox_bridge.client import NetBoxClient, TokenAdapter
 
 
@@ -246,6 +248,37 @@ class TestUpdatePassthroughs:
         api.dcim.devices.get.return_value = None
         result = client.update_device(99, {"primary_ip4": 1})
         assert result is None
+
+
+class TestNetBoxClientRetry:
+    """Retry adapter mounted on pynetbox's http_session — transient HTTP failures retry."""
+
+    def test_session_has_retry_adapter_on_http_and_https(self):
+        client, api = _client_with_mock_api()
+        adapters = api.http_session.mount.call_args_list
+        mounted_prefixes = [call.args[0] for call in adapters]
+        assert "http://" in mounted_prefixes
+        assert "https://" in mounted_prefixes
+
+    def test_retry_adapter_configured_for_transient_status_codes(self):
+        from requests.adapters import HTTPAdapter
+
+        # Use a real session (no mock) to inspect the actual retry config.
+        with patch("netbox_bridge.client.pynetbox.api") as mock_factory:
+            real_session = requests.Session()
+            mock_api = MagicMock()
+            mock_api.http_session = real_session
+            mock_factory.return_value = mock_api
+            NetBoxClient("http://x", TokenAdapter("t"))
+
+        adapter = real_session.get_adapter("https://x")
+        assert isinstance(adapter, HTTPAdapter)
+        retry = adapter.max_retries
+        assert 429 in retry.status_forcelist
+        assert 500 in retry.status_forcelist
+        assert 502 in retry.status_forcelist
+        assert 503 in retry.status_forcelist
+        assert 504 in retry.status_forcelist
 
 
 class TestReadPassthroughs:

@@ -4,6 +4,15 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import pynetbox
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# Transient HTTP statuses that should be retried at the urllib3 transport layer. pynetbox uses an
+# internal requests.Session for every API call, so mounting an HTTPAdapter with this Retry config
+# gives us transparent retry for every CRUD operation without wrapping each method.
+_TRANSIENT_STATUSES = frozenset({429, 500, 502, 503, 504})
+_DEFAULT_RETRIES = 4
+_DEFAULT_BACKOFF = 0.5
 
 
 class AuthAdapter(ABC):
@@ -21,10 +30,27 @@ class TokenAdapter(AuthAdapter):
         api.token = self.token
 
 
+def _build_retry_adapter() -> HTTPAdapter:
+    retry = Retry(
+        total=_DEFAULT_RETRIES,
+        backoff_factor=_DEFAULT_BACKOFF,
+        status_forcelist=tuple(_TRANSIENT_STATUSES),
+        allowed_methods=frozenset({"HEAD", "GET", "OPTIONS", "POST", "PATCH", "PUT", "DELETE"}),
+        respect_retry_after_header=True,
+        raise_on_status=False,
+    )
+    return HTTPAdapter(max_retries=retry)
+
+
 class NetBoxClient:
     def __init__(self, url: str, auth: AuthAdapter, *, verify_tls: bool = True) -> None:
         self.api = pynetbox.api(url)
         self.api.http_session.verify = verify_tls
+        # Mount retry adapter on both HTTP and HTTPS so transient NetBox/proxy hiccups don't kill
+        # an entire scan. urllib3 honors Retry-After on 429 automatically.
+        adapter = _build_retry_adapter()
+        self.api.http_session.mount("http://", adapter)
+        self.api.http_session.mount("https://", adapter)
         auth.apply(self.api)
 
     def version(self) -> str:
