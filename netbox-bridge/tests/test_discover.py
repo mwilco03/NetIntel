@@ -100,6 +100,7 @@ class TestDiscover:
         assert sorted(report.missing_device_cfs) == [
             "first_seen",
             "last_scan_id",
+            "oui_vendor",
             "related_macs",
         ]
         assert not report.ready

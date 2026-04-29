@@ -10,12 +10,14 @@ from pydantic import BaseModel
 
 from .matcher import MatchKind, MatchResult
 from .model import Host, Service
+from .oui import lookup_vendor
 
 CF_LAST_SEEN = "last_seen"
 CF_FIRST_SEEN = "first_seen"
 CF_LAST_SCAN_ID = "last_scan_id"
 CF_SOURCE = "source"
 CF_RELATED_MACS = "related_macs"
+CF_OUI_VENDOR = "oui_vendor"
 
 SOURCE_TAG = "source:netintel-bridge"
 RECENTLY_ADDED_TAG = "lifecycle:recently-added"
@@ -123,6 +125,9 @@ def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> di
         custom_fields[CF_RELATED_MACS] = [
             _new_mac_entry(m, host.observed_at, scan_id) for m in macs
         ]
+        vendor = lookup_vendor(macs[0])
+        if vendor:
+            custom_fields[CF_OUI_VENDOR] = vendor
     return {
         "name": _device_name(host),
         "device_type": defaults.device_type_id,
@@ -245,6 +250,21 @@ def _build_update_patch(
             desired_names.add(RECENTLY_ADDED_TAG)
         else:
             desired_names.discard(RECENTLY_ADDED_TAG)
+
+        # OUI vendor identification — refresh when a known vendor differs from existing.
+        observed_macs = _observed_macs(host)
+        if observed_macs:
+            new_vendor = lookup_vendor(observed_macs[0])
+            existing_vendor = existing_cfs.get(CF_OUI_VENDOR)
+            if new_vendor and new_vendor != existing_vendor:
+                custom_fields_patch[CF_OUI_VENDOR] = new_vendor
+                diffs.append(
+                    FieldDiff(
+                        field=CF_OUI_VENDOR,
+                        before=existing_vendor,
+                        after=new_vendor,
+                    )
+                )
 
         # related_macs windowed list + alert:mac-change tag aging
         existing_related = list(existing_cfs.get(CF_RELATED_MACS) or [])

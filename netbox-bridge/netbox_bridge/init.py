@@ -38,6 +38,14 @@ _CF_DEFINITIONS: dict[str, dict[str, str]] = {
             "More than one distinct MAC in the active window triggers alert:mac-change."
         ),
     },
+    "oui_vendor": {
+        "label": "OUI Vendor",
+        "type": "text",
+        "description": (
+            "Vendor name resolved from the device's MAC OUI (first 24 bits) against "
+            "the IEEE registry. High-confidence asset identification signal."
+        ),
+    },
 }
 
 # Distinct hex colors so each bridge-managed tag is visually distinguishable in the NetBox UI.

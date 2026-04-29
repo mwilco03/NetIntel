@@ -19,6 +19,7 @@ from netbox_bridge.matcher import MatchKind, MatchResult
 from netbox_bridge.model import Host, Interface, Service
 from netbox_bridge.upsert import (
     ALERT_MAC_CHANGE_TAG,
+    CF_OUI_VENDOR,
     CF_RELATED_MACS,
     RECENTLY_ADDED_TAG,
     SOURCE_TAG,
@@ -667,6 +668,66 @@ class TestUpdatePayloadContract:
         client, _ = _update(_host(source="malcolm"), existing)
         _, patch = client.devices_updated[0]
         assert_payload_in_schema(patch, DEVICE_CREATE_FIELDS, ctx="update_device patch")
+
+
+class TestOuiVendorIdentification:
+    """OUI lookup populates Device.custom_fields.oui_vendor when MAC is observed."""
+
+    def test_create_with_known_oui_sets_oui_vendor_cf(self):
+        spec = _create(_host(macs=("00:0E:8C:11:22:33",))).devices_created[0]
+        assert spec["custom_fields"][CF_OUI_VENDOR] == "Siemens AG"
+
+    def test_create_with_unknown_oui_omits_cf(self):
+        spec = _create(_host(macs=("00:00:00:11:22:33",))).devices_created[0]
+        assert CF_OUI_VENDOR not in spec["custom_fields"]
+
+    def test_create_without_mac_omits_cf(self):
+        spec = _create(_host(macs=())).devices_created[0]
+        assert CF_OUI_VENDOR not in spec["custom_fields"]
+
+    def test_create_with_rockwell_oui(self):
+        spec = _create(_host(macs=("08:61:95:00:00:00",))).devices_created[0]
+        assert spec["custom_fields"][CF_OUI_VENDOR] == "Rockwell Automation"
+
+    def test_create_with_cisco_oui(self):
+        spec = _create(_host(macs=("00:00:0C:00:00:00",))).devices_created[0]
+        assert spec["custom_fields"][CF_OUI_VENDOR] == "Cisco Systems"
+
+    def test_update_sets_oui_vendor_when_first_observed(self):
+        existing = _existing_bridge_owned()
+        client, _ = _update(_host(macs=("00:50:56:11:22:33",)), existing)
+        _, patch = client.devices_updated[0]
+        assert patch["custom_fields"][CF_OUI_VENDOR] == "VMware"
+
+    def test_update_changes_oui_vendor_when_mac_vendor_changes(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_OUI_VENDOR] = "Cisco Systems"
+        client, _ = _update(_host(macs=("00:0E:8C:11:22:33",)), existing)
+        _, patch = client.devices_updated[0]
+        assert patch["custom_fields"][CF_OUI_VENDOR] == "Siemens AG"
+
+    def test_update_no_change_when_same_vendor_observed(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_OUI_VENDOR] = "Siemens AG"
+        client, _ = _update(_host(macs=("00:1B:1B:11:22:33",)), existing)
+        for _, patch in client.devices_updated:
+            cfs = patch.get("custom_fields", {})
+            assert CF_OUI_VENDOR not in cfs
+
+    def test_update_unknown_oui_does_not_clobber_existing_vendor(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_OUI_VENDOR] = "Siemens AG"
+        client, _ = _update(_host(macs=("FF:FF:FF:11:22:33",)), existing)
+        for _, patch in client.devices_updated:
+            cfs = patch.get("custom_fields", {})
+            assert CF_OUI_VENDOR not in cfs
+
+    def test_human_owned_device_does_not_get_oui_vendor(self):
+        existing = _existing_human_owned()
+        client, _ = _update(_host(macs=("00:0E:8C:11:22:33",)), existing)
+        for _, patch in client.devices_updated:
+            cfs = patch.get("custom_fields", {})
+            assert CF_OUI_VENDOR not in cfs
 
 
 class TestRelatedMacsAndArpSpoofTag:
