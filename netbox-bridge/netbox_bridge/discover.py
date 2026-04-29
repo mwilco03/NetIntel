@@ -6,12 +6,18 @@ from typing import Any, Protocol
 
 from .upsert import (
     ALERT_MAC_CHANGE_TAG,
+    ALERT_NOISY_TAG,
     CF_FIRST_SEEN,
     CF_LAST_SCAN_ID,
     CF_LAST_SEEN,
     CF_OUI_VENDOR,
     CF_RELATED_MACS,
     CF_SOURCE,
+    CF_SURICATA_ALERTS_HIGH,
+    CF_SURICATA_ALERTS_LOW,
+    CF_SURICATA_ALERTS_MEDIUM,
+    CF_SURICATA_ALERTS_TOTAL,
+    CF_SURICATA_TOP_SIGNATURES,
     RECENTLY_ADDED_TAG,
     SOURCE_TAG,
 )
@@ -23,6 +29,11 @@ REQUIRED_DEVICE_CFS: list[str] = [
     CF_SOURCE,
     CF_RELATED_MACS,
     CF_OUI_VENDOR,
+    CF_SURICATA_ALERTS_TOTAL,
+    CF_SURICATA_ALERTS_HIGH,
+    CF_SURICATA_ALERTS_MEDIUM,
+    CF_SURICATA_ALERTS_LOW,
+    CF_SURICATA_TOP_SIGNATURES,
 ]
 REQUIRED_TAGS: list[str] = [
     SOURCE_TAG,
@@ -30,6 +41,7 @@ REQUIRED_TAGS: list[str] = [
     "source:nessus",
     RECENTLY_ADDED_TAG,
     ALERT_MAC_CHANGE_TAG,
+    ALERT_NOISY_TAG,
     "class:ot",
     "class:it",
     "class:mixed",

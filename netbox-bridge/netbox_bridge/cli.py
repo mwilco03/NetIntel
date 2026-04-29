@@ -27,6 +27,10 @@ from .sources.malcolm import DEFAULT_INDEX_PATTERN as MALCOLM_INDEX_PATTERN
 from .sources.malcolm import MalcolmSource
 from .sources.security_onion import DEFAULT_INDEX_PATTERN as SO_INDEX_PATTERN
 from .sources.security_onion import SecurityOnionSource
+from .sources.suricata import (
+    DEFAULT_INDEX_PATTERN as SURICATA_INDEX_PATTERN,
+    SuricataSource,
+)
 from .upsert import Strategy, UpsertAction, UpsertDefaults
 
 _SOURCE_DEFAULT_INDEX_PATTERN: dict[str, str] = {
@@ -259,6 +263,45 @@ def plan(**kwargs) -> None:
 def ingest(**kwargs) -> None:
     """Pull observed hosts from a source and upsert into NetBox."""
     _run_plan_or_ingest(dry_run=False, **kwargs)
+
+
+@main.command(name="enrich-suricata")
+@click.option("--url", required=True, help="OpenSearch base URL.")
+@click.option("--username", required=True)
+@click.option("--password", envvar="OPENSEARCH_PASSWORD")
+@click.option("--verify-tls/--no-verify-tls", default=True)
+@click.option("--since", "since_str", required=True, help="Time window: 30s/5m/2h/7d.")
+@click.option(
+    "--index-pattern",
+    default=None,
+    help=f"OpenSearch index pattern (default: {SURICATA_INDEX_PATTERN}).",
+)
+def enrich_suricata(
+    url: str,
+    username: str,
+    password: str | None,
+    verify_tls: bool,
+    since_str: str,
+    index_pattern: str | None,
+) -> None:
+    """Pull Suricata alert counts per destination IP from an OpenSearch backend.
+
+    Outputs a JSON map of IP -> {total, high, medium, low, top_signatures}. Pipe into
+    automation or use the counts to plan a manual enrichment pass against NetBox.
+    """
+    since = _parse_since(since_str)
+    client = OpenSearchClient(url, username=username, password=password, verify_tls=verify_tls)
+    kwargs: dict = {}
+    if index_pattern is not None:
+        kwargs["index_pattern"] = index_pattern
+    source = SuricataSource(client, **kwargs)
+    counts = source.fetch_alert_counts(since=since)
+    click.echo(
+        json.dumps(
+            {ip: c.to_dict() for ip, c in counts.items()},
+            indent=2,
+        )
+    )
 
 
 @main.command()

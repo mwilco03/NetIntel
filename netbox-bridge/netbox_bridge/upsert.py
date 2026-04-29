@@ -19,12 +19,19 @@ CF_LAST_SCAN_ID = "last_scan_id"
 CF_SOURCE = "source"
 CF_RELATED_MACS = "related_macs"
 CF_OUI_VENDOR = "oui_vendor"
+CF_SURICATA_ALERTS_TOTAL = "suricata_alerts_total"
+CF_SURICATA_ALERTS_HIGH = "suricata_alerts_high"
+CF_SURICATA_ALERTS_MEDIUM = "suricata_alerts_medium"
+CF_SURICATA_ALERTS_LOW = "suricata_alerts_low"
+CF_SURICATA_TOP_SIGNATURES = "suricata_top_signatures"
 
 SOURCE_TAG = "source:netintel-bridge"
 RECENTLY_ADDED_TAG = "lifecycle:recently-added"
 ALERT_MAC_CHANGE_TAG = "alert:mac-change"
+ALERT_NOISY_TAG = "alert:noisy"
 RECENTLY_ADDED_WINDOW = timedelta(days=7)
 RELATED_MAC_WINDOW = timedelta(days=7)
+NOISY_THRESHOLD = 100  # alerts in the source's window — adjust per deployment
 
 
 class Strategy(str, Enum):
@@ -113,6 +120,20 @@ def _trim_mac_entries(entries: list[dict], now: datetime) -> list[dict]:
     return keep
 
 
+def _suricata_cf_payload(host: Host) -> dict:
+    """Map host.suricata_alerts to NetBox CF dict, or {} if no alerts attached."""
+    alerts = host.suricata_alerts
+    if alerts is None:
+        return {}
+    return {
+        CF_SURICATA_ALERTS_TOTAL: alerts.total,
+        CF_SURICATA_ALERTS_HIGH: alerts.high,
+        CF_SURICATA_ALERTS_MEDIUM: alerts.medium,
+        CF_SURICATA_ALERTS_LOW: alerts.low,
+        CF_SURICATA_TOP_SIGNATURES: [s.model_dump() for s in alerts.top_signatures],
+    }
+
+
 def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> dict:
     timestamp = host.observed_at.isoformat()
     custom_fields: dict = {
@@ -131,8 +152,12 @@ def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> di
         if vendor:
             custom_fields[CF_OUI_VENDOR] = vendor
 
+    custom_fields.update(_suricata_cf_payload(host))
+
     tags = [SOURCE_TAG, f"source:{host.source}", RECENTLY_ADDED_TAG]
     tags.extend(sorted(classify_tags(host, vendor)))
+    if host.suricata_alerts is not None and host.suricata_alerts.total > NOISY_THRESHOLD:
+        tags.append(ALERT_NOISY_TAG)
 
     return {
         "name": _device_name(host),
@@ -277,6 +302,25 @@ def _build_update_patch(
 
         # Re-classify based on current host services + effective vendor.
         desired_names |= classify_tags(host, effective_vendor)
+
+        # Suricata enrichment: per-severity counts + alert:noisy tag aging.
+        if host.suricata_alerts is not None:
+            new_cfs = _suricata_cf_payload(host)
+            for k, v in new_cfs.items():
+                if existing_cfs.get(k) != v:
+                    custom_fields_patch[k] = v
+                    before = existing_cfs.get(k)
+                    diffs.append(
+                        FieldDiff(
+                            field=k,
+                            before=str(before) if before is not None else None,
+                            after=str(v),
+                        )
+                    )
+            if host.suricata_alerts.total > NOISY_THRESHOLD:
+                desired_names.add(ALERT_NOISY_TAG)
+            else:
+                desired_names.discard(ALERT_NOISY_TAG)
 
         # related_macs windowed list + alert:mac-change tag aging
         existing_related = list(existing_cfs.get(CF_RELATED_MACS) or [])

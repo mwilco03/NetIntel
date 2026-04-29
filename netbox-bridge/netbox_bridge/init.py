@@ -46,6 +46,31 @@ _CF_DEFINITIONS: dict[str, dict[str, str]] = {
             "the IEEE registry. High-confidence asset identification signal."
         ),
     },
+    "suricata_alerts_total": {
+        "label": "Suricata Alerts (total)",
+        "type": "integer",
+        "description": "Suricata alert count for this host within the enrichment window.",
+    },
+    "suricata_alerts_high": {
+        "label": "Suricata Alerts (high)",
+        "type": "integer",
+        "description": "Suricata severity=1 (high) alert count within the enrichment window.",
+    },
+    "suricata_alerts_medium": {
+        "label": "Suricata Alerts (medium)",
+        "type": "integer",
+        "description": "Suricata severity=2 (medium) alert count within the enrichment window.",
+    },
+    "suricata_alerts_low": {
+        "label": "Suricata Alerts (low)",
+        "type": "integer",
+        "description": "Suricata severity=3 (low) alert count within the enrichment window.",
+    },
+    "suricata_top_signatures": {
+        "label": "Suricata Top Signatures",
+        "type": "json",
+        "description": "Top Suricata signatures (sid + name + count) hitting this host.",
+    },
 }
 
 # Distinct hex colors so each bridge-managed tag is visually distinguishable in the NetBox UI.
@@ -55,6 +80,7 @@ _TAG_COLORS: dict[str, str] = {
     "source:nessus": "e53935",           # red
     "lifecycle:recently-added": "fb8c00",  # orange — "new in inventory"
     "alert:mac-change": "d32f2f",          # deep red — security alert
+    "alert:noisy": "f4511e",               # bright red-orange — noisy IDS alerts
     "class:ot": "8e24aa",                  # purple — OT
     "class:it": "00838f",                  # teal — IT
     "class:mixed": "5d4037",               # brown — mixed environment

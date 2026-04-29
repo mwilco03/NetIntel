@@ -102,6 +102,11 @@ class TestDiscover:
             "last_scan_id",
             "oui_vendor",
             "related_macs",
+            "suricata_alerts_high",
+            "suricata_alerts_low",
+            "suricata_alerts_medium",
+            "suricata_alerts_total",
+            "suricata_top_signatures",
         ]
         assert not report.ready
 

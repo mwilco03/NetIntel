@@ -151,12 +151,18 @@ class TestPlanInit:
         plan = plan_init(client)
         cf_names = {s["name"] for s in plan.custom_fields_to_create}
         tag_names = {s["name"] for s in plan.tags_to_create}
-        assert cf_names == {"first_seen", "last_scan_id", "related_macs", "oui_vendor"}
+        assert cf_names == {
+            "first_seen", "last_scan_id", "related_macs", "oui_vendor",
+            "suricata_alerts_total", "suricata_alerts_high",
+            "suricata_alerts_medium", "suricata_alerts_low",
+            "suricata_top_signatures",
+        }
         assert tag_names == {
             "source:netintel-bridge",
             "source:nessus",
             "lifecycle:recently-added",
             "alert:mac-change",
+            "alert:noisy",
             "class:ot",
             "class:it",
             "class:mixed",

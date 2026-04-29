@@ -28,6 +28,20 @@ class OSInfo(BaseModel):
     accuracy: int | None = None
 
 
+class SuricataAlertSignature(BaseModel):
+    signature_id: int
+    name: str | None = None
+    count: int
+
+
+class SuricataAlertCounts(BaseModel):
+    total: int = 0
+    high: int = 0
+    medium: int = 0
+    low: int = 0
+    top_signatures: list[SuricataAlertSignature] = Field(default_factory=list)
+
+
 class Host(BaseModel):
     primary_ip: str
     fqdn: str | None = None
@@ -37,3 +51,4 @@ class Host(BaseModel):
     os: OSInfo | None = None
     source: Literal["nmap", "nessus", "malcolm", "security_onion"]
     observed_at: datetime
+    suricata_alerts: SuricataAlertCounts | None = None

@@ -1,0 +1,55 @@
+{
+  "took": 5,
+  "timed_out": false,
+  "_shards": {"total": 5, "successful": 5, "skipped": 0, "failed": 0},
+  "hits": {"total": {"value": 200, "relation": "eq"}, "hits": []},
+  "aggregations": {
+    "by_destination_ip": {
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0,
+      "buckets": [
+        {
+          "key": "10.0.0.5",
+          "doc_count": 150,
+          "by_severity": {
+            "buckets": [
+              {"key": 1, "doc_count": 20},
+              {"key": 2, "doc_count": 80},
+              {"key": 3, "doc_count": 50}
+            ]
+          },
+          "top_signatures": {
+            "buckets": [
+              {
+                "key": 2027865,
+                "doc_count": 100,
+                "name": {"buckets": [{"key": "ET POLICY HTTP traffic on port 443", "doc_count": 100}]}
+              },
+              {
+                "key": 2024900,
+                "doc_count": 50,
+                "name": {"buckets": [{"key": "ET INFO Generic POST to dotted-quad host", "doc_count": 50}]}
+              }
+            ]
+          }
+        },
+        {
+          "key": "10.0.0.6",
+          "doc_count": 50,
+          "by_severity": {
+            "buckets": [{"key": 3, "doc_count": 50}]
+          },
+          "top_signatures": {
+            "buckets": [
+              {
+                "key": 2018959,
+                "doc_count": 50,
+                "name": {"buckets": [{"key": "ET INFO TLS Handshake", "doc_count": 50}]}
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -19,8 +19,15 @@ from netbox_bridge.matcher import MatchKind, MatchResult
 from netbox_bridge.model import Host, Interface, Service
 from netbox_bridge.upsert import (
     ALERT_MAC_CHANGE_TAG,
+    ALERT_NOISY_TAG,
     CF_OUI_VENDOR,
     CF_RELATED_MACS,
+    CF_SURICATA_ALERTS_HIGH,
+    CF_SURICATA_ALERTS_LOW,
+    CF_SURICATA_ALERTS_MEDIUM,
+    CF_SURICATA_ALERTS_TOTAL,
+    CF_SURICATA_TOP_SIGNATURES,
+    NOISY_THRESHOLD,
     RECENTLY_ADDED_TAG,
     SOURCE_TAG,
     Strategy,
@@ -137,6 +144,7 @@ def _host(
     macs: tuple[str, ...] = (),
     services: tuple[Service, ...] = (),
     source: str = "nmap",
+    suricata_alerts=None,
 ) -> Host:
     return Host(
         primary_ip=primary_ip,
@@ -145,6 +153,7 @@ def _host(
         services=list(services),
         source=source,  # type: ignore[arg-type]
         observed_at=datetime(2026, 4, 28, 12, 0, tzinfo=timezone.utc),
+        suricata_alerts=suricata_alerts,
     )
 
 
@@ -668,6 +677,137 @@ class TestUpdatePayloadContract:
         client, _ = _update(_host(source="malcolm"), existing)
         _, patch = client.devices_updated[0]
         assert_payload_in_schema(patch, DEVICE_CREATE_FIELDS, ctx="update_device patch")
+
+
+class TestSuricataEnrichmentOnCreate:
+    """Suricata alert counts populate dedicated CFs and add alert:noisy tag past threshold."""
+
+    def _alerts(self, total=10, high=0, medium=5, low=5, sigs=None):
+        from netbox_bridge.model import SuricataAlertCounts, SuricataAlertSignature
+
+        return SuricataAlertCounts(
+            total=total,
+            high=high,
+            medium=medium,
+            low=low,
+            top_signatures=[SuricataAlertSignature(**s) for s in (sigs or [])],
+        )
+
+    def test_create_with_alerts_populates_cfs(self):
+        host = _host(suricata_alerts=self._alerts(total=42, high=2, medium=20, low=20))
+        spec = _create(host).devices_created[0]
+        cfs = spec["custom_fields"]
+        assert cfs[CF_SURICATA_ALERTS_TOTAL] == 42
+        assert cfs[CF_SURICATA_ALERTS_HIGH] == 2
+        assert cfs[CF_SURICATA_ALERTS_MEDIUM] == 20
+        assert cfs[CF_SURICATA_ALERTS_LOW] == 20
+
+    def test_create_without_alerts_omits_cfs(self):
+        spec = _create(_host(suricata_alerts=None)).devices_created[0]
+        cfs = spec["custom_fields"]
+        for k in (
+            CF_SURICATA_ALERTS_TOTAL, CF_SURICATA_ALERTS_HIGH,
+            CF_SURICATA_ALERTS_MEDIUM, CF_SURICATA_ALERTS_LOW,
+        ):
+            assert k not in cfs
+
+    def test_create_top_signatures_serialized_to_json_field(self):
+        host = _host(
+            suricata_alerts=self._alerts(
+                total=100,
+                sigs=[
+                    {"signature_id": 2027865, "name": "ET POLICY HTTP", "count": 100},
+                ],
+            )
+        )
+        spec = _create(host).devices_created[0]
+        top = spec["custom_fields"][CF_SURICATA_TOP_SIGNATURES]
+        assert top[0]["signature_id"] == 2027865
+        assert top[0]["count"] == 100
+
+    def test_create_alerts_above_threshold_adds_noisy_tag(self):
+        host = _host(suricata_alerts=self._alerts(total=NOISY_THRESHOLD + 1))
+        spec = _create(host).devices_created[0]
+        assert ALERT_NOISY_TAG in spec["tags"]
+
+    def test_create_alerts_below_threshold_no_noisy_tag(self):
+        host = _host(suricata_alerts=self._alerts(total=NOISY_THRESHOLD - 1))
+        spec = _create(host).devices_created[0]
+        assert ALERT_NOISY_TAG not in spec["tags"]
+
+
+class TestSuricataEnrichmentOnUpdate:
+    def _alerts(self, total=10, high=0, medium=5, low=5):
+        from netbox_bridge.model import SuricataAlertCounts
+
+        return SuricataAlertCounts(total=total, high=high, medium=medium, low=low)
+
+    def test_update_populates_cfs_when_alerts_first_observed(self):
+        existing = _existing_bridge_owned()
+        host = _host(suricata_alerts=self._alerts(total=200, high=10, medium=100, low=90))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        cfs = patch["custom_fields"]
+        assert cfs[CF_SURICATA_ALERTS_TOTAL] == 200
+        assert cfs[CF_SURICATA_ALERTS_HIGH] == 10
+
+    def test_update_changes_cfs_when_counts_change(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_SURICATA_ALERTS_TOTAL] = 50
+        host = _host(suricata_alerts=self._alerts(total=300))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert patch["custom_fields"][CF_SURICATA_ALERTS_TOTAL] == 300
+
+    def test_update_no_change_when_counts_match(self):
+        existing = _existing_bridge_owned()
+        existing.custom_fields[CF_SURICATA_ALERTS_TOTAL] = 50
+        existing.custom_fields[CF_SURICATA_ALERTS_HIGH] = 0
+        existing.custom_fields[CF_SURICATA_ALERTS_MEDIUM] = 25
+        existing.custom_fields[CF_SURICATA_ALERTS_LOW] = 25
+        existing.custom_fields[CF_SURICATA_TOP_SIGNATURES] = []
+        host = _host(suricata_alerts=self._alerts(total=50, high=0, medium=25, low=25))
+        client, _ = _update(host, existing)
+        for _, patch in client.devices_updated:
+            cfs = patch.get("custom_fields") or {}
+            for k in (CF_SURICATA_ALERTS_TOTAL, CF_SURICATA_ALERTS_HIGH,
+                      CF_SURICATA_ALERTS_MEDIUM, CF_SURICATA_ALERTS_LOW):
+                assert k not in cfs
+
+    def test_noisy_tag_added_above_threshold(self):
+        existing = _existing_bridge_owned()
+        host = _host(suricata_alerts=self._alerts(total=NOISY_THRESHOLD + 1))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert ALERT_NOISY_TAG in patch["tags"]
+
+    def test_noisy_tag_cleared_when_counts_drop(self):
+        existing = _existing_bridge_owned(extra_tags=(ALERT_NOISY_TAG,))
+        host = _host(suricata_alerts=self._alerts(total=10))
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert ALERT_NOISY_TAG not in patch["tags"]
+
+    def test_no_alerts_omits_noisy_tag(self):
+        existing = _existing_bridge_owned()
+        host = _host(suricata_alerts=None)
+        client, _ = _update(host, existing)
+        for _, patch in client.devices_updated:
+            tags = patch.get("tags") or []
+            assert ALERT_NOISY_TAG not in tags
+
+    def test_human_owned_device_does_not_get_suricata_cfs(self):
+        existing = _existing_human_owned()
+        host = _host(suricata_alerts=self._alerts(total=NOISY_THRESHOLD + 1))
+        client, _ = _update(host, existing)
+        for _, patch in client.devices_updated:
+            cfs = patch.get("custom_fields") or {}
+            for k in (CF_SURICATA_ALERTS_TOTAL, CF_SURICATA_ALERTS_HIGH,
+                      CF_SURICATA_ALERTS_MEDIUM, CF_SURICATA_ALERTS_LOW):
+                assert k not in cfs
+            assert ALERT_NOISY_TAG not in (patch.get("tags") or [])
 
 
 class TestClassificationTagOnCreate:

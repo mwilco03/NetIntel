@@ -690,3 +690,86 @@ class TestPlanIngestCommands:
             MockSource.return_value.fetch_hosts.return_value = []
             result = runner.invoke(main, self._common_args(command="ingest"))
         assert result.exit_code != 0
+
+
+class TestEnrichSuricataCommand:
+    """The enrich-suricata command pulls alert counts and emits JSON."""
+
+    def _stub_counts(self):
+        from netbox_bridge.sources.suricata import HostAlertCounts, AlertSignature
+
+        return {
+            "10.0.0.5": HostAlertCounts(
+                total=42, high=2, medium=20, low=20,
+                top_signatures=[AlertSignature(signature_id=2027865, name="ET POLICY", count=42)],
+            ),
+            "10.0.0.6": HostAlertCounts(total=5, high=0, medium=0, low=5),
+        }
+
+    def test_emits_json_per_ip_with_counts(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.SuricataSource"
+        ) as MockSource:
+            MockSource.return_value.fetch_alert_counts.return_value = self._stub_counts()
+            result = runner.invoke(
+                main,
+                [
+                    "enrich-suricata",
+                    "--url",
+                    "https://m:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                    "--since",
+                    "7d",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        parsed = json.loads(result.output)
+        assert "10.0.0.5" in parsed
+        assert parsed["10.0.0.5"]["total"] == 42
+        assert parsed["10.0.0.5"]["top_signatures"][0]["signature_id"] == 2027865
+
+    def test_index_pattern_override(self):
+        runner = CliRunner()
+        with patch("netbox_bridge.cli.OpenSearchClient"), patch(
+            "netbox_bridge.cli.SuricataSource"
+        ) as MockSource:
+            MockSource.return_value.fetch_alert_counts.return_value = {}
+            runner.invoke(
+                main,
+                [
+                    "enrich-suricata",
+                    "--url",
+                    "https://so:9200",
+                    "--username",
+                    "u",
+                    "--password",
+                    "p",
+                    "--since",
+                    "1d",
+                    "--index-pattern",
+                    "logs-suricata-so",
+                ],
+            )
+        assert MockSource.call_args.kwargs["index_pattern"] == "logs-suricata-so"
+
+    def test_invalid_since_fails(self):
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                "enrich-suricata",
+                "--url",
+                "https://m:9200",
+                "--username",
+                "u",
+                "--password",
+                "p",
+                "--since",
+                "garbage",
+            ],
+        )
+        assert result.exit_code != 0
