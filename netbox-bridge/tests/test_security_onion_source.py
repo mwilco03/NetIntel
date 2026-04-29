@@ -87,15 +87,17 @@ class TestSecurityOnionSourceFetch:
     def test_emits_one_host_per_destination_ip(self, stub_client):
         source = SecurityOnionSource(stub_client)
         hosts = source.fetch_hosts(since=timedelta(days=7))
+        # Captured response from real OpenSearch.
         ips = sorted(h.primary_ip for h in hosts)
-        assert ips == ["192.168.1.10", "192.168.1.20"]
+        assert ips == ["10.0.0.5", "10.0.0.6", "10.0.0.7"]
 
     def test_host_services_match_fixture(self, stub_client):
         source = SecurityOnionSource(stub_client)
         hosts = {h.primary_ip: h for h in source.fetch_hosts(since=timedelta(days=7))}
-        web = hosts["192.168.1.10"]
+        # 10.0.0.5 has http(80) + modbus(502).
+        web = hosts["10.0.0.5"]
         ports = sorted(s.port for s in web.services)
-        assert ports == [80, 443]
+        assert ports == [80, 502]
 
     def test_host_source_is_security_onion(self, stub_client):
         source = SecurityOnionSource(stub_client)
@@ -105,8 +107,11 @@ class TestSecurityOnionSourceFetch:
     def test_service_protocol_name_preserved(self, stub_client):
         source = SecurityOnionSource(stub_client)
         hosts = {h.primary_ip: h for h in source.fetch_hosts(since=timedelta(days=1))}
-        rdp_host = hosts["192.168.1.20"]
-        assert rdp_host.services[0].name == "rdp"
+        # 10.0.0.6: profinet + s7comm — Zeek custom OT parser names land verbatim.
+        ot_host = hosts["10.0.0.6"]
+        names = sorted((s.name or "") for s in ot_host.services)
+        assert "profinet" in names
+        assert "s7comm" in names
 
     def test_empty_aggregations_returns_no_hosts(self):
         client = MagicMock()

@@ -1,9 +1,17 @@
 {
-  "took": 8,
+  "took": 16,
   "timed_out": false,
-  "_shards": {"total": 5, "successful": 5, "skipped": 0, "failed": 0},
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
   "hits": {
-    "total": {"value": 5678, "relation": "eq"},
+    "total": {
+      "value": 18,
+      "relation": "eq"
+    },
     "max_score": null,
     "hits": []
   },
@@ -13,11 +21,11 @@
       "sum_other_doc_count": 0,
       "buckets": [
         {
-          "key": "192.168.1.10",
-          "doc_count": 1500,
+          "key": "10.0.0.5",
+          "doc_count": 10,
           "last_seen": {
-            "value": 1745568000000,
-            "value_as_string": "2026-04-25T10:00:00.000Z"
+            "value": 1777470366413.0,
+            "value_as_string": "2026-04-29T13:46:06.413Z"
           },
           "by_port": {
             "doc_count_error_upper_bound": 0,
@@ -25,49 +33,178 @@
             "buckets": [
               {
                 "key": 80,
-                "doc_count": 1000,
-                "by_transport": {
-                  "buckets": [{"key": "tcp", "doc_count": 1000}]
-                },
+                "doc_count": 5,
                 "by_protocol": {
-                  "buckets": [{"key": "http", "doc_count": 1000}]
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "http",
+                      "doc_count": 5
+                    }
+                  ]
+                },
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "tcp",
+                      "doc_count": 5
+                    }
+                  ]
                 }
               },
               {
-                "key": 443,
-                "doc_count": 500,
-                "by_transport": {
-                  "buckets": [{"key": "tcp", "doc_count": 500}]
-                },
+                "key": 502,
+                "doc_count": 5,
                 "by_protocol": {
-                  "buckets": [{"key": "ssl", "doc_count": 500}]
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "modbus",
+                      "doc_count": 5
+                    }
+                  ]
+                },
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "tcp",
+                      "doc_count": 5
+                    }
+                  ]
                 }
+              }
+            ]
+          },
+          "by_mac": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {
+                "key": "00:0e:8c:11:22:33",
+                "doc_count": 10
               }
             ]
           }
         },
         {
-          "key": "192.168.1.20",
-          "doc_count": 4178,
+          "key": "10.0.0.6",
+          "doc_count": 6,
           "last_seen": {
-            "value": 1745481600000,
-            "value_as_string": "2026-04-24T10:00:00.000Z"
+            "value": 1777470366445.0,
+            "value_as_string": "2026-04-29T13:46:06.445Z"
           },
           "by_port": {
             "doc_count_error_upper_bound": 0,
             "sum_other_doc_count": 0,
             "buckets": [
               {
-                "key": 3389,
-                "doc_count": 4178,
-                "by_transport": {
-                  "buckets": [{"key": "tcp", "doc_count": 4178}]
-                },
+                "key": 102,
+                "doc_count": 3,
                 "by_protocol": {
-                  "buckets": [{"key": "rdp", "doc_count": 4178}]
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "s7comm",
+                      "doc_count": 3
+                    }
+                  ]
+                },
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "tcp",
+                      "doc_count": 3
+                    }
+                  ]
+                }
+              },
+              {
+                "key": 34962,
+                "doc_count": 3,
+                "by_protocol": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "profinet",
+                      "doc_count": 3
+                    }
+                  ]
+                },
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "tcp",
+                      "doc_count": 3
+                    }
+                  ]
                 }
               }
             ]
+          },
+          "by_mac": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {
+                "key": "08:61:95:aa:bb:cc",
+                "doc_count": 6
+              }
+            ]
+          }
+        },
+        {
+          "key": "10.0.0.7",
+          "doc_count": 2,
+          "last_seen": {
+            "value": 1777470366455.0,
+            "value_as_string": "2026-04-29T13:46:06.455Z"
+          },
+          "by_port": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {
+                "key": 53,
+                "doc_count": 2,
+                "by_protocol": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "dns",
+                      "doc_count": 2
+                    }
+                  ]
+                },
+                "by_transport": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
+                    {
+                      "key": "udp",
+                      "doc_count": 2
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "by_mac": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": []
           }
         }
       ]

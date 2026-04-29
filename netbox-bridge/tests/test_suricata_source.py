@@ -84,19 +84,21 @@ class TestSuricataSourceFetch:
         assert sorted(result.keys()) == ["10.0.0.5", "10.0.0.6"]
 
     def test_total_count_from_doc_count(self, stub_client):
+        # Captured fixture: 10.0.0.5 has 100 alerts, 10.0.0.6 has 50.
         source = SuricataSource(stub_client)
         result = source.fetch_alert_counts(since=timedelta(days=7))
-        assert result["10.0.0.5"].total == 150
+        assert result["10.0.0.5"].total == 100
         assert result["10.0.0.6"].total == 50
 
     def test_severity_breakdown(self, stub_client):
+        # Captured fixture follows Filebeat scale: 10.0.0.5 has 20 high (sev=1), 80 medium (sev=2)
+        # and 0 low. 10.0.0.6 is all low (sev=3).
         source = SuricataSource(stub_client)
         result = source.fetch_alert_counts(since=timedelta(days=7))
         host5 = result["10.0.0.5"]
-        # Suricata convention: 1=high, 2=medium, 3=low
         assert host5.high == 20
         assert host5.medium == 80
-        assert host5.low == 50
+        assert host5.low == 0
 
     def test_severity_only_low(self, stub_client):
         source = SuricataSource(stub_client)
@@ -107,13 +109,15 @@ class TestSuricataSourceFetch:
         assert host6.low == 50
 
     def test_top_signatures_extracted(self, stub_client):
+        # Captured fixture: top sig on 10.0.0.5 by count is 2024900 (80 medium alerts).
+        # OpenSearch returns rule.id as a string in the bucket key — int() cast required.
         source = SuricataSource(stub_client)
         result = source.fetch_alert_counts(since=timedelta(days=7))
         sigs = result["10.0.0.5"].top_signatures
         assert len(sigs) == 2
-        assert sigs[0].signature_id == 2027865
-        assert sigs[0].count == 100
-        assert "ET POLICY" in sigs[0].name
+        assert sigs[0].signature_id == 2024900
+        assert sigs[0].count == 80
+        assert "ET INFO" in sigs[0].name
 
     def test_empty_response_returns_empty_dict(self):
         client = MagicMock()
