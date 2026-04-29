@@ -24,6 +24,9 @@ CF_SURICATA_ALERTS_HIGH = "suricata_alerts_high"
 CF_SURICATA_ALERTS_MEDIUM = "suricata_alerts_medium"
 CF_SURICATA_ALERTS_LOW = "suricata_alerts_low"
 CF_SURICATA_TOP_SIGNATURES = "suricata_top_signatures"
+# Timestamp of the most recent fresh Suricata enrichment for this device. Lets the bridge age
+# out alert:noisy when no fresh data has arrived in NOISY_AGE_OUT_WINDOW.
+CF_SURICATA_LAST_OBSERVED = "suricata_last_observed"
 
 SOURCE_TAG = "source:netintel-bridge"
 RECENTLY_ADDED_TAG = "lifecycle:recently-added"
@@ -32,6 +35,9 @@ ALERT_NOISY_TAG = "alert:noisy"
 RECENTLY_ADDED_WINDOW = timedelta(days=7)
 RELATED_MAC_WINDOW = timedelta(days=7)
 NOISY_THRESHOLD = 100  # alerts in the source's window — adjust per deployment
+# Without fresh Suricata enrichment for this long, alert:noisy ages out — closes the
+# silent-stale-tag bug where a host noisy yesterday keeps the tag forever.
+NOISY_AGE_OUT_WINDOW = timedelta(days=7)
 
 
 class Strategy(str, Enum):
@@ -144,7 +150,11 @@ def _merge_mac_observations(
 
 
 def _suricata_cf_payload(host: Host) -> dict:
-    """Map host.suricata_alerts to NetBox CF dict, or {} if no alerts attached."""
+    """Map host.suricata_alerts to NetBox CF dict, or {} if no alerts attached.
+
+    Includes CF_SURICATA_LAST_OBSERVED so the bridge can age alert:noisy out on subsequent
+    runs that don't have fresh enrichment data.
+    """
     alerts = host.suricata_alerts
     if alerts is None:
         return {}
@@ -154,7 +164,19 @@ def _suricata_cf_payload(host: Host) -> dict:
         CF_SURICATA_ALERTS_MEDIUM: alerts.medium,
         CF_SURICATA_ALERTS_LOW: alerts.low,
         CF_SURICATA_TOP_SIGNATURES: [s.model_dump() for s in alerts.top_signatures],
+        CF_SURICATA_LAST_OBSERVED: _iso_z(host.observed_at),
     }
+
+
+def _suricata_data_is_fresh(existing_cfs: dict, now: datetime) -> bool:
+    """True if existing_cfs records a Suricata enrichment within NOISY_AGE_OUT_WINDOW."""
+    last = existing_cfs.get(CF_SURICATA_LAST_OBSERVED)
+    if not last:
+        return False
+    last_dt = _parse_iso(last)
+    if last_dt is None:
+        return False
+    return (now - last_dt) < NOISY_AGE_OUT_WINDOW
 
 
 def _iso_z(dt: datetime) -> str:
@@ -366,6 +388,8 @@ def _build_update_patch(
 
         # Suricata enrichment: per-severity counts + alert:noisy tag aging.
         if host.suricata_alerts is not None:
+            # Fresh enrichment — refresh CFs (including last_observed timestamp) and
+            # re-evaluate the tag based on the current count vs threshold.
             new_cfs = _suricata_cf_payload(host)
             for k, v in new_cfs.items():
                 if existing_cfs.get(k) != v:
@@ -382,6 +406,10 @@ def _build_update_patch(
                 desired_names.add(ALERT_NOISY_TAG)
             else:
                 desired_names.discard(ALERT_NOISY_TAG)
+        elif not _suricata_data_is_fresh(existing_cfs, host.observed_at):
+            # No fresh enrichment AND last observation is stale (or never recorded) -> drop
+            # alert:noisy. Closes the silent-stale-tag bug from the self-audit.
+            desired_names.discard(ALERT_NOISY_TAG)
 
         # related_macs windowed list + alert:mac-change tag aging
         existing_related = list(existing_cfs.get(CF_RELATED_MACS) or [])

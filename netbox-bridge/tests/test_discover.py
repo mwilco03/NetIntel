@@ -106,6 +106,7 @@ class TestDiscover:
             "suricata_alerts_low",
             "suricata_alerts_medium",
             "suricata_alerts_total",
+            "suricata_last_observed",
             "suricata_top_signatures",
         ]
         assert not report.ready

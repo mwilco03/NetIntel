@@ -26,6 +26,7 @@ from netbox_bridge.upsert import (
     CF_SURICATA_ALERTS_LOW,
     CF_SURICATA_ALERTS_MEDIUM,
     CF_SURICATA_ALERTS_TOTAL,
+    CF_SURICATA_LAST_OBSERVED,
     CF_SURICATA_TOP_SIGNATURES,
     NOISY_THRESHOLD,
     RECENTLY_ADDED_TAG,
@@ -1079,6 +1080,80 @@ class TestRelatedMacsAndArpSpoofTag:
             cfs = patch.get("custom_fields", {})
             assert CF_RELATED_MACS not in cfs
             assert "tags" not in patch
+
+
+class TestNoisyTagAging:
+    """alert:noisy must clear when fresh Suricata data is absent for too long.
+
+    Without this, a host that was noisy a month ago and has no current enrichment data keeps
+    the alert:noisy tag forever — the silent stale-tag bug from the self-audit.
+    """
+
+    def _existing_with_noisy_tag(self, *, last_observed: str | None) -> _ExistingDevice:
+        existing = _existing_bridge_owned()
+        existing.tags.append(_NamedTag(ALERT_NOISY_TAG))
+        if last_observed:
+            existing.custom_fields[CF_SURICATA_LAST_OBSERVED] = last_observed
+        return existing
+
+    def test_create_with_alerts_sets_last_observed(self):
+        from netbox_bridge.model import SuricataAlertCounts
+
+        alerts = SuricataAlertCounts(total=200, high=200, medium=0, low=0)
+        spec = _create(_host(suricata_alerts=alerts)).devices_created[0]
+        assert spec["custom_fields"][CF_SURICATA_LAST_OBSERVED]
+
+    def test_update_with_fresh_alerts_refreshes_last_observed(self):
+        from netbox_bridge.model import SuricataAlertCounts
+
+        existing = self._existing_with_noisy_tag(last_observed="2026-01-01T00:00:00Z")
+        alerts = SuricataAlertCounts(total=200, high=200, medium=0, low=0)
+        host = _host(suricata_alerts=alerts)
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert patch["custom_fields"][CF_SURICATA_LAST_OBSERVED] == "2026-04-28T12:00:00Z"
+
+    def test_update_without_alerts_within_window_keeps_tag(self):
+        # last_observed is yesterday (within 7d), no fresh enrichment this run -> tag stays.
+        existing = self._existing_with_noisy_tag(last_observed="2026-04-27T12:00:00Z")
+        host = _host(suricata_alerts=None)
+        client, _ = _update(host, existing)
+        # If there's a tag patch, alert:noisy must remain
+        for _, patch in client.devices_updated:
+            if "tags" in patch:
+                assert ALERT_NOISY_TAG in _tag_names(patch["tags"])
+
+    def test_update_without_alerts_past_window_clears_tag(self):
+        # last_observed is 30 days ago — past 7d window, no fresh data -> drop alert:noisy.
+        existing = self._existing_with_noisy_tag(last_observed="2026-03-29T00:00:00Z")
+        host = _host(suricata_alerts=None)
+        client, _ = _update(host, existing)
+        assert client.devices_updated, "expected an update because tag aged out"
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert ALERT_NOISY_TAG not in _tag_names(patch["tags"])
+
+    def test_update_without_alerts_no_last_observed_clears_tag(self):
+        # Tag exists but we have no record of when it was set — treat as stale and clear.
+        existing = self._existing_with_noisy_tag(last_observed=None)
+        host = _host(suricata_alerts=None)
+        client, _ = _update(host, existing)
+        assert client.devices_updated
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert ALERT_NOISY_TAG not in _tag_names(patch["tags"])
+
+    def test_update_with_low_alert_count_clears_tag_immediately(self):
+        from netbox_bridge.model import SuricataAlertCounts
+
+        # Fresh enrichment shows 5 alerts (well below threshold) -> tag should clear now.
+        existing = self._existing_with_noisy_tag(last_observed="2026-04-27T12:00:00Z")
+        alerts = SuricataAlertCounts(total=5, high=0, medium=0, low=5)
+        host = _host(suricata_alerts=alerts)
+        client, _ = _update(host, existing)
+        _, patch = client.devices_updated[0]
+        assert "tags" in patch
+        assert ALERT_NOISY_TAG not in _tag_names(patch["tags"])
 
 
 class TestRecentlyAddedTagAging:

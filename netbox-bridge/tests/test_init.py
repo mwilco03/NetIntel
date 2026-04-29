@@ -155,7 +155,7 @@ class TestPlanInit:
             "first_seen", "last_scan_id", "related_macs", "oui_vendor",
             "suricata_alerts_total", "suricata_alerts_high",
             "suricata_alerts_medium", "suricata_alerts_low",
-            "suricata_top_signatures",
+            "suricata_top_signatures", "suricata_last_observed",
         }
         assert tag_names == {
             "source:netintel-bridge",

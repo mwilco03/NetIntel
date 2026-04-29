@@ -71,6 +71,14 @@ _CF_DEFINITIONS: dict[str, dict[str, str]] = {
         "type": "json",
         "description": "Top Suricata signatures (sid + name + count) hitting this host.",
     },
+    "suricata_last_observed": {
+        "label": "Suricata Last Observed",
+        "type": "datetime",
+        "description": (
+            "Timestamp of the most recent fresh Suricata enrichment. Lets the bridge age "
+            "alert:noisy out when no fresh data has arrived in NOISY_AGE_OUT_WINDOW."
+        ),
+    },
 }
 
 # Distinct hex colors so each bridge-managed tag is visually distinguishable in the NetBox UI.
