@@ -219,6 +219,59 @@ class TestRenderHuman:
         assert "missing" in out.lower()
 
 
+class TestDistributionDetection:
+    """Distribution detection: OpenSearch vs Elasticsearch.
+
+    Verified 2026-04-29 against real instances:
+    - OpenSearch 2.19.5 returns: {"version": {"distribution": "opensearch", "number": "..."},
+                                  "tagline": "The OpenSearch Project: ..."}
+    - Elasticsearch 8.11.4 returns: {"version": {"number": "8.11.4", ...}, "tagline": "You Know, for Search"}
+      (no distribution key)
+    """
+
+    def test_detects_opensearch_via_distribution_key(self):
+        client = _client_with_responses(version="2.19.5")
+        client.cluster_info.return_value = {
+            "cluster_name": "x",
+            "version": {"number": "2.19.5", "distribution": "opensearch"},
+        }
+        report = probe(client, index_pattern="i")
+        assert report.distribution == "OpenSearch"
+
+    def test_detects_elasticsearch_when_no_distribution_key(self):
+        client = _client_with_responses(version="8.11.4")
+        client.cluster_info.return_value = {
+            "cluster_name": "x",
+            "version": {"number": "8.11.4"},
+            "tagline": "You Know, for Search",
+        }
+        report = probe(client, index_pattern="i")
+        assert report.distribution == "Elasticsearch"
+
+    def test_falls_back_to_opensearch_via_tagline(self):
+        client = _client_with_responses(version="1.0.0")
+        client.cluster_info.return_value = {
+            "cluster_name": "x",
+            "version": {"number": "1.0.0"},
+            "tagline": "The OpenSearch Project: opensearch.org",
+        }
+        report = probe(client, index_pattern="i")
+        assert report.distribution == "OpenSearch"
+
+    def test_render_human_shows_distribution_label(self):
+        report = ProbeReport(
+            cluster_name="x", cluster_status="green", version="8.11.4",
+            distribution="Elasticsearch",
+            indices=[{"index": "i", "docs.count": "1", "store.size": "1b"}],
+            fields_present=list(REQUIRED_FIELDS),
+            fields_missing=[],
+            datasets={"conn": 1},
+        )
+        out = render_human(report)
+        assert "Elasticsearch 8.11.4" in out
+        assert "OpenSearch" not in out
+
+
 class TestRenderJson:
     def test_emits_valid_json(self):
         report = ProbeReport(

@@ -37,10 +37,27 @@ class ProbeReport:
     fields_present: list[str] = field(default_factory=list)
     fields_missing: list[str] = field(default_factory=list)
     datasets: dict[str, int] = field(default_factory=dict)
+    distribution: str = "OpenSearch"  # OpenSearch | Elasticsearch — populated by probe()
 
     @property
     def ready(self) -> bool:
         return bool(self.indices) and not self.fields_missing
+
+
+def _detect_distribution(info: dict[str, Any]) -> str:
+    """OpenSearch advertises itself in info['version']['distribution']='opensearch'.
+    Elasticsearch does not set 'distribution'. Detect based on that.
+    Verified 2026-04-29 against OpenSearch 2.19.5 (returns distribution: 'opensearch')
+    and Elasticsearch 8.11.4 (no distribution key). Tagline differs too —
+    ES tagline 'You Know, for Search', OS tagline 'The OpenSearch Project: ...'.
+    """
+    version = info.get("version", {}) or {}
+    if str(version.get("distribution", "")).lower() == "opensearch":
+        return "OpenSearch"
+    tagline = info.get("tagline", "") or ""
+    if "OpenSearch" in tagline:
+        return "OpenSearch"
+    return "Elasticsearch"
 
 
 def probe(
@@ -52,6 +69,7 @@ def probe(
     info = client.cluster_info()
     cluster_name = info.get("cluster_name", "")
     version = info.get("version", {}).get("number", "")
+    distribution = _detect_distribution(info)
 
     indices = client.list_indices(index_pattern)
     caps = client.field_caps(index_pattern, list(REQUIRED_FIELDS))
@@ -65,6 +83,7 @@ def probe(
         cluster_name=cluster_name,
         cluster_status=info.get("status", ""),
         version=version,
+        distribution=distribution,
         indices=indices,
         fields_present=fields_present,
         fields_missing=fields_missing,
@@ -81,7 +100,7 @@ def _format_index(idx: dict[str, Any]) -> str:
 
 def render_human(report: ProbeReport) -> str:
     lines = [
-        f"Cluster: {report.cluster_name} (OpenSearch {report.version})",
+        f"Cluster: {report.cluster_name} ({report.distribution} {report.version})",
         "",
     ]
     if report.indices:

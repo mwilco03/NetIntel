@@ -111,20 +111,32 @@ Tag references in payloads must use `[{"name": "..."}]` form, not raw strings. N
 
 This is enforced by the bridge's `_build_device_spec` and `_build_update_patch`.
 
-## 5. Bring up OpenSearch (optional — for source-side ingest)
+## 5. Bring up the search backend (optional — for source-side ingest)
 
-Single-node, security plugin disabled (development only):
+The bridge supports both OpenSearch and Elasticsearch. They share the `_search`/`_field_caps`/`_cat/indices` API surface, and the bridge auto-detects which is which via `info.version.distribution` and tagline. Verified 2026-04-29 against:
+
+- OpenSearch 2.19.5 (`docker.io/opensearchproject/opensearch:2`) — Malcolm's typical backend
+- Elasticsearch 8.11.4 (`docker.elastic.co/elasticsearch/elasticsearch:8.11.4`) — Security Onion's typical backend
+
+Single-node test setup (development only — both disable security):
 
 ```
-docker run -d --name os-test \
-  -p 9200:9200 -p 9600:9600 \
+# OpenSearch (Malcolm-shaped)
+docker run -d --name os-test -p 9200:9200 -p 9600:9600 \
   -e "discovery.type=single-node" \
   -e "DISABLE_SECURITY_PLUGIN=true" \
   -e "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" \
   docker.io/opensearchproject/opensearch:2
+
+# Elasticsearch (Security Onion-shaped)
+docker run -d --name es-test -p 9201:9200 \
+  -e "discovery.type=single-node" \
+  -e "xpack.security.enabled=false" \
+  -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
+  docker.elastic.co/elasticsearch/elasticsearch:8.11.4
 ```
 
-For real Malcolm/Security Onion deployments, point at the existing OpenSearch on port 9200.
+For real deployments, point at the existing search backend (Malcolm: `https://malcolm/api/...`, Security Onion: the manager's port 9200).
 
 ## 6. Probe the OpenSearch backend
 
@@ -144,11 +156,17 @@ Field paths verified against:
 
 ## 7. Load test data (skip in production — real env has live data)
 
+For OpenSearch (Malcolm shape):
 ```
 python3 dev/load_opensearch_fixtures.py
 ```
 
-Writes 168 documents across 3 hosts: a Siemens MAC running modbus + http (mixed), a Rockwell MAC running profinet + s7comm (pure OT), an unmac'd host running dns (pure IT, graceful degradation). 150 Suricata alerts with the field paths Filebeat's Suricata module emits (`event.kind=alert`, `rule.id`, `rule.name`, `event.severity` 1/2/3).
+For Elasticsearch (Security Onion shape):
+```
+python3 dev/load_es_so_fixtures.py
+```
+
+Both write the same documents: a Siemens MAC running modbus + http (mixed), a Rockwell MAC running profinet + s7comm (pure OT), and Suricata alerts with field paths Filebeat's Suricata module emits (`event.kind=alert`, `rule.id`, `rule.name`, `event.severity` 1/2/3). The ES variant uses `logs-zeek-so` data stream pattern matching Security Onion's actual ingest layout.
 
 ## 8. Ingest
 
