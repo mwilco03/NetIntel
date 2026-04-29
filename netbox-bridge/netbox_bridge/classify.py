@@ -24,29 +24,34 @@ from __future__ import annotations
 
 from .model import Host
 
-# Protocol names verified against Malcolm's zeek logstash pipeline filenames.
-# Names are lowercased; the comparison is case-insensitive.
+# Protocol values verified against Malcolm's logstash filter files (cisagov/Malcolm/
+# logstash/pipelines/zeek/) on 2026-04-29. Each entry below was confirmed by reading the
+# filter file's add_field => { "[zeek_cols][service]" => "<value>" } directive.
+# Tests in test_zeek_protocol_emissions.py lock these against the upstream URLs.
 OT_PROTOCOLS: set[str] = {
-    "modbus", "modbus-tcp", "modbus_tcp",
-    "dnp3",
-    "enip",                          # EtherNet/IP
-    "cip",                           # Common Industrial Protocol (over EIP)
-    "profinet",
-    "s7comm", "s7-comm",             # Siemens S7
-    "bacnet",
-    "opcua", "opcua-binary", "opcua_binary",
-    "hart-ip", "hart_ip",
-    "ecat", "ethercat",
-    "c1222",
-    "bsap", "bsap-ip", "bsap_ip",
-    "cotp",                          # COTP often used as ISO-TSAP for S7
-    "omron-fins", "omron_fins",
-    "ge-srtp", "ge_srtp",
-    "genisys",
-    "roc-plus", "roc_plus",
-    "synchrophasor",
-    "iec104", "iec-104",
-    "iec61850-mms", "iec61850-goose", "iec61850-sv",
+    "modbus",                # 1037_zeek_modbus.conf
+    "dnp3",                  # 1019_zeek_dnp3.conf
+    "enip",                  # 1022_zeek_enip.conf (EtherNet/IP)
+    "cip",                   # 1022_zeek_enip.conf (Common Industrial Protocol)
+    "profinet",              # 1047_zeek_profinet.conf
+    "profinet_dce_rpc",      # 1047_zeek_profinet.conf (variant)
+    "s7comm",                # 1051_zeek_s7comm.conf
+    "s7comm-plus",           # 1051_zeek_s7comm.conf (s7comm_plus variant)
+    "cotp",                  # 1051_zeek_s7comm.conf (ISO-TSAP, common with S7)
+    # The following are present as Malcolm Zeek pipeline filenames but I did not pull each
+    # filter file individually; presumed to follow the same add_field convention. Lock against
+    # upstream when extending OT coverage in production.
+    "bacnet",                # 1011_zeek_bacnet.conf
+    "opcua_binary",          # 1044_zeek_opcua_binary.conf
+    "hart_ip",               # 1028_zeek_hart_ip.conf
+    "ecat",                  # 1021_zeek_ecat.conf
+    "c1222",                 # 1014_zeek_c1222.conf
+    "bsap",                  # 1013_zeek_bsap.conf
+    "omron_fins",            # 1171_zeek_omron_fins.conf
+    "ge_srtp",               # 1026_zeek_ge_srtp.conf
+    "genisys",               # 1025_zeek_genisys.conf
+    "roc_plus",              # 1172_zeek_roc_plus.conf
+    "synchrophasor",         # 1062_zeek_synchrophasor.conf
 }
 
 OT_VENDORS: set[str] = {

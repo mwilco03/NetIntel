@@ -57,7 +57,8 @@ class TestClassByProtocol:
         assert classify_tags(h, vendor=None) == {CLASS_OT}
 
     def test_opcua_classifies_ot(self):
-        h = _host(services=(_svc(4840, "opcua-binary"),))
+        # Malcolm emits "opcua_binary" (underscore) per 1044_zeek_opcua_binary.conf.
+        h = _host(services=(_svc(4840, "opcua_binary"),))
         assert classify_tags(h, vendor=None) == {CLASS_OT}
 
     def test_http_only_classifies_it(self):
