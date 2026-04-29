@@ -160,6 +160,13 @@ def _host(
 SCAN_ID = "00000000-0000-0000-0000-000000000001"
 
 
+def _tag_names(payload_field) -> set[str]:
+    """Tags in NetBox 4.x payloads are [{'name': '...'}]. Helper extracts the names."""
+    if payload_field is None:
+        return set()
+    return {(t["name"] if isinstance(t, dict) else t) for t in payload_field}
+
+
 def _create(host: Host, *, dry_run: bool = False, strategy: Strategy = Strategy.MERGE) -> FakeClient:
     client = FakeClient()
     upsert_host(
@@ -234,7 +241,7 @@ class TestDeviceCreatePayload:
 
     def test_carries_source_netintel_bridge_tag(self):
         spec = _create(_host()).devices_created[0]
-        assert SOURCE_TAG in spec["tags"]
+        assert SOURCE_TAG in _tag_names(spec["tags"])
 
     def test_carries_per_source_tag(self):
         for src, tag in [
@@ -244,11 +251,11 @@ class TestDeviceCreatePayload:
             ("security_onion", "source:security_onion"),
         ]:
             spec = _create(_host(source=src)).devices_created[0]
-            assert tag in spec["tags"], f"missing {tag} for source={src}"
+            assert tag in _tag_names(spec["tags"]), f"missing {tag} for source={src}"
 
     def test_carries_recently_added_tag_on_create(self):
         spec = _create(_host()).devices_created[0]
-        assert RECENTLY_ADDED_TAG in spec["tags"]
+        assert RECENTLY_ADDED_TAG in _tag_names(spec["tags"])
 
     def test_custom_fields_populated(self):
         spec = _create(_host()).devices_created[0]
@@ -546,7 +553,7 @@ class TestUpdateBridgeOwned:
         client, _ = _update(_host(source="malcolm"), existing)
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        tag_names = set(patch["tags"])
+        tag_names = _tag_names(patch["tags"])
         assert "source:malcolm" in tag_names
         # Existing tags preserved
         assert SOURCE_TAG in tag_names
@@ -567,7 +574,7 @@ class TestUpdateBridgeOwned:
 
     def test_returns_noop_when_nothing_changed(self):
         existing = _existing_bridge_owned(
-            last_seen="2026-04-28T12:00:00+00:00",
+            last_seen="2026-04-28T12:00:00Z",
             last_scan_id=SCAN_ID,
             sources=("nmap",),
         )
@@ -728,12 +735,12 @@ class TestSuricataEnrichmentOnCreate:
     def test_create_alerts_above_threshold_adds_noisy_tag(self):
         host = _host(suricata_alerts=self._alerts(total=NOISY_THRESHOLD + 1))
         spec = _create(host).devices_created[0]
-        assert ALERT_NOISY_TAG in spec["tags"]
+        assert ALERT_NOISY_TAG in _tag_names(spec["tags"])
 
     def test_create_alerts_below_threshold_no_noisy_tag(self):
         host = _host(suricata_alerts=self._alerts(total=NOISY_THRESHOLD - 1))
         spec = _create(host).devices_created[0]
-        assert ALERT_NOISY_TAG not in spec["tags"]
+        assert ALERT_NOISY_TAG not in _tag_names(spec["tags"])
 
 
 class TestSuricataEnrichmentOnUpdate:
@@ -780,7 +787,7 @@ class TestSuricataEnrichmentOnUpdate:
         client, _ = _update(host, existing)
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        assert ALERT_NOISY_TAG in patch["tags"]
+        assert ALERT_NOISY_TAG in _tag_names(patch["tags"])
 
     def test_noisy_tag_cleared_when_counts_drop(self):
         existing = _existing_bridge_owned(extra_tags=(ALERT_NOISY_TAG,))
@@ -788,7 +795,7 @@ class TestSuricataEnrichmentOnUpdate:
         client, _ = _update(host, existing)
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        assert ALERT_NOISY_TAG not in patch["tags"]
+        assert ALERT_NOISY_TAG not in _tag_names(patch["tags"])
 
     def test_no_alerts_omits_noisy_tag(self):
         existing = _existing_bridge_owned()
@@ -815,17 +822,17 @@ class TestClassificationTagOnCreate:
         spec = _create(
             _host(services=(Service(port=502, protocol="tcp", name="modbus"),))
         ).devices_created[0]
-        assert "class:ot" in spec["tags"]
+        assert "class:ot" in _tag_names(spec["tags"])
 
     def test_it_protocol_creates_with_class_it(self):
         spec = _create(
             _host(services=(Service(port=22, protocol="tcp", name="ssh"),))
         ).devices_created[0]
-        assert "class:it" in spec["tags"]
+        assert "class:it" in _tag_names(spec["tags"])
 
     def test_ot_vendor_alone_creates_with_class_ot(self):
         spec = _create(_host(macs=("00:0E:8C:11:22:33",))).devices_created[0]
-        assert "class:ot" in spec["tags"]
+        assert "class:ot" in _tag_names(spec["tags"])
 
     def test_mixed_protocol_creates_with_class_mixed(self):
         spec = _create(
@@ -836,14 +843,14 @@ class TestClassificationTagOnCreate:
                 )
             )
         ).devices_created[0]
-        assert "class:mixed" in spec["tags"]
-        assert "class:ot" not in spec["tags"]
-        assert "class:it" not in spec["tags"]
+        assert "class:mixed" in _tag_names(spec["tags"])
+        assert "class:ot" not in _tag_names(spec["tags"])
+        assert "class:it" not in _tag_names(spec["tags"])
 
     def test_no_signal_creates_without_class_tag(self):
         spec = _create(_host(services=())).devices_created[0]
         for t in ("class:ot", "class:it", "class:mixed"):
-            assert t not in spec["tags"]
+            assert t not in _tag_names(spec["tags"])
 
 
 class TestClassificationTagOnUpdate:
@@ -860,9 +867,9 @@ class TestClassificationTagOnUpdate:
         client, _ = _update(host, existing)
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        assert "class:mixed" in patch["tags"]
+        assert "class:mixed" in _tag_names(patch["tags"])
         # Old class:it must be gone (mutual exclusion)
-        assert "class:it" not in patch["tags"]
+        assert "class:it" not in _tag_names(patch["tags"])
 
     def test_does_not_change_tag_when_classification_matches(self):
         existing = _existing_bridge_owned()
@@ -889,7 +896,7 @@ class TestClassificationTagOnUpdate:
         client, _ = _update(host, existing)
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        assert "class:ot" in patch["tags"]
+        assert "class:ot" in _tag_names(patch["tags"])
 
     def test_human_owned_device_does_not_get_class_tag(self):
         existing = _existing_human_owned()
@@ -908,7 +915,7 @@ class TestClassificationTagOnUpdate:
         client, _ = _update(host, existing)
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        class_tags = {t for t in patch["tags"] if t.startswith("class:")}
+        class_tags = {t for t in _tag_names(patch["tags"]) if t.startswith("class:")}
         assert class_tags == {"class:it"}
 
 
@@ -994,7 +1001,7 @@ class TestRelatedMacsAndArpSpoofTag:
 
     def test_create_does_not_carry_alert_tag(self):
         spec = _create(_host(macs=("aa:bb:cc:dd:ee:ff",))).devices_created[0]
-        assert ALERT_MAC_CHANGE_TAG not in spec["tags"]
+        assert ALERT_MAC_CHANGE_TAG not in _tag_names(spec["tags"])
 
     def test_update_appends_new_mac_to_list(self):
         existing = _existing_bridge_owned()
@@ -1017,7 +1024,7 @@ class TestRelatedMacsAndArpSpoofTag:
         client, _ = _update(host, existing)
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        assert ALERT_MAC_CHANGE_TAG in patch["tags"]
+        assert ALERT_MAC_CHANGE_TAG in _tag_names(patch["tags"])
 
     def test_update_same_mac_observed_again_does_not_alert(self):
         existing = _existing_bridge_owned()
@@ -1039,7 +1046,7 @@ class TestRelatedMacsAndArpSpoofTag:
         client, _ = _update(host, existing)
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        assert ALERT_MAC_CHANGE_TAG not in patch["tags"]
+        assert ALERT_MAC_CHANGE_TAG not in _tag_names(patch["tags"])
 
     def test_update_aged_out_list_is_trimmed(self):
         existing = _existing_bridge_owned()
@@ -1063,7 +1070,7 @@ class TestRelatedMacsAndArpSpoofTag:
         host = _host(macs=())
         client, _ = _update(host, existing)
         _, patch = client.devices_updated[0]
-        assert ALERT_MAC_CHANGE_TAG not in patch["tags"]
+        assert ALERT_MAC_CHANGE_TAG not in _tag_names(patch["tags"])
 
     def test_human_owned_device_no_related_macs_no_alert(self):
         existing = _existing_human_owned()
@@ -1099,11 +1106,11 @@ class TestRecentlyAddedTagAging:
         assert client.devices_updated, "expected an update because the tag aged out"
         _, patch = client.devices_updated[0]
         assert "tags" in patch
-        assert RECENTLY_ADDED_TAG not in patch["tags"]
+        assert RECENTLY_ADDED_TAG not in _tag_names(patch["tags"])
 
     def test_past_window_alone_triggers_an_update(self):
         # No other changes (last_seen, last_scan_id, source all match) but tag must age out
-        same_iso = "2026-04-28T12:00:00+00:00"
+        same_iso = "2026-04-28T12:00:00Z"
         existing = _existing_bridge_owned(
             first_seen="2026-01-01T00:00:00+00:00",
             last_seen=same_iso,
@@ -1115,10 +1122,10 @@ class TestRecentlyAddedTagAging:
         client, result = _update(host, existing)
         assert result.action == UpsertAction.UPDATE
         _, patch = client.devices_updated[0]
-        assert RECENTLY_ADDED_TAG not in patch["tags"]
+        assert RECENTLY_ADDED_TAG not in _tag_names(patch["tags"])
 
     def test_within_window_no_other_changes_is_noop(self):
-        same_iso = "2026-04-28T12:00:00+00:00"
+        same_iso = "2026-04-28T12:00:00Z"
         existing = _existing_bridge_owned(
             first_seen="2026-04-26T12:00:00+00:00",
             last_seen=same_iso,

@@ -105,7 +105,7 @@ def _observed_macs(host: Host) -> list[str]:
 def _new_mac_entry(mac: str, observed_at: datetime, scan_id: str) -> dict:
     return {
         "mac": mac.lower(),
-        "observed_at": observed_at.isoformat(),
+        "observed_at": _iso_z(observed_at),
         "scan_id": scan_id,
     }
 
@@ -118,6 +118,29 @@ def _trim_mac_entries(entries: list[dict], now: datetime) -> list[dict]:
         if ts is not None and ts >= threshold:
             keep.append(e)
     return keep
+
+
+def _merge_mac_observations(
+    existing: list[dict],
+    new_macs: list[str],
+    observed_at: datetime,
+    scan_id: str,
+) -> list[dict]:
+    """Merge new MAC observations into existing list, deduplicated by MAC.
+
+    For each MAC, the most recent observation wins. Without this, a re-scan of an unchanged
+    network appends a duplicate per-MAC entry every run, breaking idempotency. Verified
+    2026-04-29 by running the same scan twice against live NetBox 4.5 and seeing related_macs
+    grow.
+    """
+    by_mac: dict[str, dict] = {}
+    for entry in existing:
+        m = (entry.get("mac") or "").lower()
+        if m:
+            by_mac[m] = entry
+    for mac in new_macs:
+        by_mac[mac.lower()] = _new_mac_entry(mac, observed_at, scan_id)
+    return list(by_mac.values())
 
 
 def _suricata_cf_payload(host: Host) -> dict:
@@ -134,8 +157,22 @@ def _suricata_cf_payload(host: Host) -> dict:
     }
 
 
+def _iso_z(dt: datetime) -> str:
+    """Emit datetime in NetBox's stored format (UTC with trailing 'Z').
+
+    NetBox 4.x normalizes datetime custom fields on read to '2026-04-28T12:00:00Z' regardless
+    of the timezone offset sent. Sending '+00:00' would cause every re-scan to detect a string
+    diff and PATCH unnecessarily — breaking idempotency. Verified 2026-04-29 against live
+    NetBox 4.5 by observing a write of '+00:00' returned as 'Z'.
+    """
+    s = dt.isoformat()
+    if s.endswith("+00:00"):
+        return s[:-6] + "Z"
+    return s
+
+
 def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> dict:
-    timestamp = host.observed_at.isoformat()
+    timestamp = _iso_z(host.observed_at)
     custom_fields: dict = {
         CF_LAST_SEEN: timestamp,
         CF_FIRST_SEEN: timestamp,
@@ -165,7 +202,11 @@ def _build_device_spec(host: Host, scan_id: str, defaults: UpsertDefaults) -> di
         "role": defaults.role_id,
         "site": defaults.site_id,
         "status": "active",
-        "tags": tags,
+        # NetBox 4.x rejects tag-as-string. Verified 2026-04-29 against live NetBox 4.5:
+        #   {'tags': ['Related objects must be referenced by numeric ID or by dictionary of
+        #    attributes. Received an unrecognized value: source:netintel-bridge']}
+        # Send each tag as {"name": "..."}; NetBox resolves to ID server-side.
+        "tags": [{"name": n} for n in tags],
         "custom_fields": custom_fields,
     }
 
@@ -239,7 +280,7 @@ def _build_update_patch(
     scan_id: str,
     owned_for_writes: bool,
 ) -> tuple[dict, list[FieldDiff]]:
-    new_observed_iso = host.observed_at.isoformat()
+    new_observed_iso = _iso_z(host.observed_at)
     existing_cfs = getattr(existing, "custom_fields", {}) or {}
 
     custom_fields_patch: dict = {}
@@ -324,10 +365,10 @@ def _build_update_patch(
 
         # related_macs windowed list + alert:mac-change tag aging
         existing_related = list(existing_cfs.get(CF_RELATED_MACS) or [])
-        appended = list(existing_related)
-        for mac in _observed_macs(host):
-            appended.append(_new_mac_entry(mac, host.observed_at, scan_id))
-        trimmed = _trim_mac_entries(appended, host.observed_at)
+        merged = _merge_mac_observations(
+            existing_related, _observed_macs(host), host.observed_at, scan_id
+        )
+        trimmed = _trim_mac_entries(merged, host.observed_at)
         if trimmed != existing_related:
             custom_fields_patch[CF_RELATED_MACS] = trimmed
             diffs.append(
@@ -347,7 +388,8 @@ def _build_update_patch(
             patch["custom_fields"] = custom_fields_patch
 
         if desired_names != existing_names:
-            patch["tags"] = sorted(desired_names)
+            # NetBox tag PATCH also requires {"name": ...} form (verified against live NetBox 4.5).
+            patch["tags"] = [{"name": n} for n in sorted(desired_names)]
             diffs.append(
                 FieldDiff(
                     field="tags",
@@ -359,11 +401,36 @@ def _build_update_patch(
     return patch, diffs
 
 
+def _service_key(svc: Any) -> tuple[int, str] | None:
+    """Extract (port, protocol) from a NetBox Service object or our internal Service.
+
+    NetBox 4.x Service has `ports` (a list) and `protocol` (a Choice with `.value`).
+    Our internal Service has `port` (single int) and `protocol` (literal string).
+    Verified 2026-04-29 against pynetbox 7.x return shapes.
+    """
+    # internal Service (pydantic)
+    if hasattr(svc, "port"):
+        return (int(svc.port), str(svc.protocol))
+    # NetBox Service (pynetbox)
+    ports = getattr(svc, "ports", None)
+    if not ports:
+        return None
+    proto_attr = getattr(svc, "protocol", None)
+    proto = (
+        getattr(proto_attr, "value", None)
+        if proto_attr is not None and hasattr(proto_attr, "value")
+        else proto_attr
+    )
+    return (int(ports[0]), str(proto)) if proto else None
+
+
 def _missing_services(host: Host, client: _ClientLike, device_id: int) -> list[Service]:
-    existing_keys = {
-        (s.port, s.protocol) for s in client.list_services_for_device(device_id)
-    }
-    return [s for s in host.services if (s.port, s.protocol) not in existing_keys]
+    existing_keys: set[tuple[int, str]] = set()
+    for s in client.list_services_for_device(device_id):
+        key = _service_key(s)
+        if key is not None:
+            existing_keys.add(key)
+    return [s for s in host.services if _service_key(s) not in existing_keys]
 
 
 def _create_path(

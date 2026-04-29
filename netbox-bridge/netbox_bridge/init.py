@@ -76,9 +76,11 @@ _CF_DEFINITIONS: dict[str, dict[str, str]] = {
 # Distinct hex colors so each bridge-managed tag is visually distinguishable in the NetBox UI.
 _TAG_COLORS: dict[str, str] = {
     "source:netintel-bridge": "1e88e5",  # blue
-    "source:nmap": "43a047",             # green
-    "source:nessus": "e53935",           # red
-    "lifecycle:recently-added": "fb8c00",  # orange — "new in inventory"
+    "source:nmap": "43a047",             # green — active scan
+    "source:nessus": "e53935",           # red — vuln-aware active scan
+    "source:malcolm": "9c27b0",          # violet — passive (Malcolm)
+    "source:security_onion": "00897b",   # dark teal — passive (Security Onion)
+    "lifecycle:recently-added": "fb8c00",  # orange
     "alert:mac-change": "d32f2f",          # deep red — security alert
     "alert:noisy": "f4511e",               # bright red-orange — noisy IDS alerts
     "class:ot": "8e24aa",                  # purple — OT

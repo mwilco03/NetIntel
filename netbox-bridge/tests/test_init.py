@@ -160,6 +160,8 @@ class TestPlanInit:
         assert tag_names == {
             "source:netintel-bridge",
             "source:nessus",
+            "source:malcolm",
+            "source:security_onion",
             "lifecycle:recently-added",
             "alert:mac-change",
             "alert:noisy",

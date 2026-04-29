@@ -37,8 +37,13 @@ REQUIRED_DEVICE_CFS: list[str] = [
 ]
 REQUIRED_TAGS: list[str] = [
     SOURCE_TAG,
+    # Per-source tags. Must match every literal value of Host.source in model.py — verified
+    # 2026-04-29 against live NetBox 4.5 which rejects unknown tag names with
+    #   {'tags': ["Related object not found using the provided attributes: ..."]}.
     "source:nmap",
     "source:nessus",
+    "source:malcolm",
+    "source:security_onion",
     RECENTLY_ADDED_TAG,
     ALERT_MAC_CHANGE_TAG,
     ALERT_NOISY_TAG,
